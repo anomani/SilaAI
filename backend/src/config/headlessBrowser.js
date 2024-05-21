@@ -9,103 +9,79 @@ async function getAppointments() {
     let browser;
     try {
         // Connect to BrowserCloud
-        browser = await puppeteer.launch({headless: false});
+        browser = await puppeteer.launch({ headless: false });
         const page = await browser.newPage();
 
         // Initial login to Squarespace
-        await page.goto(
-            "https://secure.acuityscheduling.com/login.php?redirect=1#/", {
+        await page.goto("https://secure.acuityscheduling.com/login.php?redirect=1#/", {
             waitUntil: 'domcontentloaded'
         });
-        
-        await page.type("input[type='email']", "anomani@seas.upenn.edu");
 
+        await page.type("input[type='email']", "anomani@seas.upenn.edu");
         await page.click("input[name='login']");
         await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+
         await page.type("input[type='email']", "anomani@seas.upenn.edu");
         await page.type("input[type='password']", "Maks.9611");
 
-        await page.click("button[data-test='login-button']");
+        await Promise.all([
+            page.click("button[data-test='login-button']"),
+            page.waitForNavigation({ waitUntil: 'networkidle0' })
+        ]);
 
-
-        //Clicking on menu button
-        await page.waitForSelector('div[data-test="appshell-container"]', { timeout: 60000 });
-
+        // Ensure the login was successful and wait for the iframe to be present
         await page.waitForSelector('iframe[data-test="scheduling"]', { timeout: 60000 });
 
-        //Capture iframe
+        // Access the iframe
         const frameHandle = await page.$('iframe[data-test="scheduling"]');
         const frame = await frameHandle.contentFrame();
-        
-        await frame.waitForSelector('button[data-testid="mobile-nav-button"]', { timeout: 60000 });
-        
-        await frame.click('button[data-testid="mobile-nav-button"]');
-        
-        //Now, at this point we have clicked on the side menu, we need to click on clients
-        await frame.waitForSelector('button[data-testid="left-nav-item"]', { timeout: 60000 });
 
-        
+        // Wait for and click the "menu" button inside the iframe
+        await frame.waitForSelector('button[data-testid="mobile-nav-button"]', { timeout: 60000 });
+        await frame.evaluate(() => {
+            const button = document.querySelector('button[data-testid="mobile-nav-button"]');
+            button.scrollIntoView();
+        });
+        await frame.click('button[data-testid="mobile-nav-button"]');
+
+        // Wait for and click the "clients" button inside the iframe
+        await frame.waitForSelector('button[data-testid="left-nav-item"]', { timeout: 60000 });
+        await frame.evaluate(() => {
+            const button = document.querySelector('button[data-testid="left-nav-item"]');
+            button.scrollIntoView();
+        });
         await frame.click('button[data-testid="left-nav-item"]');
 
-        //We are on the clients page now need to click import/export
+        // Wait for and click the "import/export" link inside the iframe
         await frame.waitForSelector('a[data-testid="left-nav-item"][href="/config/scheduling-service/clients.php?action=importexport"]', { timeout: 60000 });
-
-        
+        await frame.evaluate(() => {
+            const link = document.querySelector('a[data-testid="left-nav-item"][href="/config/scheduling-service/clients.php?action=importexport"]');
+            link.scrollIntoView();
+        });
         await frame.click('a[data-testid="left-nav-item"][href="/config/scheduling-service/clients.php?action=importexport"]');
 
-        //Now, click on the export clients list
+        // Wait for and click the "Export Client List" button inside the iframe
         await frame.waitForSelector('a.btn.btn-inverse.btn-bordered.btn-md.btn-client-export.margin-right.margin-bottom', { timeout: 60000 });
-
-        
+        await frame.evaluate(() => {
+            const button = document.querySelector('a.btn.btn-inverse.btn-bordered.btn-md.btn-client-export.margin-right.margin-bottom');
+            button.scrollIntoView();
+        });
         await frame.click('a.btn.btn-inverse.btn-bordered.btn-md.btn-client-export.margin-right.margin-bottom');
 
-        //Click on export clients
+        // Wait for and click the "Export Clients" button inside the iframe
         await frame.waitForSelector('input[type="submit"].btn.btn-default[value="Export Clients"]', { timeout: 60000 });
+        await frame.evaluate(() => {
+            const button = document.querySelector('input[type="submit"].btn.btn-default[value="Export Clients"]');
+            button.scrollIntoView();
+        });
         await frame.click('input[type="submit"].btn.btn-default[value="Export Clients"]');
-
-        
-    // Ensure the button is visible and scroll into view if necessary
-    // await page.evaluate(() => {
-    //   const button = document.querySelector('button[data-testid="mobile-nav-button"]');
-    //   if (button) {
-    //     button.scrollIntoView();
-    //   }
-    // });
-    
-    // Click the button
-    // await page.click('button[data-testid="mobile-nav-button"]');
-
-        
-    
-
-        // return clientsPageContent;
     } catch (error) {
         console.error("Error:", error);
-    // } finally {
-    //     if (browser) {
-    //         await browser.close();
-    //     }
-    // }
+    } finally {
+        // browser.close()
     }
 }
-
-// function extractAppointmentsFromHtml(html) {
-//     const dom = new JSDOM(html);
-//     const document = dom.window.document;
-
-//     const rows = document.querySelectorAll('table tbody tr');
-//     return Array.from(rows).map(row => {
-//         const cells = row.querySelectorAll('td');
-//         return {
-//             name: cells[1].innerText,
-//             phone: cells[2].innerText,
-//             datetime: cells[3].innerText,
-//         };
-//     });
-// }
 
 getAppointments()
 
 module.exports = getAppointments;
-
-
