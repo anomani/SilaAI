@@ -4,7 +4,7 @@ This project provides an automation solution for barbershops, starting with a fe
 
 ## Features
 
-- **Client Follow-Up**: Automatically checks for clients who haven't visited in over 6 months and sends follow-up emails.
+- **Client Follow-Up**: Automatically checks for clients who haven't visited in over 6 months and sends follow-up messages.
 - **Appointment Scheduling**: Integrates with Acuity Scheduling to manage appointments.
 - **Payment Validation**: Ensures that clients have completed their payments.
 - **Automated Messaging**: Uses iMessage and email for client communications.
