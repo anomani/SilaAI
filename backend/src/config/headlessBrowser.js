@@ -1,10 +1,13 @@
 const puppeteer = require('puppeteer');
-require('dotenv').config();
+const dotenv = require('dotenv')
+dotenv.config({path : '../../.env'})
 const fs = require('fs');
+const os = require('os');
+const path = require('path')
 
+const apiKey = process.env.BROWSERCLOUD_API_KEY;
 
-const apiKey = "ZhbhUCATxr8MyoQO";
-async function getAppointments() {
+async function getClients() {
     const browserWSEndpoint = `wss://chrome-v2.browsercloud.io?token=${apiKey}`;
     let browser;
     try {
@@ -82,6 +85,19 @@ async function getAppointments() {
     }
 }
 
-getAppointments()
+async function getCSV() {
+    const downloadsDir = path.resolve(os.homedir(), 'Downloads');
+    const targetDir = path.resolve(__dirname, '../../data');
+    const filename = 'list.csv';
+    const sourceFile = path.join(downloadsDir, filename);
+    const destFile = path.join(targetDir, filename);
 
-module.exports = getAppointments;
+    if (fs.existsSync(sourceFile)) {
+        fs.renameSync(sourceFile, destFile);
+        console.log(`File moved to ${destFile}`);
+    } else {
+        console.log('File not found');
+    }
+}
+
+module.exports = {getClients, getCSV};
