@@ -2,6 +2,8 @@ const path = require('path');
 const { readCSV } = require('../services/csvService');
 const { sendMessage } = require('../config/twilio');
 const {getClients, getCSV} = require('../config/headlessBrowser')
+const fs = require('fs');
+
 
 async function sendFollowUpMessages(req, res) {
     try {
@@ -12,6 +14,17 @@ async function sendFollowUpMessages(req, res) {
 
         const clients = await readCSV(filePath, minDaysSinceLast);
 
+
+        fs.unlink(filePath, (err) => {
+
+            if (err) {
+                console.error('Error deleting file:', err);
+            } else {
+                console.log('File deleted successfully');
+            }
+        });
+
+        
         const messages = clients.map(client => {
             console.log(client['First Name'])
             console.log(client['Phone'])
@@ -21,11 +34,15 @@ async function sendFollowUpMessages(req, res) {
 
         await Promise.all(messages);
 
+        
+
+
         res.status(200).send('Messages sent successfully');
     } catch (error) {
         res.status(500).send(`Error sending messages: ${error.message}`);
     }
 }
+
 
 module.exports = {
     sendFollowUpMessages
