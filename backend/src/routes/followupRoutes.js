@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { sendFollowUpMessages } = require('../controllers/followupController');
+const { sendFollowUpMessages, fetchClients } = require('../controllers/followupController');
 
 router.get('/send-followups', sendFollowUpMessages);
+router.get('/clients', fetchClients);  
 
 module.exports = router;
