@@ -1,6 +1,6 @@
 // frontend/src/screens/ClientListScreen.js
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, Button, Alert, SafeAreaView } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Button, Alert, SafeAreaView, TouchableOpacity } from 'react-native';
 import Checkbox from 'expo-checkbox';
 import { getClients, sendFollowUpMessages } from '../services/api';
 
@@ -15,7 +15,9 @@ const ClientListScreen = () => {
   const fetchClients = async () => {
     try {
       const response = await getClients();
-      setClients(response);
+      // Sort clients by increasing days since last appointment
+      const sortedClients = response.sort((a, b) => parseInt(a["Days Since Last Appointment"]) - parseInt(b["Days Since Last Appointment"]));
+      setClients(sortedClients);
     } catch (error) {
       console.error('Error fetching clients:', error);
     }
@@ -40,6 +42,14 @@ const ClientListScreen = () => {
     }
   };
 
+  const selectAllClients = () => {
+    setSelectedClients(clients);
+  };
+
+  const deselectAllClients = () => {
+    setSelectedClients([]);
+  };
+
   const renderItem = ({ item }) => (
     <View style={styles.row}>
       <View style={styles.checkboxCell}>
@@ -58,6 +68,14 @@ const ClientListScreen = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.title}>Manage Clients</Text>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity style={styles.button} onPress={selectAllClients}>
+            <Text style={styles.buttonText}>Select All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={deselectAllClients}>
+            <Text style={styles.buttonText}>Deselect All</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.tableHeader}>
           <View style={styles.checkboxCell}></View>
           <Text style={styles.headerCell}>Name</Text>
@@ -70,7 +88,9 @@ const ClientListScreen = () => {
           keyExtractor={(item) => item.Email} // Using email as the unique key
           contentContainerStyle={styles.listContent}
         />
-        <Button title="Send Follow-Up Messages" onPress={handleSendMessages} />
+        <TouchableOpacity style={styles.sendButton} onPress={handleSendMessages}>
+          <Text style={styles.sendButtonText}>Send Follow-Up Messages</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -88,6 +108,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     marginBottom: 20,
+    textAlign: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#007BFF',
+    padding: 10,
+    borderRadius: 5,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
     textAlign: 'center',
   },
   tableHeader: {
@@ -121,6 +156,18 @@ const styles = StyleSheet.create({
   cell: {
     flex: 1,
     textAlign: 'center',
+  },
+  sendButton: {
+    backgroundColor: '#28a745',
+    padding: 15,
+    borderRadius: 5,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

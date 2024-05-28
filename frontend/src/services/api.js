@@ -2,11 +2,11 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'http://localhost:3000/api/followup';
+const API_URL = 'http://localhost:3000/api';
 
 export const sendFollowUpMessages = async () => {
   try {
-    const response = await axios.get(`${API_URL}/send-followups`);
+    const response = await axios.get(`${API_URL}/followup/send-followups`);
     return response.data;
   } catch (error) {
     console.error('Error sending follow-up messages:', error);
@@ -17,11 +17,22 @@ export const sendFollowUpMessages = async () => {
 
 export const getClients = async () => {
   try {
-    const response = await axios.get(`${API_URL}/clients`);
+    const response = await axios.get(`${API_URL}/followup/clients`);
     return response.data;
   } catch (error) {
     console.error('Error fetching clients:', error);
     throw error;
   }
 };
+
+export const sendMessage = async (message) => {
+  try {
+    const response = await axios.post(`${API_URL}/chat/schedule`, { message });
+    return response.data.message;
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+};
+
 
