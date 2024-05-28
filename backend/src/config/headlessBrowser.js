@@ -7,6 +7,10 @@ const path = require('path')
 
 const apiKey = process.env.BROWSERCLOUD_API_KEY;
 
+
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+
 async function getClients() {
     const browserWSEndpoint = `wss://chrome-v2.browsercloud.io?token=${apiKey}`;
     let browser;
@@ -81,7 +85,8 @@ async function getClients() {
     } catch (error) {
         console.error("Error:", error);
     } finally {
-        browser.close()
+        await delay(2000)
+        await browser.close()
     }
 }
 
