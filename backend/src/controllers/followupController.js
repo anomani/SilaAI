@@ -7,55 +7,25 @@ const fs = require('fs');
 
 async function fetchClients(req, res) {
     try {
-    //   await getClients();
       const minDaysSinceLast = 1; 
-    //   await getCSV();
       const filePath = path.resolve(__dirname, '../../data/list.csv');
       const clients = await readCSV(filePath, minDaysSinceLast);
-  
-      // Deleting the file after reading it
-    //   fs.unlink(filePath, (err) => {
-    //     if (err) {
-    //       console.error('Error deleting file:', err);
-    //     } else {
-    //       console.log('File deleted successfully');
-    //     }
-    //   });
       res.status(200).json(clients);
     } catch (error) {
       res.status(500).send(`Error fetching clients: ${error.message}`);
     }
   }
 
-async function sendFollowUpMessages(req, res) {
+  async function sendFollowUpMessages(req, res) {
     try {
-        await getClients();
-        await getCSV();
-        const filePath = path.resolve(__dirname, '../../data/list.csv');
-        const minDaysSinceLast = 1; 
+        const selectedClients = req.body.clients; // Expect an array of selected clients
 
-        const clients = await readCSV(filePath, minDaysSinceLast);
-
-
-        // fs.unlink(filePath, (err) => {
-
-        //     if (err) {
-        //         console.error('Error deleting file:', err);
-        //     } else {
-        //         console.log('File deleted successfully');
-        //     }
-        // });
-
-        
-        const messages = clients.map(client => {
+        const messages = selectedClients.map(client => {
             const messageBody = `Hello ${client['First Name']}, we miss you at the barbershop! It's been a while since your last appointment. Schedule your next visit now!`;
             return sendMessage(client['Phone'], messageBody);
         });
 
         await Promise.all(messages);
-
-        
-
 
         res.status(200).send('Messages sent successfully');
     } catch (error) {
@@ -63,8 +33,19 @@ async function sendFollowUpMessages(req, res) {
     }
 }
 
+async function updateClientData(req, res) {
+    try {
+        await getClients();
+        await getCSV();
+        res.status(200).send('Client data updated successfully');
+    } catch (error) {
+        res.status(500).send(`Error updating client data: ${error.message}`);
+    }
+}
+
 
 module.exports = {
     sendFollowUpMessages,
-    fetchClients
+    fetchClients,
+    updateClientData
 };
