@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
-dotenv.config({path : '../../.env'})
+dotenv.config({path : '../../../.env'})
 const fs = require('fs');
 const os = require('os');
 const path = require('path')

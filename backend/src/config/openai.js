@@ -3,6 +3,8 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 const { getAvailability, getCurrentDate } = require('../services/tools/getAvailability');
 const { bookAppointment } = require('../services/tools/bookAppointment');
+const {cancelAppointment} = require('../services/tools/cancelAppointment')
+
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -68,11 +70,28 @@ const tools = [
       }
     }
   },
-{
+  {
     type: "function",
     function: {
       name: "getCurrentDate",
       description: "Gets the current date without taking any parameters"
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "cancelAppointment",
+      description: "Cancels an appointment by the provided name",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "Name fo the client trying to cancel their appointment"
+          }
+        },
+        required: ["name"]
+      }
     }
   }
 ];
@@ -80,7 +99,7 @@ const tools = [
 async function createAssistant() {
   if (!assistant) {
     assistant = await openai.beta.assistants.create({
-      instructions: "I want you to respond to the user about availabilities from my schedule. You will be given times that are already booked. My timings are Monday-Friday from 9am to 5pm. Respond to user queries about availability and scheduling. Do not let the user book outside of my timings",
+      instructions: "I want you to respond to the user about availabilities from my schedule. You will be given times that are already booked. My timings are Monday-Friday from 9am to 5pm. Respond to user queries about availability and scheduling. Do not let the user book outside of my timings. You can also be asked to reschedule or cancel. If you are asked to cancel, then use the cancel function. If you are asked to reschedule then run the function to cancel, then use the other functions to find another time with the customer and schedule a new time",
       name: "Scheduling Assistant",
       model: "gpt-4o",
       tools: tools
@@ -145,6 +164,12 @@ async function handleUserInput(userMessage) {
             });
           } else if (funcName === "getCurrentDate") {
             const output = getCurrentDate();
+            toolOutputs.push({
+              tool_call_id: action.id,
+              output: JSON.stringify(output)
+            });
+          } else if (funcName === "cancelAppointment") {
+            const output = await cancelAppointment(args.name);
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)

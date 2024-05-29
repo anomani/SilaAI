@@ -1,6 +1,6 @@
 const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
-dotenv.config({path : '../../.env'})
+dotenv.config({path : '../../../.env'})
 const fs = require('fs');
 const os = require('os');
 const path = require('path')
@@ -72,6 +72,7 @@ async function getAvailability(day) {
         });
 
         const resultString = `Appointments:\n${calendar.appointments.map(a => `${a.day}: ${a.appointmentText}`).join('\n')}\nBlocked Times:\n${calendar.blockedTimes.join('\n')}`;
+        console.log(resultString);
         return resultString;
     } catch (error) {
         console.error("Error:", error);
@@ -85,6 +86,5 @@ function getCurrentDate() {
     const date = new Date()
     return date.toDateString()
 }
-
 
 module.exports = {getAvailability, getCurrentDate}

@@ -7,7 +7,7 @@ const fs = require('fs');
 
 async function fetchClients(req, res) {
     try {
-      const minDaysSinceLast = 1; 
+      const minDaysSinceLast = 0; 
       const filePath = path.resolve(__dirname, '../../data/list.csv');
       const clients = await readCSV(filePath, minDaysSinceLast);
       res.status(200).json(clients);
