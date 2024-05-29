@@ -5,7 +5,7 @@ import { View, Text, Button, StyleSheet } from 'react-native';
 const Homepage = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome to the Appointment Management System</Text>
+      <Text style={styles.title}>Client Management System</Text>
       <Button
         title="Manage Clients"
         onPress={() => navigation.navigate('ClientList')}

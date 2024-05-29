@@ -16,7 +16,7 @@ async function getClients() {
     let browser;
     try {
         // Connect to BrowserCloud
-        browser = await puppeteer.launch({ headless: false });
+        browser = await puppeteer.launch({ headless: true });
         const page = await browser.newPage();
 
         // Initial login to Squarespace
@@ -24,12 +24,12 @@ async function getClients() {
             waitUntil: 'domcontentloaded'
         });
 
-        await page.type("input[type='email']", "anomani@seas.upenn.edu");
+        await page.type("input[type='email']", process.env.ACUITY_EMAIL);
         await page.click("input[name='login']");
         await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
 
-        await page.type("input[type='email']", "anomani@seas.upenn.edu");
-        await page.type("input[type='password']", "Maks.9611");
+        await page.type("input[type='email']", process.env.ACUITY_EMAIL);
+        await page.type("input[type='password']", process.env.ACUITY_PASSWORD);
 
         await Promise.all([
             page.click("button[data-test='login-button']"),

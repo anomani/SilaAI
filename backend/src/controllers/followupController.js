@@ -17,8 +17,6 @@ async function fetchClients(req, res) {
   }
 
   async function sendFollowUpMessages(req, res) {
-
-    console.log(44)
     try {
         const selectedClients = req.body.clients; // Expect an array of selected clients
 
@@ -36,7 +34,6 @@ async function fetchClients(req, res) {
 }
 
 async function updateClientData(req, res) {
-    console.log(333)
     try {
         await getClients();
         await getCSV();
