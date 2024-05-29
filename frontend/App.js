@@ -12,17 +12,17 @@ import ScheduleScreen from './src/screens/ScheduleScreen'
 const Stack = createStackNavigator();
 
 export default function App() {
-  // useEffect(() => {
-  //   const updateClientData = async () => {
-  //     try {
-  //       await axios.get('http://localhost:3000/api/followup/update-clients');
-  //     } catch (error) {
-  //       console.error('Error updating client data:', error);
-  //     }
-  //   };
+  useEffect(() => {
+    const updateClientData = async () => {
+      try {
+        await axios.get('http://localhost:3000/api/followup/update-clients');
+      } catch (error) {
+        console.error('Error updating client data:', error);
+      }
+    };
 
-  //   updateClientData();
-  // }, []);
+    updateClientData();
+  }, []);
 
   return (
     <NavigationContainer>

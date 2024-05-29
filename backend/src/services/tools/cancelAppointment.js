@@ -12,8 +12,8 @@ const apiKey = process.env.BROWSERCLOUD_API_KEY;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
-async function getAvailability(day) {
-    console.log("One moment please...")
+async function cancelAppointment(date, time, name) {
+    console.log("Cancelling now...")
     const browserWSEndpoint = `wss://chrome-v2.browsercloud.io?token=${apiKey}`;
     let browser;
     try {
@@ -53,33 +53,12 @@ async function getAvailability(day) {
         });
         await delay(2000)
 
-        await frame.waitForSelector('.appointment-inner.tall-appointment, .timeslot-column-0.cal_10192608.timeslot.unavailable', { timeout: 60000 });
-        // fs.writeFileSync('frameContent.txt', await frame.content());
-        
-        // Extract details of the specified elements
-        const calendar = await frame.evaluate(() => {
-            const appointments = Array.from(document.querySelectorAll('.appointment-inner, .appointmentListing-container .listingTitle')).map(box => {
-                const dayElement = box.closest('.appointmentListing-container').querySelector('.listingTitle');
-                const day = dayElement ? dayElement.innerText : 'Unknown Day';
-                const appointmentText = box.innerText;
-                return { day, appointmentText };
-            });
-            const blockedTimes = Array.from(document.querySelectorAll('[class*="timeslot"][class*="unavailable"]')).map(blocked => {
-                const blockedTimeHTML = blocked.innerHTML;
-                return blockedTimeHTML;
-            });
-            return { appointments, blockedTimes };
-        });
-
-        const resultString = `Appointments:\n${calendar.appointments.map(a => `${a.day}: ${a.appointmentText}`).join('\n')}\nBlocked Times:\n${calendar.blockedTimes.join('\n')}`;
-        console.log(resultString)
-        return resultString;
     } catch (error) {
-        console.error("Error:", error);
+        return "Unable to book the appointment"
     } finally {
         await delay(2000)
         await browser.close()
     }
 }
-
-module.exports = {getAvailability}
+cancelAppointment("05/31/2024", "09:00", "Lebron James")
+module.exports = {cancelAppointment}
