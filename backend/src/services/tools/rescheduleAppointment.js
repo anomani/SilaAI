@@ -12,8 +12,8 @@ const apiKey = process.env.BROWSERCLOUD_API_KEY;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
-async function cancelAppointment(name) {
-    console.log("Cancelling now...")
+async function rescheduleAppointment(name) {
+    console.log("Rescheduling now...")
     const browserWSEndpoint = `wss://chrome-v2.browsercloud.io?token=${apiKey}`;
     let browser;
     try {
@@ -98,21 +98,13 @@ async function cancelAppointment(name) {
         await frame.click('input.appt-checkbox');
 
         await delay(1000)
-
-        // Wait for and click the "Cancel Selected" link
-        await frame.waitForSelector('a#cancel-appts-btn', { timeout: 60000 });
-        await frame.evaluate(() => {
-            const cancelButton = document.querySelector('a#cancel-appts-btn');
-            cancelButton.scrollIntoView();
-            cancelButton.click();
-        });
+        
+        // Click on the button with class "btn-bulk-reschedule" to reschedule selected appointments
+        await frame.waitForSelector('a.btn-bulk-reschedule', { timeout: 60000 });
+        await frame.click('a.btn-bulk-reschedule');
 
 
-        // Wait for and click the "Yes, cancel appointments" input element
-        await frame.waitForSelector('input.btn.btn-primary.btn-block[value="Yes, cancel appointments"]', { timeout: 60000 });
-        await frame.click('input.btn.btn-primary.btn-block[value="Yes, cancel appointments"]');
-
-        return "Succefully cancelled the appointment"
+        return "Succefully rescheduled the appointment"
     } catch (error) {
         return "Unable to cancel the appointment"
     } finally {
@@ -121,5 +113,5 @@ async function cancelAppointment(name) {
     }
 }
 
-
-module.exports = {cancelAppointment}
+rescheduleAppointment()
+module.exports = {rescheduleAppointment}
