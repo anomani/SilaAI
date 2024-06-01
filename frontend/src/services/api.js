@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
 
 export const sendFollowUpMessages = async () => {
   try {

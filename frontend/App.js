@@ -15,7 +15,7 @@ export default function App() {
   useEffect(() => {
     const updateClientData = async () => {
       try {
-        await axios.get('http://localhost:3000/api/followup/update-clients');
+        await axios.get('https://lab-sweeping-typically.ngrok-free.app/api/followup/update-clients');
       } catch (error) {
         console.error('Error updating client data:', error);
       }
