@@ -20,13 +20,13 @@ const tools = [
     type: "function",
     function: {
       name: "getAvailability",
-      description: "Gets the times from the week that are already booked or are blocked off. You are gonna be getting unavailable blocked times and times which already have appointments. Those are the times which you are unavailable other than that the customer can book an appointment",
+      description: "1. **Date Headers**: Each date should be clearly marked with a header, followed by a list of appointments or a note if the entire day is free. 2. **Appointment Details**: Each appointment should include:- Name of the person- Type of appointment (e.g., Haircut) - Start and end times 3. **Blocked Times**: Specific time periods when no appointments are available should be clearly listed, marked as Unavailable, and include the date and time range. Any time outside of 9am-5pm should not be able to bookß",
       parameters: {
         type: "object",
         properties: {
           day: {
             type: "string",
-            description: "What day that they are checking availability for. This could be phrases such as today or tomorrow or could be actual dates such as May 29"
+            description: "What day that they are checking availability for. This could be phrases such as today or tomorrow or could be actual dates such as May 29."
           }
         },
         required: ["day"]
@@ -87,7 +87,7 @@ const tools = [
         properties: {
           name: {
             type: "string",
-            description: "Name fo the client trying to cancel their appointment"
+            description: "Name of the client trying to cancel their appointment"
           }
         },
         required: ["name"]
@@ -99,7 +99,7 @@ const tools = [
 async function createAssistant() {
   if (!assistant) {
     assistant = await openai.beta.assistants.create({
-      instructions: "I want you to respond to the user about availabilities from my schedule. You will be given times that are already booked. My timings are Monday-Friday from 9am to 5pm. Respond to user queries about availability and scheduling. Do not let the user book outside of my timings. You can also be asked to reschedule or cancel. If you are asked to cancel, then use the cancel function. If you are asked to reschedule then run the function to cancel, then use the other functions to find another time with the customer and schedule a new time",
+      instructions: "I want you to respond to the user about availabilities from my schedule. My timings are Monday-Friday from 9am to 5pm. Respond to user queries about availability and scheduling. Do not let the user book outside of my timings. You can also be asked to reschedule or cancel. If you are asked to cancel, then use the cancel function. If you are asked to reschedule then run the function to cancel, then use the other functions to find another time with the customer and schedule a new time. If you are asked about availiability for tomorrow or today and phrases such as those then Use the getCurrentDate function to figure out today's date then use your reasoning to figure out the date for the day they are seeking. ",
       name: "Scheduling Assistant",
       model: "gpt-4o",
       tools: tools

@@ -15,7 +15,7 @@
         "node-cron": "^2.0.3",
         "openai": "^4.47.1",
         "os": "^0.1.2",
-        "puppeteer": "^22.9.0",
+        "puppeteer": "^22.10.0",
         "twilio": "^5.0.4",
         "yahoo-finance2": "^2.11.2"
     },

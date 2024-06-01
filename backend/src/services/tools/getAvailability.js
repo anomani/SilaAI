@@ -17,7 +17,10 @@ async function getAvailability(day) {
     const browserWSEndpoint = `wss://chrome-v2.browsercloud.io?token=${apiKey}`;
     let browser;
     try {
-        browser = await puppeteer.launch({ headless: true });
+        browser = await puppeteer.launch({ headless: false });
+        // browser = await puppeteer.connect({
+        //     browserWSEndpoint: browserWSEndpoint
+        // })
         const page = await browser.newPage();
 
         // Initial login to Squarespace
@@ -70,8 +73,8 @@ async function getAvailability(day) {
             });
             return { appointments, blockedTimes };
         });
-
-        const resultString = `Appointments:\n${calendar.appointments.map(a => `${a.day}: ${a.appointmentText}`).join('\n')}\nBlocked Times:\n${calendar.blockedTimes.join('\n')}`;
+        const date = getCurrentDate()
+        const resultString = `Today's date is ${date}\nAppointments:\n${calendar.appointments.map(a => `${a.day}: ${a.appointmentText}`).join('\n')}\nBlocked Times:\n${calendar.blockedTimes.join('\n')}`;
         console.log(resultString);
         return resultString;
     } catch (error) {
@@ -83,7 +86,9 @@ async function getAvailability(day) {
 }
 
 function getCurrentDate() {
+    console.log("Getting date")
     const date = new Date()
+    console.log(date.toDateString())
     return date.toDateString()
 }
 
