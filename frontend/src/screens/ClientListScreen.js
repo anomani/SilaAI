@@ -1,413 +1,58 @@
-// import React, { useState, useEffect } from 'react';
-// import { View, Text, FlatList, StyleSheet, Button, Alert, SafeAreaView, TouchableOpacity } from 'react-native';
-// import Checkbox from 'expo-checkbox';
-// import { getClients, sendFollowUpMessages } from '../services/api';
-
-// const ClientListScreen = () => {
-//   const [clients, setClients] = useState([]);
-//   const [selectedClients, setSelectedClients] = useState([]);
-
-//   useEffect(() => {
-//     fetchClients();
-//   }, []);
-
-//   const fetchClients = async () => {
-//     try {
-//       const response = await getClients();
-//       const sortedClients = response.sort((a, b) => parseInt(a["Days Since Last Appointment"]) - parseInt(b["Days Since Last Appointment"]));
-//       setClients(sortedClients);
-//     } catch (error) {
-//       console.error('Error fetching clients:', error);
-//     }
-//   };
-
-//   const toggleClientSelection = (client) => {
-//     setSelectedClients((prevSelectedClients) => {
-//       if (prevSelectedClients.includes(client)) {
-//         return prevSelectedClients.filter((c) => c !== client);
-//       } else {
-//         return [...prevSelectedClients, client];
-//       }
-//     });
-//   };
-
-//   const handleSendMessages = async () => {
-//     try {
-//       await sendFollowUpMessages(selectedClients);
-//       Alert.alert('Success', 'Messages sent successfully');
-//     } catch (error) {
-//       Alert.alert('Error', 'Failed to send messages');
-//     }
-//   };
-
-//   const selectAllClients = () => {
-//     setSelectedClients(clients);
-//   };
-
-//   const deselectAllClients = () => {
-//     setSelectedClients([]);
-//   };
-
-//   const renderItem = ({ item }) => (
-//     <View style={styles.row}>
-//       <View style={styles.checkboxCell}>
-//         <Checkbox
-//           value={selectedClients.includes(item)}
-//           onValueChange={() => toggleClientSelection(item)}
-//         />
-//       </View>
-//       <Text style={styles.cell}>{`${item["First Name"]} ${item["Last Name"]}`}</Text>
-//       <Text style={styles.cell}>{item.Phone}</Text>
-//       <Text style={styles.cell}>{item["Days Since Last Appointment"]}</Text>
-//     </View>
-//   );
-
-//   return (
-//     <SafeAreaView style={styles.safeArea}>
-//       <View style={styles.container}>
-//         <Text style={styles.title}>Manage Clients</Text>
-//         <View style={styles.buttonRow}>
-//           <TouchableOpacity style={styles.button} onPress={selectAllClients}>
-//             <Text style={styles.buttonText}>Select All</Text>
-//           </TouchableOpacity>
-//           <TouchableOpacity style={styles.button} onPress={deselectAllClients}>
-//             <Text style={styles.buttonText}>Deselect All</Text>
-//           </TouchableOpacity>
-//         </View>
-//         <View style={styles.tableHeader}>
-//           <View style={styles.checkboxCell}></View>
-//           <Text style={styles.headerCell}>Name</Text>
-//           <Text style={styles.headerCell}>Phone</Text>
-//           <Text style={styles.headerCell}>Days Since Last Appointment</Text>
-//         </View>
-//         <FlatList
-//           data={clients}
-//           renderItem={renderItem}
-//           keyExtractor={(item) => item.Email}
-//           contentContainerStyle={styles.listContent}
-//         />
-//         <TouchableOpacity style={styles.sendButton} onPress={handleSendMessages}>
-//           <Text style={styles.sendButtonText}>Send Follow-Up Messages</Text>
-//         </TouchableOpacity>
-//       </View>
-//     </SafeAreaView>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   safeArea: {
-//     flex: 1,
-//     backgroundColor: '#fff',
-//   },
-//   container: {
-//     flex: 1,
-//     padding: 20,
-//   },
-//   title: {
-//     fontSize: 24,
-//     marginBottom: 20,
-//     textAlign: 'center',
-//   },
-//   buttonRow: {
-//     flexDirection: 'row',
-//     justifyContent: 'space-between',
-//     marginBottom: 20,
-//   },
-//   button: {
-//     backgroundColor: '#007BFF',
-//     padding: 10,
-//     borderRadius: 5,
-//   },
-//   buttonText: {
-//     color: '#fff',
-//     fontWeight: 'bold',
-//     textAlign: 'center',
-//   },
-//   tableHeader: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     marginBottom: 10,
-//     borderBottomWidth: 1,
-//     borderBottomColor: '#ddd',
-//     paddingBottom: 5,
-//   },
-//   headerCell: {
-//     flex: 1,
-//     fontWeight: 'bold',
-//     textAlign: 'center',
-//   },
-//   checkboxCell: {
-//     width: 40,
-//     alignItems: 'center',
-//   },
-//   listContent: {
-//     paddingBottom: 20,
-//   },
-//   row: {
-//     flexDirection: 'row',
-//     alignItems: 'center',
-//     marginBottom: 10,
-//     paddingVertical: 10,
-//     borderBottomWidth: 1,
-//     borderBottomColor: '#eee',
-//   },
-//   cell: {
-//     flex: 1,
-//     textAlign: 'center',
-//   },
-//   sendButton: {
-//     backgroundColor: '#28a745',
-//     padding: 15,
-//     borderRadius: 5,
-//     marginTop: 20,
-//     alignItems: 'center',
-//   },
-//   sendButtonText: {
-//     color: '#fff',
-//     fontWeight: 'bold',
-//     fontSize: 16,
-//   },
-// });
-
-// export default ClientListScreen;
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, Button, Alert, SafeAreaView, TouchableOpacity } from 'react-native';
-import Checkbox from 'expo-checkbox';
-import { getClients, sendFollowUpMessages } from '../services/api';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { getClients } from '../services/api';
+import { Ionicons } from '@expo/vector-icons';
 
 const ClientListScreen = ({ navigation }) => {
   const [clients, setClients] = useState([]);
-  const [selectedClients, setSelectedClients] = useState([]);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetchClients();
   }, []);
 
   const fetchClients = async () => {
-    try {
-      const response = await getClients();
-      const sortedClients = response.sort((a, b) => parseInt(a["Days Since Last Appointment"]) - parseInt(b["Days Since Last Appointment"]));
-      setClients(sortedClients);
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-    }
+    const data = await getClients();
+    setClients(data);
   };
 
-  const toggleClientSelection = (client) => {
-    setSelectedClients((prevSelectedClients) => {
-      if (prevSelectedClients.includes(client)) {
-        return prevSelectedClients.filter((c) => c !== client);
-      } else {
-        return [...prevSelectedClients, client];
-      }
-    });
-  };
-
-  const handleSendMessages = async () => {
-    try {
-      await sendFollowUpMessages(selectedClients);
-      Alert.alert('Success', 'Messages sent successfully');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to send messages');
-    }
-  };
-
-  const selectAllClients = () => {
-    setSelectedClients(clients);
-  };
-
-  const deselectAllClients = () => {
-    setSelectedClients([]);
-  };
+  const filteredClients = clients.filter(client =>
+    `${client.firstName} ${client.lastName}`.toLowerCase().includes(search.toLowerCase())
+  );
 
   const renderItem = ({ item }) => (
-    <View style={styles.row}>
-      <View style={styles.checkboxCell}>
-        <Checkbox
-          value={selectedClients.includes(item)}
-          onValueChange={() => toggleClientSelection(item)}
-        />
+    <TouchableOpacity onPress={() => navigation.navigate('ClientDetails', { client: item })}>
+      <View style={styles.item}>
+        <Text style={styles.name}>{item.firstName} {item.lastName}</Text>
+        <Text style={styles.details}>{item.number} | {item.email}</Text>
       </View>
-      <Text style={styles.cell}>{`${item["First Name"]} ${item["Last Name"]}`}</Text>
-      <Text style={styles.cell}>{item.Phone}</Text>
-      <Text style={styles.cell}>{item["Days Since Last Appointment"]}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Client Dashboard</Text>
-        <View style={styles.nav}>
-          <TouchableOpacity onPress={() => navigation.navigate('ClientList')}>
-            <Text style={styles.navLink}>Clients</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('ScheduleAppointment')}>
-            <Text style={styles.navLink}>Appointments</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.navLink}>Messages</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.navLink}>Settings</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.container}>
-        <Text style={styles.title}>Manage Clients</Text>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity style={styles.button} onPress={selectAllClients}>
-            <Text style={styles.buttonText}>Select All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={deselectAllClients}>
-            <Text style={styles.buttonText}>Deselect All</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.tableHeader}>
-          <View style={styles.checkboxCell}></View>
-          <Text style={styles.headerCell}>Name</Text>
-          <Text style={styles.headerCell}>Phone</Text>
-          <Text style={styles.headerCell}>Days Since Last Appointment</Text>
-        </View>
-        <FlatList
-          data={clients}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.Email}
-          contentContainerStyle={styles.listContent}
-        />
-        <TouchableOpacity style={styles.sendButton} onPress={handleSendMessages}>
-          <Text style={styles.sendButtonText}>Send Follow-Up Messages</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2024 Client Dashboard. All rights reserved.</Text>
-        <View style={styles.footerNav}>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Privacy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Terms</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Contact</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <TextInput
+        style={styles.searchBar}
+        placeholder="Search"
+        placeholderTextColor="white"
+        value={search}
+        onChangeText={setSearch}
+      />
+      <FlatList
+        data={filteredClients}
+        renderItem={renderItem}
+        keyExtractor={item => item._id}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    backgroundColor: '#333',
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  nav: {
-    flexDirection: 'row',
-  },
-  navLink: {
-    color: '#fff',
-    marginLeft: 16,
-  },
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: '#f0f0f0',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  button: {
-    backgroundColor: '#007BFF',
-    padding: 10,
-    borderRadius: 5,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-    paddingBottom: 5,
-  },
-  headerCell: {
-    flex: 1,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  checkboxCell: {
-    width: 40,
-    alignItems: 'center',
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  cell: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  sendButton: {
-    backgroundColor: '#28a745',
-    padding: 15,
-    borderRadius: 5,
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  footer: {
-    backgroundColor: '#333',
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#fff',
-  },
-  footerNav: {
-    flexDirection: 'row',
-  },
-  footerLink: {
-    color: '#fff',
-    marginLeft: 16,
-  },
+  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e' },
+  searchBar: { padding: 10, backgroundColor: '#333', borderRadius: 5, color: 'white', marginBottom: 10 },
+  item: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#333' },
+  name: { fontSize: 18, color: 'white' },
+  details: { fontSize: 14, color: '#aaa' },
 });
 
 export default ClientListScreen;

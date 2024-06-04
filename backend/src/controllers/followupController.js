@@ -2,6 +2,7 @@ const path = require('path');
 const { readCSV } = require('../services/csvService');
 const { sendMessage } = require('../config/twilio');
 const {getClients, getCSV} = require('../config/headlessBrowser')
+
 const fs = require('fs');
 
 
@@ -48,4 +49,4 @@ module.exports = {
     sendFollowUpMessages,
     fetchClients,
     updateClientData
-};
+}

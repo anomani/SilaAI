@@ -1,91 +1,60 @@
-// // frontend/src/screens/Homepage.js
-// import React from 'react';
-// import { View, Text, Button, StyleSheet } from 'react-native';
-
-// const Homepage = ({ navigation }) => {
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.title}>Client Management System</Text>
-//       <Button
-//         title="Manage Clients"
-//         onPress={() => navigation.navigate('ClientList')}
-//       />
-//       <Button
-//         title="Schedule Appointment"
-//         onPress={() => navigation.navigate('ScheduleAppointment')}
-//       />
-//     </View>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     alignItems: 'center',
-//     backgroundColor: '#fff',
-//   },
-//   title: {
-//     fontSize: 24,
-//     marginBottom: 20,
-//   },
-// });
-
-// export default Homepage;
-
-
 import React from 'react';
-import { View, Text, Button, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 const Homepage = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Client Dashboard</Text>
-        <View style={styles.nav}>
-          <TouchableOpacity onPress={() => navigation.navigate('ClientList')}>
-            <Text style={styles.navLink}>Clients</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('ScheduleAppointment')}>
-            <Text style={styles.navLink}>Appointments</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.navLink}>Messages</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.navLink}>Settings</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>Uzi</Text>
       </View>
       <View style={styles.main}>
-        <Text style={styles.title}>Welcome to the Client Dashboard</Text>
-        <Text style={styles.subtitle}>
-          Manage your clients, appointments, and messages all in one place.
-        </Text>
-        <View style={styles.buttons}>
-          <Button
-            title="Manage Clients"
-            onPress={() => navigation.navigate('ClientList')}
-          />
-          <Button
-            title="Schedule Appointment"
-            onPress={() => navigation.navigate('ScheduleAppointment')}
-          />
-        </View>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ChatDashboard')}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Chat Dashboard</Text>
+            <Text style={styles.menuSubtitle}>View all your clients and their chats</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ClientList')}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Clients</Text>
+            <Text style={styles.menuSubtitle}>See all your clients and manage them</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Calendar')}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Calendar</Text>
+            <Text style={styles.menuSubtitle}>View all your appointments</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Settings</Text>
+            <Text style={styles.menuSubtitle}>Manage your account and settings</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2024 Client Dashboard. All rights reserved.</Text>
-        <View style={styles.footerNav}>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Privacy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Terms</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Contact</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="home" size={24} color="#fff" />
+          <Text style={styles.footerText}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ClientList')}>
+          <Ionicons name="people" size={24} color="#fff" />
+          <Text style={styles.footerText}>Clients</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Calendar')}>
+          <Ionicons name="calendar" size={24} color="#fff" />
+          <Text style={styles.footerText}>Calendar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Settings')}>
+          <Ionicons name="settings" size={24} color="#fff" />
+          <Text style={styles.footerText}>Settings</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -94,66 +63,55 @@ const Homepage = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
   },
   header: {
-    backgroundColor: '#333',
     padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
   headerTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-  },
-  nav: {
-    flexDirection: 'row',
-  },
-  navLink: {
-    color: '#fff',
-    marginLeft: 16,
   },
   main: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     padding: 16,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  buttons: {
+  menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    maxWidth: 300,
+    alignItems: 'center',
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  menuTextContainer: {
+    flex: 1,
+  },
+  menuTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  menuSubtitle: {
+    color: '#8e8e93',
+    fontSize: 14,
   },
   footer: {
-    backgroundColor: '#333',
-    padding: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+  },
+  footerItem: {
     alignItems: 'center',
   },
   footerText: {
     color: '#fff',
-  },
-  footerNav: {
-    flexDirection: 'row',
-  },
-  footerLink: {
-    color: '#fff',
-    marginLeft: 16,
+    fontSize: 12,
+    marginTop: 4,
   },
 });
 
