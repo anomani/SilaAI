@@ -113,5 +113,4 @@ async function rescheduleAppointment(name) {
     }
 }
 
-rescheduleAppointment()
 module.exports = {rescheduleAppointment}

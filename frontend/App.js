@@ -10,7 +10,10 @@ import ScheduleScreen from './src/screens/ScheduleScreen'
 import CalendarScreen from './src/screens/CalendarScreen';
 import AddAppointmentScreen from './src/screens/AddAppointmentScreen';
 import ClientDetailsScreen from './src/screens/ClientDetailsScreen';
-
+import AddClientScreen from './src/screens/AddClientScreen';
+import SuggestedFollowUpsScreen from './src/screens/SuggestedFollowUpsScreen';
+import AppointmentDetailsScreen from './src/screens/AppointmentDetailsScreen';
+import ChatScreen from './src/screens/ChatScreen';
 
 const Stack = createStackNavigator();
 
@@ -36,6 +39,10 @@ export default function App() {
         <Stack.Screen name="Calendar" component={CalendarScreen} />
         <Stack.Screen name="AddAppointment" component={AddAppointmentScreen} />
         <Stack.Screen name="ClientDetails" component={ClientDetailsScreen} />
+        <Stack.Screen name="AppointmentDetails" component={AppointmentDetailsScreen} />
+        <Stack.Screen name="AddClient" component={AddClientScreen} />
+        <Stack.Screen name="SuggestedFollowUps" component={SuggestedFollowUpsScreen} />
+        <Stack.Screen name="Chat" component={ChatScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

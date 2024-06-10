@@ -16,7 +16,7 @@ dotenv.config({ path: '../../.env' });
 */
 
 
-async function createAppointment(appointmentType, date, startTime, endTime, clientId) {
+async function createAppointment(appointmentType, date, startTime, endTime, clientId, details) {
     const db = await dbUtils.getDB()
     const appointmentCollection = db.collection('Appointment')
     const newAppointment = {
@@ -24,9 +24,17 @@ async function createAppointment(appointmentType, date, startTime, endTime, clie
         clientId: clientId,
         date: date,
         startTime: startTime,
-        endTime: endTime
+        endTime: endTime,
+        details: details
     }
     const result = await appointmentCollection.insertOne(newAppointment);
+    
+    // Reset daysSinceLastAppointment for the client
+    await db.collection('Client').updateOne(
+        { _id: new ObjectId(clientId) },
+        { $set: { daysSinceLastAppointment: 0 } }
+    );
+    
     await dbUtils.closeMongoDBConnection()
     return result;
 }
@@ -67,6 +75,14 @@ async function getAppointmentsByDay(date) {
     return appointments;
 }
 
+async function getAllAppointmentsByClientId(clientId) {
+    const db = await dbUtils.getDB();
+    const appointmentCollection = db.collection('Appointment');
+    const appointments = await appointmentCollection.find({ clientId: clientId }).toArray();
+    await dbUtils.closeMongoDBConnection();
+    return appointments;
+}
+
 
 
 
@@ -75,6 +91,8 @@ module.exports = {
   getAppointmentById,
   updateAppointment,
   deleteAppointment,
-  getAppointmentsByDay
+  getAppointmentsByDay,
+  getAllAppointmentsByClientId
 };
+
 

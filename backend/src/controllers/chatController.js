@@ -1,4 +1,5 @@
-const { handleUserInput } = require('../config/openai');
+const { handleUserInput } = require('../ai/scheduling');
+const {handleUserInputData} = require('../ai/clientData');
 
 const handleChatRequest = async (req, res) => {
   const { message } = req.body;
@@ -18,4 +19,18 @@ const handleChatRequest = async (req, res) => {
   }
 };
 
-module.exports = { handleChatRequest };
+
+const handleUserInputDataController = async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    const responseMessage = await handleUserInputData(message);
+    res.json({ message: responseMessage });
+  } catch (error) {
+    console.error('Error handling user input data:', error);
+    res.status(500).json({ error: 'Error processing request' });
+  }
+};
+module.exports = { handleChatRequest, handleUserInputDataController };

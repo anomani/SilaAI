@@ -1,24 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { addAppointment } from '../services/api';
+import Autocomplete from 'react-native-autocomplete-input';
+import { addAppointment, searchClients } from '../services/api';
+import CustomTimePicker from '../components/CustomTimePicker';
 
 const AddAppointmentScreen = ({ navigation }) => {
   const [appointment, setAppointment] = useState({
     appointmentType: '',
-    clientId: '',
+    clientName: '',
     date: new Date(),
-    startTime: new Date(),
-    endTime: new Date(),
+    startTime: '00:00',
+    endTime: '00:00',
     details: ''
   });
-
+  const [filteredClients, setFilteredClients] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState(null);
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = async (field, value) => {
     setAppointment({ ...appointment, [field]: value });
+    if (field === 'clientName') {
+      const data = await searchClients(value);
+      setFilteredClients([{ _id: 'new', firstName: 'New', lastName: 'Client' }, ...data]);
+    }
   };
 
   const handleDateChange = (event, selectedDate) => {
@@ -27,31 +34,43 @@ const AddAppointmentScreen = ({ navigation }) => {
     setAppointment({ ...appointment, date: currentDate });
   };
 
-  const handleStartTimeChange = (event, selectedTime) => {
-    const currentTime = selectedTime || appointment.startTime;
+  const handleStartTimeChange = (time) => {
+    setAppointment({ ...appointment, startTime: time });
     setShowStartTimePicker(false);
-    setAppointment({ ...appointment, startTime: currentTime });
   };
 
-  const handleEndTimeChange = (event, selectedTime) => {
-    const currentTime = selectedTime || appointment.endTime;
+  const handleEndTimeChange = (time) => {
+    setAppointment({ ...appointment, endTime: time });
     setShowEndTimePicker(false);
-    setAppointment({ ...appointment, endTime: currentTime });
+  };
+
+  const handleSelectClient = (item) => {
+    if (item._id === 'new') {
+      navigation.navigate('AddClient'); // Navigate to the add client screen
+    } else {
+      setAppointment({ ...appointment, clientName: `${item.firstName} ${item.lastName}` });
+      setSelectedClientId(item._id); // Store the selected client ID
+    }
+    setFilteredClients([]); // Clear the dropdown
+  };
+
+  const handleClientAdded = (clientId, clientName) => {
+    setSelectedClientId(clientId);
+    setAppointment({ ...appointment, clientName });
   };
 
   const handleAddAppointment = async () => {
-    const adjustTime = (date) => {
-      const adjustedDate = new Date(date);
-      adjustedDate.setHours(adjustedDate.getHours() - 4);
-      return adjustedDate;
+    const formatDate = (date) => {
+      return date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
     };
 
     const appointmentToSubmit = {
       appointmentType: appointment.appointmentType.toString(),
-      clientId: appointment.clientId.toString(),
-      date: appointment.date.toISOString().split('T')[0], // YYYY-MM-DD
-      startTime: adjustTime(appointment.startTime).toISOString().split('T')[1].slice(0, 5), // HH:MM
-      endTime: adjustTime(appointment.endTime).toISOString().split('T')[1].slice(0, 5), // HH:MM
+      clientName: appointment.clientName.toString(),
+      clientId: selectedClientId, // Include the selected client ID
+      date: formatDate(appointment.date), // YYYY-MM-DD
+      startTime: appointment.startTime, // HH:MM
+      endTime: appointment.endTime, // HH:MM
       details: appointment.details.toString()
     };
 
@@ -63,28 +82,36 @@ const AddAppointmentScreen = ({ navigation }) => {
     }
   };
 
-  // Add a function to format the date
-  const formatDate = (date) => {
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
-  };
-
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Client</Text>
-      <TextInput
-        style={styles.input}
-        value={appointment.clientId}
-        onChangeText={(value) => handleInputChange('clientId', value)}
-        placeholder="Client"
+      <Text style={styles.label}>Client Name</Text>
+      <Autocomplete
+        data={filteredClients}
+        defaultValue={appointment.clientName}
+        onChangeText={(value) => handleInputChange('clientName', value)}
+        flatListProps={{
+          keyExtractor: item => item._id,
+          renderItem: ({ item }) => (
+            <TouchableOpacity onPress={() => handleSelectClient(item)}>
+              <Text style={styles.itemText}>{item.firstName} {item.lastName}</Text>
+            </TouchableOpacity>
+          ),
+        }}
+        inputContainerStyle={[styles.inputContainer, { backgroundColor: '#2c2c2e', borderColor: '#444', borderWidth: 1, borderRadius: 8 }]}
+        placeholder="Client Name"
         placeholderTextColor="#888"
+        renderTextInput={(props) => (
+          <TextInput
+            {...props}
+            style={[styles.input, { color: '#fff' }]}
+          />
+        )}
+        listStyle={styles.listStyle}
       />
       <Text style={styles.label}>Date</Text>
       <TouchableOpacity onPress={() => setShowDatePicker(true)}>
         <Text style={styles.input}>
-          {formatDate(appointment.date)}
+          {appointment.date.toLocaleDateString('en-US')}
         </Text>
       </TouchableOpacity>
       {showDatePicker && (
@@ -98,29 +125,27 @@ const AddAppointmentScreen = ({ navigation }) => {
       <Text style={styles.label}>Starts at</Text>
       <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
         <Text style={styles.input}>
-          {appointment.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {appointment.startTime}
         </Text>
       </TouchableOpacity>
       {showStartTimePicker && (
-        <DateTimePicker
-          value={appointment.startTime}
-          mode="time"
-          display="default"
-          onChange={handleStartTimeChange}
+        <CustomTimePicker
+          visible={showStartTimePicker}
+          onClose={() => setShowStartTimePicker(false)}
+          onSelect={handleStartTimeChange}
         />
       )}
       <Text style={styles.label}>Ends at</Text>
       <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
         <Text style={styles.input}>
-          {appointment.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {appointment.endTime}
         </Text>
       </TouchableOpacity>
       {showEndTimePicker && (
-        <DateTimePicker
-          value={appointment.endTime}
-          mode="time"
-          display="default"
-          onChange={handleEndTimeChange}
+        <CustomTimePicker
+          visible={showEndTimePicker}
+          onClose={() => setShowEndTimePicker(false)}
+          onSelect={handleEndTimeChange}
         />
       )}
       <Text style={styles.label}>Appointment Type</Text>
@@ -168,6 +193,23 @@ const styles = StyleSheet.create({
   textArea: {
     height: 100,
     textAlignVertical: 'top'
+  },
+  inputContainer: {
+    marginVertical: 8
+  },
+  itemText: {
+    fontSize: 18,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    color: '#333'
+  },
+  listStyle: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    backgroundColor: '#fff',
+    padding: 5
   }
 });
 

@@ -1,9 +1,9 @@
 const { OpenAI } = require('openai');
 const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
-const { getAvailability, getCurrentDate } = require('../services/tools/getAvailability');
-const { bookAppointment } = require('../services/tools/bookAppointment');
-const {cancelAppointment} = require('../services/tools/cancelAppointment')
+const { getAvailability, getCurrentDate } = require('./tools/getAvailability');
+const { bookAppointment } = require('./tools/bookAppointment');
+const {cancelAppointment} = require('./tools/cancelAppointment')
 
 
 const openai = new OpenAI({
@@ -101,7 +101,7 @@ async function createAssistant() {
     assistant = await openai.beta.assistants.create({
       instructions: "I want you to respond to the user about availabilities from my schedule. My timings are Monday-Friday from 9am to 5pm. Respond to user queries about availability and scheduling. Do not let the user book outside of my timings. You can also be asked to reschedule or cancel. If you are asked to cancel, then use the cancel function. If you are asked to reschedule then run the function to cancel, then use the other functions to find another time with the customer and schedule a new time. If you are asked about availiability for tomorrow or today and phrases such as those then Use the getCurrentDate function to figure out today's date then use your reasoning to figure out the date for the day they are seeking. ",
       name: "Scheduling Assistant",
-      model: "gpt-4o",
+      model: "gpt-3.5-turbo",
       tools: tools
     });
   }
