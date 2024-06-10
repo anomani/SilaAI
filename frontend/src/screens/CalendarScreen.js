@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { getAppointmentsByDay } from '../services/api';
+import { getAppointmentsByDay, getClientById } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 
 const CalendarScreen = ({ navigation }) => {
@@ -21,10 +21,14 @@ const CalendarScreen = ({ navigation }) => {
       const formattedDate = `${year}-${month}-${day}`;
 
       const response = await getAppointmentsByDay(formattedDate);
-      const adjustedAppointments = response.map(appointment => ({
-        ...appointment,
-        startTime: convertTo12HourFormat(appointment.startTime),
-        endTime: convertTo12HourFormat(appointment.endTime)
+      const adjustedAppointments = await Promise.all(response.map(async (appointment) => {
+        const client = await getClientById(appointment.clientId);
+        return {
+          ...appointment,
+          clientName: `${client.firstName} ${client.lastName}`,
+          startTime: convertTo12HourFormat(appointment.startTime),
+          endTime: convertTo12HourFormat(appointment.endTime)
+        };
       }));
       setAppointments(adjustedAppointments);
     } catch (error) {
@@ -66,7 +70,7 @@ const CalendarScreen = ({ navigation }) => {
     >
       <Ionicons name={item.icon} size={24} color="white" style={styles.icon} />
       <View style={styles.itemText}>
-        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.name}>{item.clientName}</Text>
         <Text style={styles.time}>{item.startTime} - {item.endTime}</Text>
       </View>
       <Text style={styles.type}>{item.appointmentType}</Text>
@@ -82,6 +86,9 @@ const CalendarScreen = ({ navigation }) => {
         </View>
         <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddAppointment')}>
           <Ionicons name="add-circle" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.refreshButton} onPress={fetchAppointments}>
+          <Ionicons name="refresh" size={24} color="#007AFF" />
         </TouchableOpacity>
       </View>
       <FlatList
@@ -134,6 +141,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 18, color: 'white' },
   time: { fontSize: 14, color: '#aaa' },
   type: { fontSize: 14, color: '#aaa' },
+  clientName: { fontSize: 16, color: '#aaa' }, // Added this line
   navigation: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
   navButton: { padding: 10, backgroundColor: '#333', borderRadius: 5 },
   navButtonText: { color: 'white', fontSize: 16 },
@@ -141,6 +149,13 @@ const styles = StyleSheet.create({
   footerItem: { alignItems: 'center' },
   footerText: { color: '#fff', fontSize: 12, marginTop: 4 },
   addButton: { position: 'absolute', top: 10, right: 10 },
+  refreshButton: { position: 'absolute', top: 10, right: 60 }
 });
 
 export default CalendarScreen;
+
+
+
+
+
+

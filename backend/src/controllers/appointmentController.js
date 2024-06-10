@@ -1,4 +1,4 @@
-const { getAppointmentsByDay } = require('../model/appointment');
+const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment } = require('../model/appointment');
 const { createAppointment } = require('../model/appointment');
 const dbUtils = require('../model/dbUtils');
 
@@ -41,4 +41,31 @@ async function getAppointmentsByDate(req, res) {
     }
 }
 
-module.exports = { createNewAppointment, getAppointmentsByDate };
+async function getAppointmentsByClientId(req, res) {
+    try {
+        await dbUtils.connect();
+        const clientId = req.params.clientId;
+        console.log(clientId)
+        const appointments = await getAllAppointmentsByClientId(clientId);
+        console.log(appointments)
+        await dbUtils.closeMongoDBConnection();
+        res.status(200).json(appointments);
+    } catch (error) {
+        res.status(500).send(`Error fetching appointments: ${error.message}`);
+    }
+}
+
+async function delAppointment(req, res) {
+    try {
+        await dbUtils.connect();
+        const appointmentId = req.params.appointmentId;
+        const result = await deleteAppointment(appointmentId);
+        await dbUtils.closeMongoDBConnection();
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).send(`Error deleting appointment: ${error.message}`);
+    }
+}
+
+
+module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment };
