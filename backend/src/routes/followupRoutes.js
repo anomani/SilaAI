@@ -1,0 +1,11 @@
+const express = require('express');
+const router = express.Router();
+const { sendFollowUpMessages, fetchClients, updateClientData } = require('../controllers/followupController');
+
+router.get('/send-followups', sendFollowUpMessages);
+// router.get('/clients', fetchClients);  
+router.get('/update-clients', updateClientData);
+
+
+module.exports = router;
+
