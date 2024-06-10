@@ -4,7 +4,7 @@ This project provides an automation solution for barbershops, starting with a fe
 
 ## Features
 
-- **Client Follow-Up**: Automatically checks for clients who haven't visited in over 6 months and sends follow-up emails.
+- **Client Follow-Up**: Automatically checks for clients who haven't visited in over 6 months and sends follow-up messages.
 - **Appointment Scheduling**: Integrates with Acuity Scheduling to manage appointments.
 - **Payment Validation**: Ensures that clients have completed their payments.
 - **Automated Messaging**: Uses iMessage and email for client communications.
@@ -25,7 +25,3 @@ ACUITY_API_KEY=your_acuity_api_key
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_email_password
 3. npm start
-4. cd frontend
-5. npm install
-6. npm start
-7. Go to http://localhost:3000 to see the app in action.
