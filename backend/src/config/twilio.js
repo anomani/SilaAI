@@ -1,14 +1,13 @@
 const twilio = require('twilio');
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
-const { handleUserInput } = require('../ai/clientData');
-const {MessagingResponse} = require('twilio').twiml;
+const { handleUserInput } = require('../ai/scheduling');
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 
-const sendMessage = (to, body) => {
+async function sendMessage(to, body) {
   return client.messages.create({
     from: process.env.TWILIO_PHONE_NUMBER,
     to: to,
@@ -24,13 +23,16 @@ const sendMessage = (to, body) => {
   });
 };
 
-const sendMessages = async (clients, message) => {
+async function sendMessages(clients, message) {
+  console.log(clients) 
+  console.log(message)
+
   for (const client of clients) {
     await sendMessage(client, message);
   }
 };
 
-const handleIncomingMessage = async (req, res) => {
+async function handleIncomingMessage(req, res) {
   if (!req.body) {
     return res.status(400).send('No request body!');
   }

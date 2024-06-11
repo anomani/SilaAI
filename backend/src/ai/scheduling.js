@@ -20,13 +20,13 @@ const tools = [
     type: "function",
     function: {
       name: "getAvailability",
-      description: "1. **Date Headers**: Each date should be clearly marked with a header, followed by a list of appointments or a note if the entire day is free. 2. **Appointment Details**: Each appointment should include:- Name of the person- Type of appointment (e.g., Haircut) - Start and end times 3. **Blocked Times**: Specific time periods when no appointments are available should be clearly listed, marked as Unavailable, and include the date and time range. Any time outside of 9am-5pm should not be able to bookß",
+      description: "Given the day will return an array of JSON objects with the following properties: _id, appointmentType, clientId, date, startTime, endTime, details. These are the already made appointments for that day.",
       parameters: {
         type: "object",
         properties: {
           day: {
             type: "string",
-            description: "What day that they are checking availability for. This could be phrases such as today or tomorrow or could be actual dates such as May 29."
+            description: "What day that they are checking availability for. This should be in the form of YYYY-MM-DD. Convert anything else that the user gives to this form. Use the getCurrentDate if the user uses phrases such as today or tomorrow"
           }
         },
         required: ["day"]
@@ -43,11 +43,11 @@ const tools = [
         properties: {
           date: {
             type: "string",
-            description: "The date for the appointment. Date should be converted to MM/DD/YYYY"
+            description: "The date for the appointment. Date should be converted to YYYY-MM-DD"
           },
-          time: {
+          startTime: {
             type: "string",
-            description: "The time for the appointment. This could be in 24-hour format like 14:30. Convert it into military time if it isnt already."
+            description: "The time for the appointment. This could be in 24-hour format like 14:30. Convert it into military time if it isnt already in the form of HH:MM."
           },
           fname: {
             type: "string",
@@ -64,9 +64,13 @@ const tools = [
           email: {
             type: "string",
             description: "The email of the person booking the appointment"
+          },
+          appointmentType: {
+            type: "string",
+            description: "The type of appointment they want to book."
           }
         },
-        required: ["date", "time", "name", "phone", "email"]
+        required: ["date", "startTime", "fname", "lname", "phone", "email", "appointmentType"]
       }
     }
   },
@@ -85,12 +89,16 @@ const tools = [
       parameters: {
         type: "object",
         properties: {
-          name: {
+          number: {
             type: "string",
-            description: "Name of the client trying to cancel their appointment"
+            description: "Number of the client trying to cancel their appointment"
+          },
+          date: {
+            type: "string",
+            description: "Date of the appointment they want to cancel"
           }
         },
-        required: ["name"]
+        required: ["number", "date"]
       }
     }
   }
@@ -99,10 +107,11 @@ const tools = [
 async function createAssistant() {
   if (!assistant) {
     assistant = await openai.beta.assistants.create({
-      instructions: "I want you to respond to the user about availabilities from my schedule. My timings are Monday-Friday from 9am to 5pm. Respond to user queries about availability and scheduling. Do not let the user book outside of my timings. You can also be asked to reschedule or cancel. If you are asked to cancel, then use the cancel function. If you are asked to reschedule then run the function to cancel, then use the other functions to find another time with the customer and schedule a new time. If you are asked about availiability for tomorrow or today and phrases such as those then Use the getCurrentDate function to figure out today's date then use your reasoning to figure out the date for the day they are seeking. ",
+      instructions: "I want you to respond to the user about availabilities from my schedule. Using the getAvailability you are going to be given the appointments for the day. Lets say the only appointment for the day is from 9:00 to 9:30 then respond to the user saying we have availability anytime from 9:30 to 5:00. Do not tell the user what slots are already booked just give them timings that are not booked. Do not give out any information about specific appointments and client names. My timings are Monday-Friday from 9am to 5pm. Do not let the user book outside of my timings. You can also be asked to reschedule or cancel. If you are asked to cancel, then use the cancel function. If you are asked to reschedule then run the function to cancel, then use the other functions to find another time with the customer and schedule a new time. If you are asked about availiability for tomorrow or today and phrases such as those then Use the getCurrentDate function to figure out today's date then use your reasoning to figure out the date for the day they are seeking. Don't ever respond in military time always convert to AM or PM when talking to the user",
       name: "Scheduling Assistant",
-      model: "gpt-3.5-turbo",
-      tools: tools
+      model: "gpt-4o",
+      tools: tools,
+      temperature: 0.1
     });
   }
   return assistant;
@@ -126,8 +135,7 @@ async function handleUserInput(userMessage) {
     });
 
     const run = await openai.beta.threads.runs.create(thread.id, {
-      assistant_id: assistant.id,
-      instructions: "Please address the user in very informal language using phrases such as brother or bro"
+      assistant_id: assistant.id
     });
 
     while (true) {
@@ -157,7 +165,7 @@ async function handleUserInput(userMessage) {
               output: JSON.stringify(output)
             });
           } else if (funcName === "bookAppointment") {
-            const output = await bookAppointment(args.date, args.time, args.fname, args.lname, args.phone, args.email);
+            const output = await bookAppointment(args.date, args.startTime, args.fname, args.lname, args.phone, args.email, args.appointmentType);
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
@@ -169,7 +177,7 @@ async function handleUserInput(userMessage) {
               output: JSON.stringify(output)
             });
           } else if (funcName === "cancelAppointment") {
-            const output = await cancelAppointment(args.name);
+            const output = await cancelAppointment(args.number, args.date);
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)

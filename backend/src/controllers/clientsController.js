@@ -70,7 +70,6 @@ async function clientIDGet(req, res) {
     const { id } = req.params;
     await dbUtils.connect();
     const client = await getClientById(id);
-    await dbUtils.closeMongoDBConnection();
     res.status(200).json(client);
 }
 

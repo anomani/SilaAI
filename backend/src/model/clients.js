@@ -16,27 +16,32 @@ Clients:
 */
 
 async function createClient(firstName, lastName, number, email, daysSinceLastAppointment, notes) {
-    const db = await dbUtils.getDB();
-    const clientCollection = db.collection('Client');
-    const newClient = {
-        firstName: firstName,
-        lastName: lastName,
-        number: number,
-        email: email,
-        daysSinceLastAppointment: daysSinceLastAppointment,
-        notes: notes
-    };
-    const result = await clientCollection.insertOne(newClient);
-    await dbUtils.closeMongoDBConnection()
-    console.log(result)
-    return result;
+    try {
+        const db = await dbUtils.getDB();
+        const clientCollection = db.collection('Client');
+        const newClient = {
+            firstName: firstName,
+            lastName: lastName,
+            number: number,
+            email: email,
+            daysSinceLastAppointment: daysSinceLastAppointment,
+            notes: notes
+        };
+        const result = await clientCollection.insertOne(newClient);
+        console.log("Client Created");
+        return result;
+    } catch (error) {
+        console.error("Error creating client:", error);
+        throw error;
+    } finally {
+        await dbUtils.closeMongoDBConnection();
+    }
 }
 
 async function getClientById(clientId) {
     const db = await dbUtils.getDB();
     const clientCollection = db.collection('Client');
     const client = await clientCollection.findOne({ _id: new ObjectId(clientId) });
-    await dbUtils.closeMongoDBConnection()
     return client;
 }
 
@@ -128,6 +133,41 @@ async function followUp(days) {
     }
 }
 
+async function checkClientExists(phoneNumber) {
+    const db = await dbUtils.getDB();
+    const clientCollection = db.collection('Client');
+
+    try {
+        const client = await clientCollection.findOne({
+            number: phoneNumber
+        });
+        return client;
+    } catch (error) {
+        console.error('Error checking if client exists:', error);
+        throw error;
+    } finally {
+        await dbUtils.closeMongoDBConnection();
+    }
+}
+
+async function getClientIdByPhoneNumber(phoneNumber) {
+    const db = await dbUtils.getDB();
+    const clientCollection = db.collection('Client');
+
+    try {
+        const client = await clientCollection.findOne({ number: phoneNumber }, { projection: { _id: 1 } });
+        if (client) {
+            return client._id;
+        } else {
+            throw new Error('Client not found');
+        }
+    } catch (error) {
+        console.error('Error fetching client ID by phone number:', error);
+        throw error;
+    } finally {
+        await dbUtils.closeMongoDBConnection();
+    }
+}
 
 
 module.exports = {
@@ -137,6 +177,8 @@ module.exports = {
     deleteClient,
     getAllClients,
     searchForClients,
-    followUp
+    followUp,
+    checkClientExists,
+    getClientIdByPhoneNumber
 };
 

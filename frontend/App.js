@@ -35,7 +35,7 @@ export default function App() {
       <Stack.Navigator initialRouteName="Homepage">
         <Stack.Screen name="Homepage" component={Homepage} />
         <Stack.Screen name="ClientList" component={ClientListScreen} />
-        <Stack.Screen name="ScheduleAppointment" component={ScheduleScreen} />
+        <Stack.Screen name="ScheduleScreen" component={ScheduleScreen} />
         <Stack.Screen name="Calendar" component={CalendarScreen} />
         <Stack.Screen name="AddAppointment" component={AddAppointmentScreen} />
         <Stack.Screen name="ClientDetails" component={ClientDetailsScreen} />
