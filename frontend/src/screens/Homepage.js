@@ -9,7 +9,7 @@ const Homepage = ({ navigation }) => {
         <Text style={styles.headerTitle}>Uzi</Text>
       </View>
       <View style={styles.main}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ChatDashboard')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ScheduleScreen')}>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Chat Dashboard</Text>
             <Text style={styles.menuSubtitle}>View all your clients and their chats</Text>
