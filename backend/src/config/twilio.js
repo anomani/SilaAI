@@ -2,12 +2,20 @@ const twilio = require('twilio');
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
 const { handleUserInput } = require('../ai/scheduling');
-
+const { saveMessage } = require('../model/messages');
+const { getClientByPhoneNumber } = require('../model/clients');
+const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 
 async function sendMessage(to, body) {
+  const customer = await getClientByPhoneNumber(to);
+  const clientId = customer._id
+  const localDate = new Date().toLocaleString();
+  await dbUtils.connect();
+  await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId.toString());
+
   return client.messages.create({
     from: process.env.TWILIO_PHONE_NUMBER,
     to: to,
@@ -39,8 +47,18 @@ async function handleIncomingMessage(req, res) {
 
   const { Author, Body } = req.body;
   try {
-    const responseMessage = await handleUserInput(Body);
-    sendMessage(Author, responseMessage);
+    await dbUtils.connect();
+    const client = await getClientByPhoneNumber(Author);
+    const clientId = client._id
+    const localDate = new Date().toLocaleString();
+
+    await dbUtils.connect();
+    await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId.toString());
+    console.log("Author: ", Author)
+    const responseMessage = await handleUserInput(Body, Author);
+    await dbUtils.connect();
+    await sendMessage(Author, responseMessage);
+
     res.status(200).send('Message sent');
   } catch (error) {
     console.error('Error handling incoming message:', error);
@@ -53,4 +71,3 @@ module.exports = {
   handleIncomingMessage,
   sendMessages
 };
-

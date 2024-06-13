@@ -75,6 +75,7 @@ async function deleteAppointment(appointmentId) {
 
 async function getAppointmentsByDay(date) {
     const db = await dbUtils.getDB();
+    await dbUtils.connect();
     const appointmentCollection = db.collection('Appointment');
     const appointments = await appointmentCollection.find({ date }).toArray();
     await dbUtils.closeMongoDBConnection()

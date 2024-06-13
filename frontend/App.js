@@ -14,7 +14,9 @@ import AddClientScreen from './src/screens/AddClientScreen';
 import SuggestedFollowUpsScreen from './src/screens/SuggestedFollowUpsScreen';
 import AppointmentDetailsScreen from './src/screens/AppointmentDetailsScreen';
 import ChatScreen from './src/screens/ChatScreen';
-
+import EditClientScreen from './src/screens/EditClientScreen';
+import ChatDashboard from './src/screens/ChatDashboard';
+import ClientMessagesScreen from './src/screens/ClientMessagesScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
@@ -43,6 +45,9 @@ export default function App() {
         <Stack.Screen name="AddClient" component={AddClientScreen} />
         <Stack.Screen name="SuggestedFollowUps" component={SuggestedFollowUpsScreen} />
         <Stack.Screen name="Chat" component={ChatScreen} />
+        <Stack.Screen name="EditClient" component={EditClientScreen} />
+        <Stack.Screen name="ChatDashboard" component={ChatDashboard} />
+        <Stack.Screen name="ClientMessages" component={ClientMessagesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

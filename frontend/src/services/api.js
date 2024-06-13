@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
 
 export const sendFollowUpMessages = async () => {
   try {
@@ -129,6 +129,35 @@ export const handleUserInput = async (message) => {
     return response.data;
   } catch (error) {
     console.error('Error handling user input:', error);
+    throw error;
+  }
+};
+
+export const updateClient = async (clientId, client) => {
+  try {
+    await axios.put(`${API_URL}/clients/${clientId}`, client);
+  } catch (error) {
+    console.error('Error updating client:', error);
+    throw error;
+  }
+};
+
+export const getMessagesByClientId = async (clientId) => {
+  try {
+    const response = await axios.get(`${API_URL}/chat/messages/${clientId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    throw error;
+  }
+};
+
+export const getAllMessagesGroupedByClient = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/chat/messages`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching messages:', error);
     throw error;
   }
 };
