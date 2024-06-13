@@ -4,16 +4,11 @@ dotenv.config({path : '../../../.env'})
 const fs = require('fs');
 const os = require('os');
 const path = require('path')
-const {getAppointmentsByDay} = require('../../model/appointment')
 const dbUtils = require('../../model/dbUtils');
 
-const apiKey = process.env.BROWSERCLOUD_API_KEY;
 
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-
-async function getAvailability(day) {
+async function getClientInfo(number) {
     console.log("One moment please...")
     try {
         await dbUtils.connect();

@@ -1,5 +1,7 @@
 const { handleUserInput } = require('../ai/scheduling');
 const {handleUserInputData} = require('../ai/clientData');
+const { getMessagesByClientId, getAllMessages } = require('../model/messages');
+const dbUtils = require('../model/dbUtils');
 
 const handleChatRequest = async (req, res) => {
   const { message } = req.body;
@@ -19,10 +21,10 @@ const handleChatRequest = async (req, res) => {
   }
 };
 
-
 const handleUserInputDataController = async (req, res) => {
   try {
     const { message } = req.body;
+    console.log(message)
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
@@ -33,4 +35,23 @@ const handleUserInputDataController = async (req, res) => {
     res.status(500).json({ error: 'Error processing request' });
   }
 };
-module.exports = { handleChatRequest, handleUserInputDataController };
+
+const getAllMessagesGroupedByClient = async (req, res) => {
+  try {
+    await dbUtils.connect()
+    const messages = await getAllMessages();
+    const groupedMessages = messages.reduce((acc, message) => {
+      if (!acc[message.clientId]) {
+        acc[message.clientId] = [];
+      }
+      acc[message.clientId].push(message);
+      return acc;
+    }, {});
+    res.status(200).json(groupedMessages);
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ error: 'Error fetching messages' });
+  }
+};
+
+module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientId, getAllMessagesGroupedByClient };
