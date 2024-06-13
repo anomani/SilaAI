@@ -120,7 +120,7 @@ const ClientDetailsScreen = ({ route, navigation }) => {
       <Text style={styles.details}>Email: {client.email}</Text>
       <Text style={styles.details}>Days since last appointment: {client.daysSinceLastAppointment}</Text>
       <Text style={styles.details}>Notes: {client.notes}</Text>
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('EditClient', { client })}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('EditClient', { clientId: client._id })}>
         <Text style={styles.buttonText}>Edit</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={() => confirmDeleteClient(client._id)}>

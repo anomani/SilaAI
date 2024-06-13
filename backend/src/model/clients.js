@@ -5,7 +5,6 @@ dotenv.config({ path: '../../.env' });
 
 
 /*
-
 Clients:
 - First Name
 - Last Name
@@ -16,40 +15,60 @@ Clients:
 */
 
 async function createClient(firstName, lastName, number, email, daysSinceLastAppointment, notes) {
-    const db = await dbUtils.getDB();
-    const clientCollection = db.collection('Client');
-    const newClient = {
-        firstName: firstName,
-        lastName: lastName,
-        number: number,
-        email: email,
-        daysSinceLastAppointment: daysSinceLastAppointment,
-        notes: notes
-    };
-    const result = await clientCollection.insertOne(newClient);
-    await dbUtils.closeMongoDBConnection()
-    console.log(result)
-    return result;
+    try {
+        const db = await dbUtils.getDB();
+        const clientCollection = db.collection('Client');
+        const newClient = {
+            firstName: firstName,
+            lastName: lastName,
+            number: number,
+            email: email,
+            daysSinceLastAppointment: daysSinceLastAppointment,
+            notes: notes
+        };
+        const result = await clientCollection.insertOne(newClient);
+        console.log("Client Created");
+        return result;
+    } catch (error) {
+        console.error("Error creating client:", error);
+        throw error;
+    } finally {
+        await dbUtils.closeMongoDBConnection();
+    }
 }
 
 async function getClientById(clientId) {
     const db = await dbUtils.getDB();
     const clientCollection = db.collection('Client');
     const client = await clientCollection.findOne({ _id: new ObjectId(clientId) });
-    await dbUtils.closeMongoDBConnection()
     return client;
 }
 
 async function updateClient(clientId, updateData) {
-    const db = await dbUtils.getDB();
-    const clientCollection = db.collection('Client');
-    const result = await clientCollection.findOneAndUpdate(
-        { _id: new ObjectId(clientId) },
-        { $set: updateData },
-        { returnOriginal: false }
-    );
-    await dbUtils.closeMongoDBConnection()
-    return result.value;
+    try {
+        const db = await dbUtils.getDB();
+        const clientCollection = db.collection('Client');
+        
+        // Log the input parameters
+        console.log('Updating client with ID:', clientId);
+        console.log('Update data:', updateData);
+
+ 
+        const result = await clientCollection.findOneAndUpdate(
+            { _id: new ObjectId(clientId) },
+            { $set: updateData },
+            { returnDocument: 'after' }
+        );
+
+        // Log the result
+        console.log('Update result:', result);
+
+        await dbUtils.closeMongoDBConnection();
+        return result.value;
+    } catch (error) {
+        console.error('Error updating client:', error);
+        throw error;
+    }
 }
 
 async function deleteClient(clientId) {
@@ -128,6 +147,46 @@ async function followUp(days) {
     }
 }
 
+async function checkClientExists(phoneNumber) {
+    const db = await dbUtils.getDB();
+    const clientCollection = db.collection('Client');
+
+    try {
+        const client = await clientCollection.findOne({
+            number: phoneNumber
+        });
+        return client;
+    } catch (error) {
+        console.error('Error checking if client exists:', error);
+        throw error;
+    } finally {
+        await dbUtils.closeMongoDBConnection();
+    }
+}
+
+async function getClientByPhoneNumber(phoneNumber) {
+    const db = await dbUtils.getDB();
+    const clientCollection = db.collection('Client');
+
+    if (phoneNumber.startsWith('+1')) {
+        phoneNumber = phoneNumber.slice(2);
+    }
+    try {
+        const clientId = await clientCollection.findOne({ number: phoneNumber }, { projection: { _id: 1 } });
+        const client = await getClientById(clientId._id.toString())
+        if (client) {
+            return client;
+        } else {
+            throw new Error('Client not found');
+        }
+    } catch (error) {
+        console.error('Error fetching client ID by phone number:', error);
+        throw error;
+    } finally {
+        await dbUtils.closeMongoDBConnection();
+    }
+}
+
 
 
 module.exports = {
@@ -137,6 +196,10 @@ module.exports = {
     deleteClient,
     getAllClients,
     searchForClients,
-    followUp
+    followUp,
+    checkClientExists,
+    getClientByPhoneNumber
 };
+
+
 

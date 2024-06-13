@@ -17,26 +17,32 @@ dotenv.config({ path: '../../.env' });
 
 
 async function createAppointment(appointmentType, date, startTime, endTime, clientId, details) {
-    const db = await dbUtils.getDB()
-    const appointmentCollection = db.collection('Appointment')
-    const newAppointment = {
-        appointmentType: appointmentType,
-        clientId: clientId,
-        date: date,
-        startTime: startTime,
-        endTime: endTime,
-        details: details
+    try {
+        const db = await dbUtils.getDB();
+        const appointmentCollection = db.collection('Appointment');
+        const newAppointment = {
+            appointmentType: appointmentType,
+            clientId: clientId,
+            date: date,
+            startTime: startTime,
+            endTime: endTime,
+            details: details
+        };
+        const result = await appointmentCollection.insertOne(newAppointment);
+        
+        // Reset daysSinceLastAppointment for the client
+        await db.collection('Client').updateOne(
+            { _id: new ObjectId(clientId) },
+            { $set: { daysSinceLastAppointment: 0 } }
+        );
+        
+        return result;
+    } catch (error) {
+        console.error("Error creating appointment:", error);
+        throw error;
+    } finally {
+        await dbUtils.closeMongoDBConnection();
     }
-    const result = await appointmentCollection.insertOne(newAppointment);
-    
-    // Reset daysSinceLastAppointment for the client
-    await db.collection('Client').updateOne(
-        { _id: new ObjectId(clientId) },
-        { $set: { daysSinceLastAppointment: 0 } }
-    );
-    
-    await dbUtils.closeMongoDBConnection()
-    return result;
 }
 
 async function getAppointmentById(appointmentId) {
@@ -69,6 +75,7 @@ async function deleteAppointment(appointmentId) {
 
 async function getAppointmentsByDay(date) {
     const db = await dbUtils.getDB();
+    await dbUtils.connect();
     const appointmentCollection = db.collection('Appointment');
     const appointments = await appointmentCollection.find({ date }).toArray();
     await dbUtils.closeMongoDBConnection()

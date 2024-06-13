@@ -1,179 +1,99 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, FlatList, KeyboardAvoidingView, Platform, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { sendMessage } from '../services/api';
+import { Ionicons } from '@expo/vector-icons';
 
 const ScheduleScreen = ({ navigation }) => {
+  const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
 
-  const handleSendMessage = async () => {
-    if (input.trim().length === 0) return;
+  const handleSend = async () => {
+    if (message.trim() === '') return;
 
-    const userMessage = { sender: 'user', text: input };
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    setInput('');
+    const newMessages = [...messages, { text: message, sender: 'user' }];
+    setMessages(newMessages);
+    setMessage('');
 
     try {
-      const responseMessage = await sendMessage(input);
-      const botMessage = { sender: 'bot', text: responseMessage };
-      setMessages((prevMessages) => [...prevMessages, botMessage]);
+      const response = await sendMessage(message);
+      const responseMessage = typeof response === 'string' ? response : response.message;
+      setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
     } catch (error) {
       console.error('Error sending message:', error);
-      const errorMessage = { sender: 'bot', text: 'Something went wrong. Please try again.' };
-      setMessages((prevMessages) => [...prevMessages, errorMessage]);
     }
   };
 
-  const renderMessage = ({ item }) => (
+  const renderItem = ({ item }) => (
     <View style={[styles.messageContainer, item.sender === 'user' ? styles.userMessage : styles.botMessage]}>
       <Text style={styles.messageText}>{item.text}</Text>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Client Dashboard</Text>
-        <View style={styles.nav}>
-          <TouchableOpacity onPress={() => navigation.navigate('ClientList')}>
-            <Text style={styles.navLink}>Clients</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('ScheduleAppointment')}>
-            <Text style={styles.navLink}>Appointments</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.navLink}>Messages</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.navLink}>Settings</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={90}
-      >
-        <Text style={styles.title}>Schedule Appointment</Text>
-        <FlatList
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={(item, index) => index.toString()}
-          contentContainerStyle={styles.messageList}
+    <View style={styles.container}>
+      <FlatList
+        data={messages}
+        renderItem={renderItem}
+        keyExtractor={(item, index) => index.toString()}
+        contentContainerStyle={styles.chatContainer}
+      />
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          value={message}
+          onChangeText={setMessage}
+          placeholder="Type a message"
+          placeholderTextColor="#888"
         />
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder="Type a message..."
-          />
-          <Button title="Send" onPress={handleSendMessage} />
-        </View>
-      </KeyboardAvoidingView>
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2024 Client Dashboard. All rights reserved.</Text>
-        <View style={styles.footerNav}>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Privacy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Terms</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.footerLink}>Contact</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
+          <Ionicons name="send" size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    backgroundColor: '#333',
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  nav: {
-    flexDirection: 'row',
-  },
-  navLink: {
-    color: '#fff',
-    marginLeft: 16,
-  },
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
-    padding: 16,
+    backgroundColor: '#1c1c1e',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  messageList: {
+  chatContainer: {
     padding: 10,
   },
   messageContainer: {
     marginVertical: 5,
     padding: 10,
-    borderRadius: 5,
+    borderRadius: 10,
   },
   userMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#dcf8c6',
+    backgroundColor: '#007AFF',
   },
   botMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: '#f1f0f0',
+    backgroundColor: '#333',
   },
   messageText: {
-    fontSize: 16,
+    color: '#fff',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
     borderTopWidth: 1,
-    borderTopColor: '#ccc',
+    borderTopColor: '#333',
+    backgroundColor: '#1c1c1e',
   },
   input: {
     flex: 1,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    marginRight: 10,
-  },
-  footer: {
+    padding: 10,
     backgroundColor: '#333',
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  footerText: {
+    borderRadius: 20,
     color: '#fff',
   },
-  footerNav: {
-    flexDirection: 'row',
-  },
-  footerLink: {
-    color: '#fff',
-    marginLeft: 16,
+  sendButton: {
+    marginLeft: 10,
   },
 });
 
