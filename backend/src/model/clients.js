@@ -5,7 +5,6 @@ dotenv.config({ path: '../../.env' });
 
 
 /*
-
 Clients:
 - First Name
 - Last Name
@@ -46,15 +45,30 @@ async function getClientById(clientId) {
 }
 
 async function updateClient(clientId, updateData) {
-    const db = await dbUtils.getDB();
-    const clientCollection = db.collection('Client');
-    const result = await clientCollection.findOneAndUpdate(
-        { _id: new ObjectId(clientId) },
-        { $set: updateData },
-        { returnOriginal: false }
-    );
-    await dbUtils.closeMongoDBConnection()
-    return result.value;
+    try {
+        const db = await dbUtils.getDB();
+        const clientCollection = db.collection('Client');
+        
+        // Log the input parameters
+        console.log('Updating client with ID:', clientId);
+        console.log('Update data:', updateData);
+
+ 
+        const result = await clientCollection.findOneAndUpdate(
+            { _id: new ObjectId(clientId) },
+            { $set: updateData },
+            { returnDocument: 'after' }
+        );
+
+        // Log the result
+        console.log('Update result:', result);
+
+        await dbUtils.closeMongoDBConnection();
+        return result.value;
+    } catch (error) {
+        console.error('Error updating client:', error);
+        throw error;
+    }
 }
 
 async function deleteClient(clientId) {
@@ -150,14 +164,18 @@ async function checkClientExists(phoneNumber) {
     }
 }
 
-async function getClientIdByPhoneNumber(phoneNumber) {
+async function getClientByPhoneNumber(phoneNumber) {
     const db = await dbUtils.getDB();
     const clientCollection = db.collection('Client');
 
+    if (phoneNumber.startsWith('+1')) {
+        phoneNumber = phoneNumber.slice(2);
+    }
     try {
-        const client = await clientCollection.findOne({ number: phoneNumber }, { projection: { _id: 1 } });
+        const clientId = await clientCollection.findOne({ number: phoneNumber }, { projection: { _id: 1 } });
+        const client = await getClientById(clientId._id.toString())
         if (client) {
-            return client._id;
+            return client;
         } else {
             throw new Error('Client not found');
         }
@@ -170,6 +188,7 @@ async function getClientIdByPhoneNumber(phoneNumber) {
 }
 
 
+
 module.exports = {
     createClient,
     getClientById,
@@ -179,6 +198,8 @@ module.exports = {
     searchForClients,
     followUp,
     checkClientExists,
-    getClientIdByPhoneNumber
+    getClientByPhoneNumber
 };
+
+
 

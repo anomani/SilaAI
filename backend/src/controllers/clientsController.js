@@ -1,4 +1,4 @@
-const { getAllClients, createClient, searchForClients, deleteClient, followUp, getClientById } = require('../model/clients');
+const { getAllClients, createClient, searchForClients, deleteClient, followUp, getClientById, updateClient } = require('../model/clients');
 const dbUtils = require('../model/dbUtils');
 
 
@@ -73,5 +73,15 @@ async function clientIDGet(req, res) {
     res.status(200).json(client);
 }
 
-
-module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet };
+async function updateTheClient(req, res) {
+    try {
+        const { id } = req.params;
+        const { firstName, lastName, number, email } = req.body;
+        await dbUtils.connect();
+        const result = await updateClient(id, firstName, lastName, number, email);
+        res.status(200).json(result);
+    } catch (error) {
+        res.status(500).send(`Error updating client: ${error.message}`);
+    }
+}
+module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient };
