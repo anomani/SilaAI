@@ -21,7 +21,7 @@ const tools = [
     type: "function",
     function: {
       name: "getAvailability",
-      description: "Given the day will return an array of JSON objects with the following properties: _id, appointmentType, clientId, date, startTime, endTime, details. These are the already made appointments for that day.",
+      description: "Given the day will return an array of JSON objects with the following properties: id, appointmentType, clientId, date, startTime, endTime, details. These are the already made appointments for that day.",
       parameters: {
         type: "object",
         properties: {
@@ -105,16 +105,16 @@ async function createThread() {
   return thread;
 }
 
-async function handleUserInput(userMessage,number) {
+async function handleUserInput(userMessage,phoneNumber) {
   try {
     const assistant = await createAssistant();
     const thread = await createThread();
     await dbUtils.connect()
-    const client = await getClientByPhoneNumber(number)
+    const client = await getClientByPhoneNumber(phoneNumber)
     const fname = client.firstName
     const lname = client.lastName
     const email = client.email
-    const phone = client.number
+    const phone = client.phoneNumber
 
     const message = await openai.beta.threads.messages.create(thread.id, {
       role: "user",
@@ -165,7 +165,7 @@ async function handleUserInput(userMessage,number) {
               output: JSON.stringify(output)
             });
           } else if (funcName === "cancelAppointment") {
-            const output = await cancelAppointment(phone, args.date);
+            const output = await cancelAppointment(phoneNumber, args.date);
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)

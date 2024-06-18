@@ -1,7 +1,6 @@
 const { handleUserInput } = require('../ai/scheduling');
 const {handleUserInputData} = require('../ai/clientData');
 const { getMessagesByClientId, getAllMessages } = require('../model/messages');
-const dbUtils = require('../model/dbUtils');
 
 const handleChatRequest = async (req, res) => {
   const { message } = req.body;
@@ -38,7 +37,6 @@ const handleUserInputDataController = async (req, res) => {
 
 const getAllMessagesGroupedByClient = async (req, res) => {
   try {
-    await dbUtils.connect()
     const messages = await getAllMessages();
     const groupedMessages = messages.reduce((acc, message) => {
       if (!acc[message.clientId]) {

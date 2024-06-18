@@ -4,7 +4,7 @@ const dbUtils = require('../model/dbUtils');
 
 async function createNewAppointment(req, res) {
   try {
-    await dbUtils.connect()
+
     const { appointmentType, date, startTime, endTime, clientId, details } = req.body;
 
     if (!appointmentType || !date || !startTime || !endTime || !clientId) {
@@ -13,7 +13,7 @@ async function createNewAppointment(req, res) {
 
 
     const result = await createAppointment(appointmentType, date, startTime, endTime, clientId, details);
-    await dbUtils.closeMongoDBConnection()
+
     res.status(201).json(result);
   } catch (error) {
     if (error.message.includes('validation failed')) {
@@ -29,12 +29,12 @@ async function createNewAppointment(req, res) {
 
 async function getAppointmentsByDate(req, res) {
     try {
-        await dbUtils.connect()
+
         const date = req.params.date;
         console.log(date)
         const appointments = await getAppointmentsByDay(date);
         console.log(appointments)
-        await dbUtils.closeMongoDBConnection()
+
         res.status(200).json(appointments);
     } catch (error) {
         res.status(500).send(`Error fetching appointments: ${error.message}`);
@@ -43,12 +43,10 @@ async function getAppointmentsByDate(req, res) {
 
 async function getAppointmentsByClientId(req, res) {
     try {
-        await dbUtils.connect();
         const clientId = req.params.clientId;
         console.log(clientId)
         const appointments = await getAllAppointmentsByClientId(clientId);
         console.log(appointments)
-        await dbUtils.closeMongoDBConnection();
         res.status(200).json(appointments);
     } catch (error) {
         res.status(500).send(`Error fetching appointments: ${error.message}`);
@@ -57,10 +55,8 @@ async function getAppointmentsByClientId(req, res) {
 
 async function delAppointment(req, res) {
     try {
-        await dbUtils.connect();
         const appointmentId = req.params.appointmentId;
         const result = await deleteAppointment(appointmentId);
-        await dbUtils.closeMongoDBConnection();
         res.status(200).json(result);
     } catch (error) {
         res.status(500).send(`Error deleting appointment: ${error.message}`);

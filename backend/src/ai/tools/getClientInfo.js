@@ -4,14 +4,12 @@ dotenv.config({path : '../../../.env'})
 const fs = require('fs');
 const os = require('os');
 const path = require('path')
-const dbUtils = require('../../model/dbUtils');
 
 
 
-async function getClientInfo(number) {
+async function getClientInfo(phoneNumber) {
     console.log("One moment please...")
     try {
-        await dbUtils.connect();
         const appointments = await getAppointmentsByDay(day)
         console.log(appointments)
         return appointments

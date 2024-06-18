@@ -8,7 +8,7 @@ const EditClientScreen = ({ route, navigation }) => {
     firstName: '',
     lastName: '',
     email: '',
-    number: '',
+    phoneNumber: '',
   });
 
   useEffect(() => {
@@ -56,8 +56,8 @@ const EditClientScreen = ({ route, navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Phone Number"
-        value={client.number}
-        onChangeText={(value) => handleChange('number', value)}
+        value={client.phoneNumber}
+        onChangeText={(value) => handleChange('phoneNumber', value)}
       />
       <Button title="Save" onPress={handleSubmit} />
     </View>

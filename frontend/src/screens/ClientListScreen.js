@@ -26,7 +26,7 @@ const ClientListScreen = () => {
     <TouchableOpacity onPress={() => navigation.navigate('ClientDetails', { client: item })}>
       <View style={styles.item}>
         <Text style={styles.name}>{item.firstName} {item.lastName}</Text>
-        <Text style={styles.details}>{item.number} | {item.email}</Text>
+        <Text style={styles.details}>{item.phoneNumber} | {item.email}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -58,7 +58,7 @@ const ClientListScreen = () => {
         <FlatList
           data={filteredClients}
           renderItem={renderItem}
-          keyExtractor={item => item._id}
+          keyExtractor={item => item.id}
         />
       </View>
     </SafeAreaView>

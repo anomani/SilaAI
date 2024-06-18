@@ -14,20 +14,17 @@ const apiKey = process.env.BROWSERCLOUD_API_KEY;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
-async function cancelAppointment(number, date) {
+async function cancelAppointment(phoneNumber, date) {
     try {
-        await dbUtils.connect()
-        const client = await checkClientExists(number)
+        const client = await checkClientExists(phoneNumber)
 
-        await dbUtils.connect()
         const appointmentsForDay = await getAppointmentsByDay(date)
-        const appointment = appointmentsForDay.find(appointment => appointment.clientId === client._id.toString())
+        const appointment = appointmentsForDay.find(appointment => appointment.clientId === client.id)
         if (!appointment) {
             return "Appointment not found"
         }
 
-        await dbUtils.connect()
-        await deleteAppointment(appointment._id.toString())
+        await deleteAppointment(appointment.id)
         return "Appointment cancelled successfully"
     } catch (error) {
         console.log(error)

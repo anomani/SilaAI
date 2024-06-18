@@ -1,105 +1,111 @@
-const { MongoClient, ObjectId } = require('mongodb');
-const dotenv = require('dotenv');
 const dbUtils = require('./dbUtils');
-dotenv.config({ path: '../../.env' });
-
-
-/*
-## Appointments
-
-- Appointment Id
-- Type
-- Client Id
-- Date
-- Start Time
-- End Time
-*/
-
 
 async function createAppointment(appointmentType, date, startTime, endTime, clientId, details) {
-    try {
-        const db = await dbUtils.getDB();
-        const appointmentCollection = db.collection('Appointment');
-        const newAppointment = {
-            appointmentType: appointmentType,
-            clientId: clientId,
-            date: date,
-            startTime: startTime,
-            endTime: endTime,
-            details: details
-        };
-        const result = await appointmentCollection.insertOne(newAppointment);
-        
-        // Reset daysSinceLastAppointment for the client
-        await db.collection('Client').updateOne(
-            { _id: new ObjectId(clientId) },
-            { $set: { daysSinceLastAppointment: 0 } }
-        );
-        
-        return result;
-    } catch (error) {
-        console.error("Error creating appointment:", error);
-        throw error;
-    } finally {
-        await dbUtils.closeMongoDBConnection();
-    }
+    const db = dbUtils.getDB();
+    const sql = `
+        INSERT INTO Appointment (appointmentType, date, startTime, endTime, clientId, details)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    return new Promise((resolve, reject) => {
+        db.run(sql, [appointmentType, date, startTime, endTime, clientId, details], function(err) {
+            if (err) {
+                console.error('Error creating appointment:', err.message);
+                reject(err);
+            } else {
+                console.log('Appointment Created with ID:', this.lastID);
+                resolve(this.lastID);
+            }
+        });
+    });
 }
 
 async function getAppointmentById(appointmentId) {
-    const db = await dbUtils.getDB();
-    const appointmentCollection = db.collection('Appointment');
-    const appointment = await appointmentCollection.findOne({ _id: new ObjectId(appointmentId) });
-    await dbUtils.closeMongoDBConnection()
-    return appointment;
+    const db = dbUtils.getDB();
+    const sql = 'SELECT * FROM Appointment WHERE id = ?';
+    return new Promise((resolve, reject) => {
+        db.get(sql, [appointmentId], (err, row) => {
+            if (err) {
+                console.error('Error fetching appointment:', err.message);
+                reject(err);
+            } else {
+                resolve(row);
+            }
+        });
+    });
 }
 
 async function updateAppointment(appointmentId, updateData) {
-  const db = await dbUtils.getDB();
-  const appointmentCollection = db.collection('Appointment');
-  const result = await appointmentCollection.findOneAndUpdate(
-    { _id: new ObjectId(appointmentId) },
-    { $set: updateData },
-    { returnOriginal: false }
-  );
-  await dbUtils.closeMongoDBConnection()
-  return result.value;
+    const db = dbUtils.getDB();
+    const sql = `
+        UPDATE Appointment
+        SET appointmentType = ?, date = ?, startTime = ?, endTime = ?, clientId = ?, details = ?
+        WHERE id = ?
+    `;
+    const params = [updateData.appointmentType, updateData.date, updateData.startTime, updateData.endTime, updateData.clientId, updateData.details, appointmentId];
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function(err) {
+            if (err) {
+                console.error('Error updating appointment:', err.message);
+                reject(err);
+            } else {
+                console.log(`Appointment Updated: ${this.changes} changes made`);
+                resolve(this.changes);
+            }
+        });
+    });
 }
 
 async function deleteAppointment(appointmentId) {
-  const db = await dbUtils.getDB();
-  const appointmentCollection = db.collection('Appointment');
-  const result = await appointmentCollection.findOneAndDelete({ _id: new ObjectId(appointmentId) });
-  await dbUtils.closeMongoDBConnection()
-  return result.value;
+    const db = dbUtils.getDB();
+    const sql = 'DELETE FROM Appointment WHERE id = ?';
+    return new Promise((resolve, reject) => {
+        db.run(sql, [appointmentId], function(err) {
+            if (err) {
+                console.error('Error deleting appointment:', err.message);
+                reject(err);
+            } else {
+                console.log('Appointment Deleted');
+                resolve(this.changes);
+            }
+        });
+    });
 }
 
 async function getAppointmentsByDay(date) {
-    const db = await dbUtils.getDB();
-    await dbUtils.connect();
-    const appointmentCollection = db.collection('Appointment');
-    const appointments = await appointmentCollection.find({ date }).toArray();
-    await dbUtils.closeMongoDBConnection()
-    return appointments;
+    const db = dbUtils.getDB();
+    const sql = 'SELECT * FROM Appointment WHERE date = ?';
+    return new Promise((resolve, reject) => {
+        db.all(sql, [date], (err, rows) => {
+            if (err) {
+                console.error('Error fetching appointments by day:', err.message);
+                reject(err);
+            } else {
+                resolve(rows);
+            }
+        });
+    });
 }
 
 async function getAllAppointmentsByClientId(clientId) {
-    const db = await dbUtils.getDB();
-    const appointmentCollection = db.collection('Appointment');
-    const appointments = await appointmentCollection.find({ clientId: clientId }).toArray();
-    await dbUtils.closeMongoDBConnection();
-    return appointments;
+    const db = dbUtils.getDB();
+    const sql = 'SELECT * FROM Appointment WHERE clientId = ?';
+    return new Promise((resolve, reject) => {
+        db.all(sql, [clientId], (err, rows) => {
+            if (err) {
+                console.error('Error fetching appointments by client ID:', err.message);
+                reject(err);
+            } else {
+                resolve(rows);
+            }
+        });
+    });
 }
 
-
-
-
 module.exports = {
-  createAppointment,
-  getAppointmentById,
-  updateAppointment,
-  deleteAppointment,
-  getAppointmentsByDay,
-  getAllAppointmentsByClientId
+    createAppointment,
+    getAppointmentById,
+    updateAppointment,
+    deleteAppointment,
+    getAppointmentsByDay,
+    getAllAppointmentsByClientId
 };
-
-
