@@ -11,11 +11,11 @@ async function migrateData() {
     try {
         for (const line of lines) {
             if (line.trim() === '') continue; // Skip empty lines
-            const [firstName, lastName, number, email, notes, daysSinceLastAppointment] = line.split(',').map(item => item.replace(/"/g, '').trim());
+            const [firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment] = line.split(',').map(item => item.replace(/"/g, '').trim());
 
             try {
                 await dbUtils.connect();
-                await createClient(firstName, lastName, number, email, daysSinceLastAppointment, notes);
+                await createClient(firstName, lastName, phoneNumber, email, daysSinceLastAppointment, notes);
                 console.log(`Successfully added client: ${firstName} ${lastName}`);
                 await dbUtils.closeMongoDBConnection();
             } catch (error) {

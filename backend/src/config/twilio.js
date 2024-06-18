@@ -11,10 +11,9 @@ const client = twilio(accountSid, authToken);
 
 async function sendMessage(to, body) {
   const customer = await getClientByPhoneNumber(to);
-  const clientId = customer._id
+  const clientId = customer.id
   const localDate = new Date().toLocaleString();
-  await dbUtils.connect();
-  await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId.toString());
+  await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId);
 
   return client.messages.create({
     from: process.env.TWILIO_PHONE_NUMBER,
@@ -47,16 +46,16 @@ async function handleIncomingMessage(req, res) {
 
   const { Author, Body } = req.body;
   try {
-    await dbUtils.connect();
+
     const client = await getClientByPhoneNumber(Author);
-    const clientId = client._id
+    const clientId = client.id
     const localDate = new Date().toLocaleString();
 
-    await dbUtils.connect();
-    await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId.toString());
+
+    await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
     console.log("Author: ", Author)
     const responseMessage = await handleUserInput(Body, Author);
-    await dbUtils.connect();
+
     await sendMessage(Author, responseMessage);
 
     res.status(200).send('Message sent');

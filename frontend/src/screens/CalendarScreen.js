@@ -92,9 +92,9 @@ const CalendarScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       <FlatList
-        data={appointments}
+        data={appointments} 
         renderItem={renderItem}
-        keyExtractor={(item) => item._id}
+        keyExtractor={(item) => item.id}
       />
       <View style={styles.navigation}>
         <TouchableOpacity style={styles.navButton} onPress={() => changeDate(-1)}>

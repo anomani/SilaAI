@@ -162,3 +162,12 @@ export const getAllMessagesGroupedByClient = async () => {
   }
 };
 
+export const getDaysSinceLastAppointment = async (clientId) => {
+  try {
+    const response = await axios.get(`${API_URL}/clients/days-since-last-appointment/${clientId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching days since last appointment:', error);
+    throw error;
+  }
+};

@@ -22,13 +22,13 @@ const ChatDashboard = () => {
 
   const renderMessages = (messages) => {
     return messages.map((message) => {
-      const avatar = message.from === '+18446480598' ? twilioAvatar : defaultAvatar;
+      const avatar = message.fromText === '+18446480598' ? twilioAvatar : defaultAvatar;
       return (
-        <View key={message._id} style={styles.messageContainer}>
+        <View key={message.id} style={styles.messageContainer}>
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.messageContent}>
             <View style={styles.messageHeader}>
-              <Text style={styles.messageSender}>{message.from}</Text>
+              <Text style={styles.messageSender}>{message.fromText}</Text>
               <Text style={styles.messageTime}>{message.date}</Text>
             </View>
             <Text style={styles.messageText}>{message.body}</Text>

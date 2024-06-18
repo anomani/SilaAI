@@ -16,7 +16,6 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 async function getAvailability(day) {
     console.log("One moment please...")
     try {
-        await dbUtils.connect();
         const appointments = await getAppointmentsByDay(day)
         console.log(appointments)
         return appointments

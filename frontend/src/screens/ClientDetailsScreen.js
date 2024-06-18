@@ -1,25 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
-import { getAppointmentsByClientId, deleteClient } from '../services/api';
+import { getAppointmentsByClientId, deleteClient, getDaysSinceLastAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 
 const ClientDetailsScreen = ({ route, navigation }) => {
   const { client } = route.params;
   const [appointments, setAppointments] = useState([]);
   const [groupedAppointments, setGroupedAppointments] = useState({});
+  const [daysSinceLastAppointment, setDaysSinceLastAppointment] = useState('');
 
   useEffect(() => {
     fetchAppointments();
+    fetchDaysSinceLastAppointment();
   }, []);
 
   const fetchAppointments = async () => {
     try {
-      const response = await getAppointmentsByClientId(client._id);
+      const response = await getAppointmentsByClientId(client.id);
       const grouped = groupAppointmentsByDate(response);
       setAppointments(response);
       setGroupedAppointments(grouped);
     } catch (error) {
       console.error('Error fetching appointments:', error);
+    }
+  };
+
+  const fetchDaysSinceLastAppointment = async () => {
+    try {
+      const response = await getDaysSinceLastAppointment(client.id);
+      setDaysSinceLastAppointment(response.daysSinceLastAppointment);
+    } catch (error) {
+      console.error('Error fetching days since last appointment:', error);
     }
   };
 
@@ -75,7 +86,7 @@ const ClientDetailsScreen = ({ route, navigation }) => {
       <FlatList
         data={item.appointments}
         renderItem={renderAppointment}
-        keyExtractor={(appointment) => appointment._id}
+        keyExtractor={(appointment) => appointment.id}
       />
     </View>
   );
@@ -116,14 +127,14 @@ const ClientDetailsScreen = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.name}>{client.firstName} {client.lastName}</Text>
-      <Text style={styles.details}>Phone: {client.number}</Text>
+      <Text style={styles.details}>Phone: {client.phoneNumber}</Text>
       <Text style={styles.details}>Email: {client.email}</Text>
-      <Text style={styles.details}>Days since last appointment: {client.daysSinceLastAppointment}</Text>
+      <Text style={styles.details}>Days since last appointment: {daysSinceLastAppointment}</Text>
       <Text style={styles.details}>Notes: {client.notes}</Text>
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('EditClient', { clientId: client._id })}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('EditClient', { clientId: client.id })}>
         <Text style={styles.buttonText}>Edit</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => confirmDeleteClient(client._id)}>
+      <TouchableOpacity style={styles.button} onPress={() => confirmDeleteClient(client.id)}>
         <Text style={styles.buttonText}>Delete</Text>
       </TouchableOpacity>
       <FlatList

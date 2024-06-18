@@ -22,7 +22,7 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
 
   const handleDelete = async () => {
     try {
-      await deleteAppointment(appointment._id);
+      await deleteAppointment(appointment.id);
       Alert.alert('Success', 'Appointment deleted successfully');
       navigation.goBack();
     } catch (error) {
