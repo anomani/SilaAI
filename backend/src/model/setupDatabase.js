@@ -21,7 +21,7 @@ db.serialize(() => {
             notes TEXT
         );
     `);
-
+    
     db.run(`
         CREATE TABLE IF NOT EXISTS Appointment (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

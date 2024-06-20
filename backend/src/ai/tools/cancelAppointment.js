@@ -4,7 +4,7 @@ dotenv.config({path : '../../../.env'})
 const fs = require('fs');
 const os = require('os');
 const path = require('path')
-const {checkClientExists} = require ('../../model/clients') 
+const {getClientByPhoneNumber} = require ('../../model/clients') 
 const {deleteAppointment, getAppointmentsByDay} = require ('../../model/appointment')
 const dbUtils = require('../../model/dbUtils')
 
@@ -16,16 +16,16 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function cancelAppointment(phoneNumber, date) {
     try {
-        const client = await checkClientExists(phoneNumber)
-
+        const client = await getClientByPhoneNumber(phoneNumber)
         const appointmentsForDay = await getAppointmentsByDay(date)
+        console.log(appointmentsForDay)
         const appointment = appointmentsForDay.find(appointment => appointment.clientId === client.id)
         if (!appointment) {
             return "Appointment not found"
         }
 
         await deleteAppointment(appointment.id)
-        return "Appointment cancelled successfully"
+        return appointment;
     } catch (error) {
         console.log(error)
         return "Unable to cancel the appointment"
