@@ -28,6 +28,8 @@ async function addClient(req, res) {
     }
 }
 
+
+
 async function searchClients(req, res) {
   try {
     const { query } = req.query;
@@ -63,7 +65,7 @@ async function clientIDGet(req, res) {
 async function updateTheClient(req, res) {
     try {
         const { id } = req.params;
-        const { firstName, lastName, phoneNumber, email } = req.body;
+        const { firstName, lastName, phoneNumber, email, notes } = req.body;
         const result = await updateClient(id, firstName, lastName, phoneNumber, email);
         res.status(200).json(result);
     } catch (error) {

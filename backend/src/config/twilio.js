@@ -11,6 +11,7 @@ const client = twilio(accountSid, authToken);
 
 async function sendMessage(to, body) {
   const customer = await getClientByPhoneNumber(to);
+  const name = customer.firstName;
   const clientId = customer.id
   const localDate = new Date().toLocaleString();
   await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId);
@@ -44,16 +45,26 @@ async function handleIncomingMessage(req, res) {
     return res.status(400).send('No request body!');
   }
 
-  const { Author, Body } = req.body;
-  try {
+  const { EventType } = req.body;
+  let Author, Body;
 
+  if (EventType === 'onConversationAdd') {
+    Author = req.body['MessagingBinding.Address'];
+    Body = req.body.MessageBody;
+  } else if (EventType === 'onMessageAdd') {
+    Author = req.body.Author;
+    Body = req.body.Body;
+  } else {
+    return res.status(400).send('Unsupported EventType');
+  }
+
+  try {
     const client = await getClientByPhoneNumber(Author);
-    const clientId = client.id
+    const clientId = client.id;
     const localDate = new Date().toLocaleString();
 
-
     await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
-    console.log("Author: ", Author)
+
     const responseMessage = await handleUserInput(Body, Author);
 
     await sendMessage(Author, responseMessage);
@@ -64,6 +75,13 @@ async function handleIncomingMessage(req, res) {
     res.status(500).send('Error processing message');
   }
 };
+
+// async function main() {
+//   await sendMessage('+16478985997', 'Hey Areeb is Uzi from Uzi cuts. How you doing?');
+// }
+
+// main();
+
 
 module.exports = {
   sendMessage,

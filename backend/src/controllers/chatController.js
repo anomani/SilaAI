@@ -52,4 +52,15 @@ const getAllMessagesGroupedByClient = async (req, res) => {
   }
 };
 
-module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientId, getAllMessagesGroupedByClient };
+const getMessagesByClientIdController = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const messages = await getMessagesByClientId(clientId);
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error('Error fetching messages by clientId:', error);
+    res.status(500).json({ error: 'Error fetching messages' });
+  }
+};
+
+module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient };

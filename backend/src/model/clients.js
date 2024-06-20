@@ -1,13 +1,13 @@
 const dbUtils = require('./dbUtils');
 
-async function createClient(firstName, lastName, phoneNumber, email, daysSinceLastAppointment, notes) {
+async function createClient(firstName, lastName, phoneNumber, email, notes) {
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO Client (firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO Client (firstName, lastName, phoneNumber, email, notes)
+        VALUES (?, ?, ?, ?, ?)
     `;
     return new Promise((resolve, reject) => {
-        db.run(sql, [firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment], function(err) {
+        db.run(sql, [firstName, lastName, phoneNumber, email, notes], function(err) {
             if (err) {
                 console.error('Error creating client:', err.message);
                 reject(err);
@@ -34,14 +34,14 @@ async function getClientById(clientId) {
     });
 }
 
-async function updateClient(clientId, updateData) {
+async function updateClient(clientId, firstName, lastName, phoneNumber, email, notes) {
     const db = dbUtils.getDB();
     const sql = `
         UPDATE Client
-        SET firstName = ?, lastName = ?, phoneNumber = ?, email = ?, notes = ?, daysSinceLastAppointment = ?
+        SET firstName = ?, lastName = ?, phoneNumber = ?, email = ?, notes = ?
         WHERE id = ?
     `;
-    const params = [updateData.firstName, updateData.lastName, updateData.phoneNumber, updateData.email, updateData.notes, updateData.daysSinceLastAppointment, clientId];
+    const params = [firstName, lastName, phoneNumber, email, notes, clientId];
     return new Promise((resolve, reject) => {
         db.run(sql, params, function(err) {
             if (err) {
@@ -102,12 +102,13 @@ async function checkClientExists(phoneNumber) {
 
 async function getClientByPhoneNumber(phoneNumber) {
     const db = dbUtils.getDB();
-    if (phoneNumber.startsWith('+1')) {
-        phoneNumber = phoneNumber.slice(2);
-    }
-    const sql = 'SELECT * FROM Client WHERE phoneNumber = ?';
+    const sql = `
+        SELECT * FROM Client 
+        WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phoneNumber, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(?, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '')
+        OR phoneNumber = ?
+    `;
     return new Promise((resolve, reject) => {
-        db.get(sql, [phoneNumber], async (err, row) => {
+        db.get(sql, [phoneNumber, phoneNumber], async (err, row) => {
             if (err) {
                 console.error('Error fetching client by phone number:', err.message);
                 reject(err);
@@ -215,3 +216,4 @@ module.exports = {
     searchForClients,
     getDaysSinceLastAppointment
 };
+
