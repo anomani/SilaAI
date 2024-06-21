@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1c1c1e',
+    paddingTop: 50, // Add paddingTop
   },
   chatContainer: {
     padding: 10,

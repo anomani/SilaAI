@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Button, 
 import { getClients } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import Footer from '../components/Footer'; // Import Footer component
 
 const ClientListScreen = () => {
   const [clients, setClients] = useState([]);
@@ -26,7 +27,7 @@ const ClientListScreen = () => {
     <TouchableOpacity onPress={() => navigation.navigate('ClientDetails', { client: item })}>
       <View style={styles.item}>
         <Text style={styles.name}>{item.firstName} {item.lastName}</Text>
-        <Text style={styles.details}>{item.number} | {item.email}</Text>
+        <Text style={styles.details}>{item.phoneNumber} | {item.email}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -48,26 +49,27 @@ const ClientListScreen = () => {
           <TouchableOpacity style={styles.refreshButton} onPress={fetchClients}>
             <Ionicons name="refresh" size={24} color="#007AFF" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.followUpButton} onPress={() => navigation.navigate('SuggestedFollowUps')}>
+          {/* <TouchableOpacity style={styles.followUpButton} onPress={() => navigation.navigate('SuggestedFollowUps')}>
             <Ionicons name="mail" size={24} color="#007AFF" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('Chat')}>
             <Ionicons name="chatbubbles" size={24} color="#007AFF" />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
         <FlatList
           data={filteredClients}
           renderItem={renderItem}
-          keyExtractor={item => item._id}
+          keyExtractor={item => item.id}
         />
       </View>
+      <Footer navigation={navigation} /> 
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#1c1c1e' },
-  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e' },
+  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e', paddingTop: 50 }, // Add paddingTop
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   searchBar: { flex: 1, padding: 10, backgroundColor: '#333', borderRadius: 5, color: 'white', marginRight: 10 },
   item: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#333' },

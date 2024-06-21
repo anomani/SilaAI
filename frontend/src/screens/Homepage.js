@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Footer from '../components/Footer';
 
 const Homepage = ({ navigation }) => {
   return (
@@ -38,24 +39,7 @@ const Homepage = ({ navigation }) => {
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Home')}>
-          <Ionicons name="home" size={24} color="#fff" />
-          <Text style={styles.footerText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ClientList')}>
-          <Ionicons name="people" size={24} color="#fff" />
-          <Text style={styles.footerText}>Clients</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Calendar')}>
-          <Ionicons name="calendar" size={24} color="#fff" />
-          <Text style={styles.footerText}>Calendar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Settings')}>
-          <Ionicons name="settings" size={24} color="#fff" />
-          <Text style={styles.footerText}>Settings</Text>
-        </TouchableOpacity>
-      </View>
+      <Footer navigation={navigation} />
     </View>
   );
 };
@@ -68,6 +52,7 @@ const styles = StyleSheet.create({
   header: {
     padding: 16,
     alignItems: 'center',
+    marginTop: 50, // Added this line
   },
   headerTitle: {
     color: '#fff',
@@ -97,21 +82,6 @@ const styles = StyleSheet.create({
   menuSubtitle: {
     color: '#8e8e93',
     fontSize: 14,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-  },
-  footerItem: {
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 4,
   },
 });
 

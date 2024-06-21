@@ -13,24 +13,18 @@ appointmentType, date, startTime, endTime, clientId, details
 
 async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType) {
     try {
-        await dbUtils.connect()
         const endTime = addThirtyMinutes(startTime)
         const clientExists = await checkClientExists(phone)
         if(clientExists != null) {
             console.log("Client already exists")
-            await dbUtils.connect()
-            const clientId = clientExists._id.toString()
-            await dbUtils.connect()
+            const clientId = clientExists.id
             await createAppointment(appointmentType, date, startTime, endTime, clientId, "")
             return "Appointment booked successfully"
         } else {
             console.log("Client does not exist")
-            await dbUtils.connect()
             await createClient(fname, lname, phone, email, 0, "")
-            await dbUtils.connect()
             const client = await checkClientExists(phone)
-            await dbUtils.connect()
-            await createAppointment(appointmentType, date, startTime, endTime, client._id.toString(), "")
+            await createAppointment(appointmentType, date, startTime, endTime, client.id, "")
             return "Appointment booked successfully"
         }
 

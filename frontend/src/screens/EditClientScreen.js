@@ -8,7 +8,8 @@ const EditClientScreen = ({ route, navigation }) => {
     firstName: '',
     lastName: '',
     email: '',
-    number: '',
+    phoneNumber: '',
+    notes: '',
   });
 
   useEffect(() => {
@@ -56,8 +57,14 @@ const EditClientScreen = ({ route, navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Phone Number"
-        value={client.number}
-        onChangeText={(value) => handleChange('number', value)}
+        value={client.phoneNumber}
+        onChangeText={(value) => handleChange('phoneNumber', value)}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Notes"
+        value={client.notes}
+        onChangeText={(value) => handleChange('notes', value)}
       />
       <Button title="Save" onPress={handleSubmit} />
     </View>
@@ -65,7 +72,7 @@ const EditClientScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e' },
+  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e', paddingTop: 100 }, // Add paddingTop
   input: { backgroundColor: 'white', padding: 10, marginBottom: 10, borderRadius: 5 },
 });
 
