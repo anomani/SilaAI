@@ -147,7 +147,7 @@ const ClientDetailsScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e' },
+  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e', paddingTop: 70 }, // Add paddingTop
   name: { fontSize: 24, color: 'white', marginBottom: 10 },
   details: { fontSize: 18, color: '#aaa', marginBottom: 10 },
   button: { padding: 10, backgroundColor: '#007AFF', borderRadius: 5, marginBottom: 10 },
@@ -159,3 +159,4 @@ const styles = StyleSheet.create({
 });
 
 export default ClientDetailsScreen;
+

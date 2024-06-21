@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { getAppointmentsByDay, getClientById } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
+import Footer from '../components/Footer';
 
 const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
@@ -107,34 +108,49 @@ const CalendarScreen = ({ navigation }) => {
           <Text style={styles.navButtonText}>Next Day</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Homepage')}>
-          <Ionicons name="home" size={24} color="#fff" />
-          <Text style={styles.footerText}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ClientList')}>
-          <Ionicons name="people" size={24} color="#fff" />
-          <Text style={styles.footerText}>Clients</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Calendar')}>
-          <Ionicons name="calendar" size={24} color="#fff" />
-          <Text style={styles.footerText}>Calendar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Settings')}>
-          <Ionicons name="settings" size={24} color="#fff" />
-          <Text style={styles.footerText}>Settings</Text>
-        </TouchableOpacity>
-      </View>
+      <Footer navigation={navigation} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e' },
-  header: { alignItems: 'center', marginBottom: 20 },
-  headerDay: { color: '#007AFF', fontSize: 16, fontWeight: 'bold' },
-  headerDateContainer: { backgroundColor: '#007AFF', borderRadius: 50, padding: 10, marginTop: 5 },
-  headerDate: { color: 'white', fontSize: 24, fontWeight: 'bold' },
+  container: { 
+    flex: 1, 
+    padding: 16, 
+    paddingTop: 0, // Ensure no top padding
+    backgroundColor: '#1c1c1e' 
+  },
+  header: { 
+    alignItems: 'center', 
+    marginBottom: 20,
+    marginTop: 80, // Increase top margin to move the header further down
+  },
+  headerDay: { 
+    color: '#007AFF', 
+    fontSize: 16, 
+    fontWeight: 'bold' 
+  },
+  headerDateContainer: { 
+    backgroundColor: '#007AFF', 
+    borderRadius: 50, 
+    padding: 10, 
+    marginTop: 5 
+  },
+  headerDate: { 
+    color: 'white', 
+    fontSize: 24, 
+    fontWeight: 'bold' 
+  },
+  addButton: { 
+    position: 'absolute', 
+    top: 10, 
+    right: 10 
+  },
+  refreshButton: { 
+    position: 'absolute', 
+    top: 10, 
+    right: 60 
+  },
   item: { flexDirection: 'row', alignItems: 'center', padding: 10, borderBottomWidth: 1, borderBottomColor: '#333' },
   icon: { marginRight: 10 },
   itemText: { flex: 1 },
@@ -153,9 +169,3 @@ const styles = StyleSheet.create({
 });
 
 export default CalendarScreen;
-
-
-
-
-
-

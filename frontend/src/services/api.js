@@ -25,15 +25,15 @@ export const getClients = async () => {
   }
 };
 
-export const sendMessage = async (message) => {
-  try {
-    const response = await axios.post(`${API_URL}/chat/schedule`, { message });
-    return response.data.message;
-  } catch (error) {
-    console.error('Error sending message:', error);
-    throw error;
-  }
-};
+// export const sendMessage = async (message) => {
+//   try {
+//     const response = await axios.post(`${API_URL}/chat/schedule`, { message });
+//     return response.data.message;
+//   } catch (error) {
+//     console.error('Error sending message:', error);
+//     throw error;
+//   }
+// };
 
 export const getAppointmentsByDay = async (date) => {
   try {
@@ -168,6 +168,15 @@ export const getDaysSinceLastAppointment = async (clientId) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching days since last appointment:', error);
+    throw error;
+  }
+};
+
+export const sendMessage = async (to, message) => {
+  try {
+    await axios.post(`${API_URL}/chat/send-message`, { to, message });
+  } catch (error) {
+    console.error('Error sending message:', error);
     throw error;
   }
 };
