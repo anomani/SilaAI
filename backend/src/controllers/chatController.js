@@ -1,6 +1,7 @@
 const { handleUserInput } = require('../ai/scheduling');
 const {handleUserInputData} = require('../ai/clientData');
 const { getMessagesByClientId, getAllMessages } = require('../model/messages');
+const { sendMessage } = require('../config/twilio');
 
 const handleChatRequest = async (req, res) => {
   const { message } = req.body;
@@ -63,4 +64,15 @@ const getMessagesByClientIdController = async (req, res) => {
   }
 };
 
-module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient };
+const sendMessageController = async (req, res) => {
+  try {
+    const { to, message } = req.body;
+    await sendMessage(to, message);
+    res.status(200).json({ message: 'Message sent' });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: 'Error sending message' });
+  }
+}
+
+module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController };

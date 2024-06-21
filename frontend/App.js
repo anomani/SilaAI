@@ -20,21 +20,9 @@ import ClientMessagesScreen from './src/screens/ClientMessagesScreen';
 const Stack = createStackNavigator();
 
 export default function App() {
-  // useEffect(() => {
-  //   const updateClientData = async () => {
-  //     try {
-  //       await axios.get('https://lab-sweeping-typically.ngrok-free.app/api/followup/update-clients');
-  //     } catch (error) {
-  //       console.error('Error updating client data:', error);
-  //     }
-  //   };
-
-  //   updateClientData();
-  // }, []);
-
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Homepage">
+      <Stack.Navigator initialRouteName="Homepage" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Homepage" component={Homepage} />
         <Stack.Screen name="ClientList" component={ClientListScreen} />
         <Stack.Screen name="ScheduleScreen" component={ScheduleScreen} />
@@ -56,7 +44,8 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
     justifyContent: 'center',
   },
 });
+

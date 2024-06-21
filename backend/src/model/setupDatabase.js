@@ -18,7 +18,8 @@ db.serialize(() => {
             lastName TEXT,
             phoneNumber TEXT,
             email TEXT,
-            notes TEXT
+            notes TEXT,
+            daysSinceLastAppointment INTEGER
         );
     `);
     

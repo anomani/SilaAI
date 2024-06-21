@@ -19,6 +19,25 @@ async function createClient(firstName, lastName, phoneNumber, email, notes) {
     });
 }
 
+async function createAltClient(firstName, lastName, phoneNumber, email, daysSinceLastAppointment, notes) {
+    const db = dbUtils.getDB();
+    const sql = `
+        INSERT INTO Client (firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    return new Promise((resolve, reject) => {
+        db.run(sql, [firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment], function(err) {
+            if (err) {
+                console.error('Error creating client:', err.message);
+                reject(err);
+            } else {
+                console.log('Client Created with ID:', this.lastID);
+                resolve(this.lastID);
+            }
+        });
+    });
+}
+
 async function getClientById(clientId) {
     const db = dbUtils.getDB();
     const sql = 'SELECT * FROM Client WHERE id = ?';
@@ -214,6 +233,7 @@ module.exports = {
     getClientByPhoneNumber,
     followUp,
     searchForClients,
-    getDaysSinceLastAppointment
+    getDaysSinceLastAppointment,
+    createAltClient
 };
 

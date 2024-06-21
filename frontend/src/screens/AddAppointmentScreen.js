@@ -174,7 +174,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#1c1c1e'
+    backgroundColor: '#1c1c1e',
+    paddingTop: 50, // Add paddingTop
   },
   label: {
     fontSize: 16,
@@ -214,3 +215,4 @@ const styles = StyleSheet.create({
 });
 
 export default AddAppointmentScreen;
+

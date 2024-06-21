@@ -109,12 +109,12 @@ If it is a client trying to schedule an appointment here are the following instr
 
 I want you to respond to the user about availabilities from my schedule. Using the getAvailability you are going to be given the appointments for the day.
 Lets say the only appointment for the day is from 9:00 to 9:30 then respond to the user saying we have availability anytime from 9:30 to 5:00.
-Do not tell the user what slots are already booked just give them timings that are not booked. Do not give out any information about specific appointments and client names.
+Do not tell the user what slots are already booked just give them timings that are not booked. If you are asked about availability for a certain week then run the function to get the availability for that week and then give the user the available times for that week or time period. Do not give out any information about specific appointments and client names.
 My timings are Monday-Friday from 9am to 5pm. Do not let the user book outside of my timings. You can also be asked to reschedule or cancel.
 If you are asked to cancel, then use the cancel function. If you are asked to reschedule then run the function to cancel, then use the other functions to find another time with the customer and schedule a new time.
-If you are asked about availiability for tomorrow or today and phrases such as those then
+If you are asked about availiability for tomorrow or today and phrases such as those then. If someone asks when are you free next, then using the date first check the availability for that day and then give the user the available times for that day or time period. And if there are none then check for the next day and so on. 
 Use the getCurrentDate function to figure out today's date then use your reasoning to figure out the date for the day they are seeking.
-Don't ever respond in military time always convert to AM or PM when talking to the user. Make sure to ask the user what type of appointment they want to book. 
+Don't ever respond in military time always convert to AM or PM when talking to the user. Make sure to ask the user what type of appointment they want to book. Don't use a lot of exclamation marks
 
 If you think this is a campaign to get the user to return to the barbershop. Then, use the following instructions:
 
@@ -168,7 +168,7 @@ async function classifyMessage(message, messageHistory) {
           You are a classifier that determines whether a message should be handled by an AI assistant or needs human intervention. 
           Classify the following message as either "assistant" if it can be handled by the AI assistant, or "user" if it needs to be forwarded to a human for intervention.
           The capabilities of the AI are as follows: Able to schedule, reschedule, cancel appointments and talk to the user in informal language and address them by their name and 
-          should be able to make pretty basic small talk. 
+          should be able to make pretty basic small talk. If there is something that you don't have information of then you should respond with user.
           Examples:
           Message: "Hello"
           Classification: assistant
@@ -236,7 +236,7 @@ async function handleUserInput(userMessage, phoneNumber) {
         role: "user",
         content: userMessage,
       });
-
+      console.log(fname)
       const run = await openai.beta.threads.runs.create(thread.id, {
         assistant_id: assistant.id,
         additional_instructions: `The client's name is ${fname} ${lname}, their email is ${email}, and their phone number is ${phone}. These are the messages between the client and the user: ${messages}. Address the customer by their name and make it natural`

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
-const { createClient } = require('../clients');
+const { createClient, createAltClient } = require('../clients');
 
 const csvFilePath = path.join(__dirname, 'list (1).csv');
 
@@ -17,7 +17,7 @@ async function migrateData() {
             console.log('CSV file successfully processed');
             for (const client of clients) {
                 try {
-                    await createClient(
+                    await createAltClient(
                         client['First Name'],
                         client['Last Name'],
                         client['Phone'],
