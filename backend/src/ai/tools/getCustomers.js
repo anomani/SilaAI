@@ -4,7 +4,6 @@ Show me all the
 */
 
 const { followUp, getAllClients } = require('../../model/clients');
-const dbUtils = require('../../model/dbUtils');
 
 /**
  * Retrieves a list of clients who have not visited in the specified number of days.
@@ -15,12 +14,10 @@ const dbUtils = require('../../model/dbUtils');
  */
 
 async function getInactiveClients(days) {
-    dbUtils.connect();
     return await followUp(days);
 }
 
 async function getClients() {
-    dbUtils.connect();
     return await getAllClients();
 }
 

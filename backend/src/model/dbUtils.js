@@ -1,51 +1,45 @@
-const dotenv = require('dotenv')
-dotenv.config({path : '../../.env'})
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-// import the mongodb driver
-const { MongoClient } = require('mongodb');
+let db;
 
-// the mongodb server URL
-const dbURL = process.env.DB_URL;
-// MongoDB database connection
-let client;
-let database;
+function connect() {
+    const dbPath = path.join(__dirname, 'app.db'); // Adjust the path as necessary
+    db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+        if (err) {
+            console.error('Error connecting to the SQLite database:', err.message);
+        } else {
+            console.log('Connected to the SQLite database at', dbPath);
+        }
+    });
+}
 
-// connection to the db
-const connect = async () => {
-  // always use try/catch to handle any exception
-  try {
-    client = new MongoClient(dbURL);
-    database = client.db('Uzi');
-    console.log('connected to db: Uzi');
-  } catch (err) {
-    console.log(err.message);
-  }
-  return client; // we return the entire client, not just the DB
-};
-/**
- *
- * @returns the database attached to this MongoDB connection
- */
-const getDB = async () => {
-  // test if there is an active connection
-  if (!client) {
-    await connect();
-  }
-  return database;
-};
+function getDB() {
+    if (!db) {
+        connect();
+    }
+    return db;
+}
 
-/**
- *
- * Close the mongodb connection
- */
-const closeMongoDBConnection = async () => {
-  await client.close();
-};
+function closeDB() {
+    if (db) {
+        db.close((err) => {
+            if (err) {
+                console.error('Error closing the SQLite database:', err.message);
+            } else {
+                console.log('SQLite database connection closed.');
+            }
+        });
+    }
+}
 
-// export the functions
+async function main() {
+  
+}
+
+main()
 module.exports = {
-  closeMongoDBConnection,
-  getDB,
-  connect,
+    connect,
+    getDB,
+    closeDB
 };
-

@@ -1,7 +1,7 @@
 const { handleUserInput } = require('../ai/scheduling');
 const {handleUserInputData} = require('../ai/clientData');
 const { getMessagesByClientId, getAllMessages } = require('../model/messages');
-const dbUtils = require('../model/dbUtils');
+const { sendMessage } = require('../config/twilio');
 
 const handleChatRequest = async (req, res) => {
   const { message } = req.body;
@@ -38,7 +38,6 @@ const handleUserInputDataController = async (req, res) => {
 
 const getAllMessagesGroupedByClient = async (req, res) => {
   try {
-    await dbUtils.connect()
     const messages = await getAllMessages();
     const groupedMessages = messages.reduce((acc, message) => {
       if (!acc[message.clientId]) {
@@ -54,4 +53,26 @@ const getAllMessagesGroupedByClient = async (req, res) => {
   }
 };
 
-module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientId, getAllMessagesGroupedByClient };
+const getMessagesByClientIdController = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const messages = await getMessagesByClientId(clientId);
+    res.status(200).json(messages);
+  } catch (error) {
+    console.error('Error fetching messages by clientId:', error);
+    res.status(500).json({ error: 'Error fetching messages' });
+  }
+};
+
+const sendMessageController = async (req, res) => {
+  try {
+    const { to, message } = req.body;
+    await sendMessage(to, message);
+    res.status(200).json({ message: 'Message sent' });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: 'Error sending message' });
+  }
+}
+
+module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController };

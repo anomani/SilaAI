@@ -24,7 +24,7 @@ const AddAppointmentScreen = ({ navigation }) => {
     setAppointment({ ...appointment, [field]: value });
     if (field === 'clientName') {
       const data = await searchClients(value);
-      setFilteredClients([{ _id: 'new', firstName: 'New', lastName: 'Client' }, ...data]);
+      setFilteredClients([{ id: 'new', firstName: 'New', lastName: 'Client' }, ...data]);
     }
   };
 
@@ -45,11 +45,11 @@ const AddAppointmentScreen = ({ navigation }) => {
   };
 
   const handleSelectClient = (item) => {
-    if (item._id === 'new') {
+    if (item.id === 'new') {
       navigation.navigate('AddClient'); // Navigate to the add client screen
     } else {
       setAppointment({ ...appointment, clientName: `${item.firstName} ${item.lastName}` });
-      setSelectedClientId(item._id); // Store the selected client ID
+      setSelectedClientId(item.id); // Store the selected client ID
     }
     setFilteredClients([]); // Clear the dropdown
   };
@@ -90,7 +90,7 @@ const AddAppointmentScreen = ({ navigation }) => {
         defaultValue={appointment.clientName}
         onChangeText={(value) => handleInputChange('clientName', value)}
         flatListProps={{
-          keyExtractor: item => item._id,
+          keyExtractor: item => item.id,
           renderItem: ({ item }) => (
             <TouchableOpacity onPress={() => handleSelectClient(item)}>
               <Text style={styles.itemText}>{item.firstName} {item.lastName}</Text>
@@ -174,7 +174,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#1c1c1e'
+    backgroundColor: '#1c1c1e',
+    paddingTop: 50, // Add paddingTop
   },
   label: {
     fontSize: 16,
@@ -214,3 +215,4 @@ const styles = StyleSheet.create({
 });
 
 export default AddAppointmentScreen;
+

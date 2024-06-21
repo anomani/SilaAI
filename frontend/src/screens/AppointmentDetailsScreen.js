@@ -22,7 +22,7 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
 
   const handleDelete = async () => {
     try {
-      await deleteAppointment(appointment._id);
+      await deleteAppointment(appointment.id);
       Alert.alert('Success', 'Appointment deleted successfully');
       navigation.goBack();
     } catch (error) {
@@ -47,7 +47,7 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e' },
+  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e', paddingTop: 50 }, // Add paddingTop
   label: { fontSize: 18, color: '#fff', marginBottom: 10 },
 });
 

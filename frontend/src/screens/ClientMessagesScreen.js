@@ -1,34 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
-import { getAllMessagesGroupedByClient } from '../services/api';
-import twilioAvatar from '../../assets/uzi.png'; // Import the Twilio avatar
-import defaultAvatar from '../../assets/avatar.png'; // Import the default avatar
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation
+import { getMessagesByClientId, sendMessage } from '../services/api';
+import twilioAvatar from '../../assets/uzi.png';
+import defaultAvatar from '../../assets/avatar.png';
 
-const ChatDashboard = () => {
-  const [groupedMessages, setGroupedMessages] = useState({});
+const ClientMessagesScreen = ({ route }) => {
+  const { clientId } = route.params; // Retrieve clientId from route params
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState(''); // State for new message
+  const navigation = useNavigation(); // Initialize navigation
 
   useEffect(() => {
-    fetchMessages();
-  }, []);
+    fetchMessages(clientId);
+  }, [clientId]);
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (clientId) => {
     try {
-      const data = await getAllMessagesGroupedByClient();
-      setGroupedMessages(data);
+      const data = await getMessagesByClientId(clientId);
+      setMessages(data);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
   };
 
+  const handleSendMessage = async () => {
+    if (newMessage.trim() === '') return; // Prevent sending empty messages
+    try {
+      const lastMessage = messages[messages.length - 2];
+      const fromText = lastMessage ? lastMessage.fromText : clientId; // Use fromText of the last message or clientId if no messages
+      console.log(fromText)
+      console.log(newMessage)
+      await sendMessage(fromText, newMessage);
+      setNewMessage(''); // Clear the input field
+      fetchMessages(clientId); // Refresh messages
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
   const renderMessages = (messages) => {
     return messages.map((message) => {
-      const avatar = message.from === '+18446480598' ? twilioAvatar : defaultAvatar;
+      const avatar = message.fromText === '+18446480598' ? twilioAvatar : defaultAvatar;
       return (
-        <View key={message._id} style={styles.messageContainer}>
+        <View key={message.id} style={styles.messageContainer}>
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.messageContent}>
             <View style={styles.messageHeader}>
-              <Text style={styles.messageSender}>{message.from}</Text>
+              <Text style={styles.messageSender}>{message.fromText}</Text>
               <Text style={styles.messageTime}>{message.date}</Text>
             </View>
             <Text style={styles.messageText}>{message.body}</Text>
@@ -41,28 +60,31 @@ const ChatDashboard = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}> 
           <Text style={styles.backButton}>Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chat</Text>
+        <View style={{ width: 50 }} /> 
       </View>
       <Text style={styles.dateHeader}>Today</Text>
       <FlatList
-        data={Object.keys(groupedMessages)}
+        data={messages}
         renderItem={({ item }) => (
           <View>
-            {renderMessages(groupedMessages[item])}
+            {renderMessages([item])}
           </View>
         )}
-        keyExtractor={(item) => item}
+        keyExtractor={(item) => item.id.toString()}
       />
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
           placeholder="Type a message"
           placeholderTextColor="#9da6b8"
+          value={newMessage} // Bind input value to state
+          onChangeText={setNewMessage} // Update state on text change
         />
-        <TouchableOpacity style={styles.sendButton}>
+        <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
       </View>
@@ -74,10 +96,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#111318',
+    paddingTop: 50, // Added padding to the top
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between', // Ensure space between elements
     padding: 16,
     backgroundColor: '#111318',
   },
@@ -156,4 +180,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ChatDashboard;
+export default ClientMessagesScreen;
