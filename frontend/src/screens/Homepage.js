@@ -31,6 +31,13 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ScheduleScreen')}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Schedule</Text>
+            <Text style={styles.menuSubtitle}>Testing for the scheduling bot</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Settings</Text>

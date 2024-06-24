@@ -4,7 +4,9 @@ dotenv.config({path : '../../.env'})
 const fs = require('fs');
 const os = require('os');
 const path = require('path')
-
+const moment = require('moment'); // Add moment library
+const {createAppointment} = require('../model/appointment')
+const {getClientByPhoneNumber} = require('../model/clients')
 const apiKey = process.env.BROWSERCLOUD_API_KEY;
 
 
@@ -16,79 +18,109 @@ async function getClients() {
     let browser;
     try {
         // Connect to BrowserCloud
-        browser = await puppeteer.launch({ headless: true });
+        browser = await puppeteer.launch({ headless: false });
         const page = await browser.newPage();
 
         // Initial login to Squarespace
-        await page.goto("https://secure.acuityscheduling.com/login.php?redirect=1#/", {
+        await page.goto("https://secure.acuityscheduling.com/login.php?redirect=1", {
             waitUntil: 'domcontentloaded'
         });
 
         await page.type("input[type='email']", process.env.ACUITY_EMAIL);
         await page.click("input[name='login']");
-        await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
 
-        await page.type("input[type='email']", process.env.ACUITY_EMAIL);
-        await page.type("input[type='password']", process.env.ACUITY_PASSWORD);
+        // Wait for the password input field to load
+        await page.waitForSelector("input[data-testid='password-input']", { visible: true });
+        await page.type("input[data-testid='password-input']", process.env.ACUITY_PASSWORD);
+        
+        // Click the login button
+        await page.click("input[data-testid='next-button']");
+        console.log("Login button clicked");
 
-        await Promise.all([
-            page.click("button[data-test='login-button']"),
-            page.waitForNavigation({ waitUntil: 'networkidle0' })
-        ]);
+        // Press the escape key to close any open modal or dialog
+        await delay(2000)
+        await page.keyboard.press('Escape');
+        console.log("Escape key pressed");
 
-        // Ensure the login was successful and wait for the iframe to be present
-        await page.waitForSelector('iframe[data-test="scheduling"]', { timeout: 60000 });
+        await page.waitForSelector("button[data-testid='mobile-nav-button']", { visible: true });
+        await page.click("button[data-testid='mobile-nav-button']");
+        console.log("Mobile nav button clicked");
 
-        // Access the iframe
-        const frameHandle = await page.$('iframe[data-test="scheduling"]');
-        const frame = await frameHandle.contentFrame();
-
-        // Wait for and click the "menu" button inside the iframe
-        await frame.waitForSelector('button[data-testid="mobile-nav-button"]', { timeout: 60000 });
-        await frame.evaluate(() => {
-            const button = document.querySelector('button[data-testid="mobile-nav-button"]');
-            button.scrollIntoView();
+        await page.goto("https://secure.acuityscheduling.com/admin/clients", {
+            waitUntil: 'domcontentloaded'
         });
-        await frame.click('button[data-testid="mobile-nav-button"]');
+        await delay(2000)
 
-        // Wait for and click the "clients" button inside the iframe
-        await frame.waitForSelector('button[data-testid="left-nav-item"]', { timeout: 60000 });
-        await frame.evaluate(() => {
-            const button = document.querySelector('button[data-testid="left-nav-item"]');
-            button.scrollIntoView();
-        });
-        await frame.click('button[data-testid="left-nav-item"]');
+        let previousHeight;
+        while (true) {
+            previousHeight = await page.evaluate('document.body.scrollHeight');
+            await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
+            await delay(2000); // Wait for new clients to load
+            const newHeight = await page.evaluate('document.body.scrollHeight');
+            if (newHeight === previousHeight) break;
+        }
+        
+        const clientLinksCount = await page.$$eval("td.lastName.css-1b3r7q", links => links.length);
+        console.log(clientLinksCount)
+        for (let i = 0; i < clientLinksCount; i++) {
+            try {
+                await page.waitForSelector("td.lastName.css-1b3r7q", { visible: true });
+                // Click on the client link by index
+                await page.evaluate(index => {
+                    document.querySelectorAll("td.lastName.css-1b3r7q")[index].click();
+                }, i);
 
-        // Wait for and click the "import/export" link inside the iframe
-        await frame.waitForSelector('a[data-testid="left-nav-item"][href="/config/scheduling-service/clients.php?action=importexport"]', { timeout: 60000 });
-        await frame.evaluate(() => {
-            const link = document.querySelector('a[data-testid="left-nav-item"][href="/config/scheduling-service/clients.php?action=importexport"]');
-            link.scrollIntoView();
-        });
-        await frame.click('a[data-testid="left-nav-item"][href="/config/scheduling-service/clients.php?action=importexport"]');
+                await page.waitForSelector(".start-time");
 
-        // Wait for and click the "Export Client List" button inside the iframe
-        await frame.waitForSelector('a.btn.btn-inverse.btn-bordered.btn-md.btn-client-export.margin-right.margin-bottom', { timeout: 60000 });
-        await frame.evaluate(() => {
-            const button = document.querySelector('a.btn.btn-inverse.btn-bordered.btn-md.btn-client-export.margin-right.margin-bottom');
-            button.scrollIntoView();
-        });
-        await frame.click('a.btn.btn-inverse.btn-bordered.btn-md.btn-client-export.margin-right.margin-bottom');
+                const clientName = await page.$eval(".field-rendered.edit-client", el => el.innerText);
+                const clientNumber = await page.$eval("a.real-link[data-testid='added-client-phone']", el => el.innerText);
+                const startTime = await page.$eval(".start-time", el => el.innerText);
+                const endTime = await page.$eval(".end-time", el => el.innerText);
+                const dateOfAppointment = await page.$eval("a[data-testid='docket-appointment-detail-link']", el => el.innerText);
+                const typeOfAppointment = await page.$eval(".appointment-type-name", el => el.innerText);
 
-        // Wait for and click the "Export Clients" button inside the iframe
-        await frame.waitForSelector('input[type="submit"].btn.btn-default[value="Export Clients"]', { timeout: 60000 });
-        await frame.evaluate(() => {
-            const button = document.querySelector('input[type="submit"].btn.btn-default[value="Export Clients"]');
-            button.scrollIntoView();
-        });
-        await frame.click('input[type="submit"].btn.btn-default[value="Export Clients"]');
+                // Convert times to HH:MM in military time
+                const startTimeMilitary = moment(startTime, ["h:mm A"]).format("HH:mm");
+                const endTimeMilitary = moment(endTime, ["h:mm A"]).format("HH:mm");
+                // Convert date to YYYY-MM-DD
+                const dateOfAppointmentFormatted = moment(dateOfAppointment, "dddd, MMMM D, YYYY").format("YYYY-MM-DD");
+                console.log({
+                    clientName,
+                    clientNumber,
+                    startTime: startTimeMilitary,
+                    endTime: endTimeMilitary,
+                    dateOfAppointment: dateOfAppointmentFormatted,
+                    typeOfAppointment
+                });
+                const client = await getClientByPhoneNumber(clientNumber)
+
+                // //async function createAppointment(appointmentType, date, startTime, endTime, clientId, details)
+                // //17|1950|2024-06-24|09:15|09:45|Haircut and Beard|
+                if(client) {
+                    const appointment = await createAppointment(typeOfAppointment, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "")
+                }                
+
+                await page.click("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
+                console.log("Back button clicked");
+                
+            } catch (e) {
+                console.log(`Error processing client at index ${i}: ${e.message}`);
+                await page.click("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
+                console.log("Back button clicked");
+                await delay(2000);
+                continue;
+            }
+        }
+
     } catch (error) {
         console.error("Error:", error);
     } finally {
         await delay(2000)
-        await browser.close()
+        // await browser.close()
     }
 }
+
+
 
 
 //Gets the CSV from my downloads folder and saves it locally in the program

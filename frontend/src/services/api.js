@@ -25,15 +25,15 @@ export const getClients = async () => {
   }
 };
 
-// export const sendMessage = async (message) => {
-//   try {
-//     const response = await axios.post(`${API_URL}/chat/schedule`, { message });
-//     return response.data.message;
-//   } catch (error) {
-//     console.error('Error sending message:', error);
-//     throw error;
-//   }
-// };
+export const handleChat = async (message) => {
+  try {
+    const response = await axios.post(`${API_URL}/chat/schedule`, { message });
+    return response.data.message;
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+};
 
 export const getAppointmentsByDay = async (date) => {
   try {

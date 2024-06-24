@@ -1,19 +1,18 @@
 const { handleUserInput } = require('../ai/scheduling');
 const {handleUserInputData} = require('../ai/clientData');
-const { getMessagesByClientId, getAllMessages } = require('../model/messages');
+const { getMessagesByClientId, getAllMessages, saveMessage } = require('../model/messages');
 const { sendMessage } = require('../config/twilio');
 
 const handleChatRequest = async (req, res) => {
-  const { message } = req.body;
-
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
-  }
-
   try {
-    // Here, we're simulating handling user input and generating a response
-    // You might need to adapt the `handleUserInput` function to fit this use case.
-    const responseMessage = await handleUserInput(message);
+    const { message } = req.body;
+    const number = "+12038324011";
+    const twilio = "+18446480598";
+    const localDate = new Date().toLocaleString();
+    await saveMessage(number, twilio, message, localDate, 3367);
+
+    const responseMessage = await handleUserInput(message, number);
+    await saveMessage(twilio, number, responseMessage, localDate, 3367);
     res.json({ message: responseMessage });
   } catch (error) {
     console.error('Error handling chat request:', error);

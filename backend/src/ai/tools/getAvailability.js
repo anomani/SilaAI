@@ -13,23 +13,51 @@ const apiKey = process.env.BROWSERCLOUD_API_KEY;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
-async function getAvailability(day) {
-    console.log("One moment please...")
+async function getAvailability(day, duration) {
+    console.log("One moment please...");
     try {
-        const appointments = await getAppointmentsByDay(day)
-        console.log(appointments)
-        return appointments
+        const appointments = await getAppointmentsByDay(day);
+
+        const startOfDay = new Date(`${day}T09:00:00`);
+        const endOfDay = new Date(`${day}T18:00:00`);
+        const availableSlots = [];
+
+        let currentTime = startOfDay;
+
+        while (currentTime < endOfDay) {
+            const nextTime = new Date(currentTime.getTime() + duration * 60000);
+
+            const isSlotAvailable = appointments.every(appointment => {
+                const appointmentStart = new Date(`${appointment.date}T${appointment.startTime}`);
+                const appointmentEnd = new Date(`${appointment.date}T${appointment.endTime}`);
+
+                return nextTime <= appointmentStart || currentTime >= appointmentEnd;
+            });
+
+            if (isSlotAvailable) {
+                availableSlots.push({
+                    startTime: currentTime.toTimeString().slice(0, 5),
+                    endTime: nextTime.toTimeString().slice(0, 5)
+                });
+            }
+
+            currentTime = nextTime;
+        }
+        console.log(availableSlots)
+        return availableSlots;
     } catch (error) {
         console.error("Error:", error);
-        return []
+        return [];
     }
 }
 
+
 function getCurrentDate() {
-    console.log("Getting date")
-    const date = new Date()
-    console.log(date.toDateString())
-    return date.toDateString()
+    const now = new Date();
+    const dateTimeString = now.toLocaleString();
+    console.log(dateTimeString)
+    return dateTimeString;
 }
+
 
 module.exports = {getAvailability, getCurrentDate}
