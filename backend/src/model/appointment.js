@@ -73,7 +73,7 @@ async function deleteAppointment(appointmentId) {
 
 async function getAppointmentsByDay(date) {
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Appointment WHERE date = ?';
+    const sql = 'SELECT * FROM Appointment WHERE date = ? ORDER BY startTime';
     return new Promise((resolve, reject) => {
         db.all(sql, [date], (err, rows) => {
             if (err) {
@@ -88,7 +88,7 @@ async function getAppointmentsByDay(date) {
 
 async function getAllAppointmentsByClientId(clientId) {
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Appointment WHERE clientId = ?';
+    const sql = 'SELECT * FROM Appointment WHERE clientId = ? ORDER BY date DESC';
     return new Promise((resolve, reject) => {
         db.all(sql, [clientId], (err, rows) => {
             if (err) {

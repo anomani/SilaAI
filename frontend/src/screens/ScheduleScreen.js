@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { sendMessage } from '../services/api';
+import { handleChat } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 
 const ScheduleScreen = ({ navigation }) => {
@@ -15,7 +15,7 @@ const ScheduleScreen = ({ navigation }) => {
     setMessage('');
 
     try {
-      const response = await sendMessage(message);
+      const response = await handleChat(message);
       const responseMessage = typeof response === 'string' ? response : response.message;
       setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
     } catch (error) {

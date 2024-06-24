@@ -5,25 +5,27 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path')
 const {createAppointment} = require ('../../model/appointment')
-const {checkClientExists, getClientIdByPhoneNumber, createClient} = require ('../../model/clients')
+const {checkClientExists, getClientByPhoneNumber, createClient} = require ('../../model/clients')
 const dbUtils = require('../../model/dbUtils')
 /*
 appointmentType, date, startTime, endTime, clientId, details
 */
 
-async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType) {
+async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration) {
     try {
-        const endTime = addThirtyMinutes(startTime)
-        const clientExists = await checkClientExists(phone)
-        if(clientExists != null) {
+        console.log("Appointment duration: ", appointmentDuration)
+        const endTime = addMinutes(startTime, appointmentDuration)
+        console.log("End time: ", endTime)
+        const client = await getClientByPhoneNumber(phone)
+        if(client != null) {
             console.log("Client already exists")
-            const clientId = clientExists.id
+            const clientId = client.id
             await createAppointment(appointmentType, date, startTime, endTime, clientId, "")
             return "Appointment booked successfully"
         } else {
             console.log("Client does not exist")
-            await createClient(fname, lname, phone, email, 0, "")
-            const client = await checkClientExists(phone)
+            await createClient(fname, lname, phone, email, "")
+            const client = await getClientByPhoneNumber(phone)
             await createAppointment(appointmentType, date, startTime, endTime, client.id, "")
             return "Appointment booked successfully"
         }
@@ -34,18 +36,18 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     } 
 }
 
-function addThirtyMinutes(time) {
+function addMinutes(time, minutesToAdd) {
     const [hours, minutes] = time.split(':').map(Number);
-    let newMinutes = minutes + 30;
+    let newMinutes = minutes + minutesToAdd;
     let newHours = hours;
 
     if (newMinutes >= 60) {
-        newMinutes -= 60;
-        newHours += 1;
+        newHours += Math.floor(newMinutes / 60);
+        newMinutes = newMinutes % 60;
     }
 
     if (newHours >= 24) {
-        newHours -= 24;
+        newHours = newHours % 24;
     }
 
     const formattedHours = newHours.toString().padStart(2, '0');
@@ -53,5 +55,6 @@ function addThirtyMinutes(time) {
     return `${formattedHours}:${formattedMinutes}`;
 }
 
-module.exports = {bookAppointment}
 
+
+module.exports = {bookAppointment}
