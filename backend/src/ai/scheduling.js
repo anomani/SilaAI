@@ -79,13 +79,13 @@ const tools = [
       }
     }
   },
-  {
-    type: "function",
-    function: {
-      name: "getCurrentDate",
-      description: "Gets the current date without taking any parameters"
-    }
-  },
+  // {
+  //   type: "function",
+  //   function: {
+  //     name: "getCurrentDate",
+  //     description: "Gets the current date without taking any parameters"
+  //   }
+  // },
   {
     type: "function",
     function: {
@@ -145,6 +145,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
     .replace('${messages}', JSON.stringify(messages, null, 2))
     .replace('${daysSinceLastAppointment}', daysSinceLastAppointment);
   if (!assistant) {
+    console.log("Creating assistant")
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions,
       name: "Scheduling Assistant",
@@ -167,17 +168,19 @@ async function handleUserInput(userMessage, phoneNumber) {
     const lname = client.lastName;
     const email = client.email;
     const phone = client.phoneNumber; 
+    const day = getCurrentDate();
 
-    const assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment);
     const thread = await createThread(phoneNumber); 
-
+    const assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment);
+    
 
     const message = await openai.beta.threads.messages.create(thread.id, {
       role: "user",
       content: userMessage,
     });
     const run = await openai.beta.threads.runs.create(thread.id, {
-      assistant_id: assistant.id
+      assistant_id: assistant.id,
+      additional_instructions: "The current date and time is" + day
     });
 
     while (true) {
@@ -250,3 +253,4 @@ async function handleUserInput(userMessage, phoneNumber) {
 }
 
 module.exports = { getAvailability, bookAppointment, handleUserInput };
+

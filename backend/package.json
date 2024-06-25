@@ -4,7 +4,7 @@
     "description": "Automation services for barbers",
     "main": "index.js",
     "scripts": {
-        "start": "node index.js",
+        "start": "node api/index.js",
         "test": "jest"
     },
     "dependencies": {
@@ -19,6 +19,7 @@
         "openai": "^4.47.1",
         "os": "^0.1.2",
         "puppeteer": "^22.10.0",
+        "socket.io": "^4.7.5",
         "sqlite3": "^5.1.7",
         "twilio": "^5.0.4",
         "yahoo-finance2": "^2.11.2"
