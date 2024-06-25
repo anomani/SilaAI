@@ -9,7 +9,6 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 
-
 async function sendMessage(to, body) {
   const customer = await getClientByPhoneNumber(to);
   const name = customer.firstName;
@@ -41,6 +40,10 @@ async function sendMessages(clients, message) {
   }
 };
 
+async function notifyUser(clientId) {
+  io.emit('notifyUser', { clientId });
+}
+
 async function handleIncomingMessage(req, res) {
   if (!req.body) {
     return res.status(400).send('No request body!');
@@ -68,7 +71,10 @@ async function handleIncomingMessage(req, res) {
     await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
 
     const responseMessage = await handleUserInput(Body, Author);
-    await sendMessage(Author, responseMessage);
+    if (responseMessage == "user")  {
+    } else {
+      await sendMessage(Author, responseMessage);
+    }
     
 
     res.status(200).send('Message sent');
@@ -77,12 +83,6 @@ async function handleIncomingMessage(req, res) {
     res.status(500).send('Error processing message');
   }
 };
-
-// async function main() {
-//   await sendMessage('+16478985997', 'Hey Areeb its Uzi from Uzi cuts. How you been?');
-// }
-
-// main();
 
 
 module.exports = {
