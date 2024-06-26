@@ -129,14 +129,6 @@ async function getClientByPhoneNumber(phoneNumber) {
         throw err;
     }
 }
-
-async function main() {
-    const client = await getClientByPhoneNumber('+12038324011');
-    console.log(client);
-}
-
-main();
-
 async function followUp(days) {
     const db = dbUtils.getDB();
 

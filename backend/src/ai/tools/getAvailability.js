@@ -43,7 +43,6 @@ async function getAvailability(day, duration) {
 
             currentTime = nextTime;
         }
-        console.log(availableSlots)
         return availableSlots;
     } catch (error) {
         console.error("Error:", error);
@@ -51,12 +50,6 @@ async function getAvailability(day, duration) {
     }
 }
 
-(async () => {
-    const testDay = '2024-06-26';
-    const testDuration = 30; // duration in minutes
-    const availability = await getAvailability(testDay, testDuration);
-    console.log(`Availability for ${testDay}:`, availability);
-})();
 
 function getCurrentDate() {
     const now = new Date();

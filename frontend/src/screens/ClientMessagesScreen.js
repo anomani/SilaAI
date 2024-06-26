@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native'; // Import useNavigation
-import { getMessagesByClientId, sendMessage } from '../services/api';
+import { getMessagesByClientId, sendMessage, setMessagesRead } from '../services/api';
 import twilioAvatar from '../../assets/uzi.png';
 import defaultAvatar from '../../assets/avatar.png';
 
@@ -9,6 +9,7 @@ const ClientMessagesScreen = ({ route }) => {
   const { clientid } = route.params; // Retrieve clientId from route params
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState(''); // State for new message
+  const [unreadIndicatorAdded, setUnreadIndicatorAdded] = useState(false); // State to track unread indicator
   const navigation = useNavigation(); // Initialize navigation
 
   useEffect(() => {
@@ -19,6 +20,7 @@ const ClientMessagesScreen = ({ route }) => {
     try {
       const data = await getMessagesByClientId(clientid);
       setMessages(data);
+      setUnreadIndicatorAdded(false); // Reset unread indicator state
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
@@ -27,31 +29,40 @@ const ClientMessagesScreen = ({ route }) => {
   const handleSendMessage = async () => {
     if (newMessage.trim() === '') return; // Prevent sending empty messages
     try {
-      const lastMessage = messages[messages.length - 2];
-      const fromtext = lastMessage ? lastMessage.fromtext : clientid; // Use fromtext of the last message or clientId if no messages
-      console.log(fromtext)
-      console.log(newMessage)
-      await sendMessage(fromtext, newMessage);
-      setNewMessage(''); // Clear the input field
-      fetchMessages(clientid); // Refresh messages
+      const lastMessage = messages[messages.length - 1];
+      const recipient = lastMessage.fromtext === '+18446480598' ? lastMessage.totext : lastMessage.fromtext;
+      console.log(recipient)
+      await sendMessage(recipient, newMessage);
+      setNewMessage('');
+      setMessagesRead(clientid);
+      fetchMessages(clientid); 
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
 
   const renderMessages = (messages) => {
+    let unreadAdded = unreadIndicatorAdded;
     return messages.map((message) => {
       const avatar = message.fromtext === '+18446480598' ? twilioAvatar : defaultAvatar;
       return (
-        <View key={message.id} style={styles.messageContainer}>
-          <Image source={avatar} style={styles.avatar} />
-          <View style={styles.messageContent}>
-            <View style={styles.messageHeader}>
-              <Text style={styles.messageSender}>{message.fromtext}</Text>
-              <Text style={styles.messageTime}>{message.date}</Text>
+        <View key={message.id}>
+          {!unreadAdded && !message.read && (
+            <View style={styles.unreadSeparator}>
+              <Text style={styles.unreadSeparatorText}>Unread Messages</Text>
             </View>
-            <Text style={styles.messageText}>{message.body}</Text>
+          )}
+          <View style={styles.messageContainer}>
+            <Image source={avatar} style={styles.avatar} />
+            <View style={styles.messageContent}>
+              <View style={styles.messageHeader}>
+                <Text style={styles.messageSender}>{message.fromtext}</Text>
+                <Text style={styles.messageTime}>{message.date}</Text>
+              </View>
+              <Text style={styles.messageText}>{message.body}</Text>
+            </View>
           </View>
+          {!unreadAdded && !message.read && setUnreadIndicatorAdded(true)}
         </View>
       );
     });
@@ -177,6 +188,15 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: 'white',
     fontSize: 16,
+  },
+  unreadSeparator: {
+    padding: 8,
+    backgroundColor: '#292e38',
+    alignItems: 'center',
+  },
+  unreadSeparatorText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 

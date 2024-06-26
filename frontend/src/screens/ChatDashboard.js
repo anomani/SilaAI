@@ -40,6 +40,7 @@ const ChatDashboard = ({ navigation }) => {
     const lastMessage = messages[messages.length - 1];
     const avatar = lastMessage.from === '18446480598' ? require('../../assets/uzi.png') : require('../../assets/avatar.png');
     const senderName = lastMessage.from === '18446480598' ? 'UZI' : clientNames[clientid];
+    const unreadMessagesCount = messages.filter(message => !message.read).length; // Count unread messages
 
     return (
       <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid })}> 
@@ -49,6 +50,11 @@ const ChatDashboard = ({ navigation }) => {
             <Text style={styles.clientName}>{senderName}</Text>
             <Text style={styles.messageTime}>{lastMessage.date}</Text>
           </View>
+          {unreadMessagesCount > 0 && (
+            <View style={styles.unreadCountContainer}>
+              <Text style={styles.unreadCountText}>{unreadMessagesCount}</Text>
+            </View>
+          )}
         </View>
         <Text style={styles.messageText}>{lastMessage.body}</Text>
       </TouchableOpacity>
@@ -175,6 +181,18 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: 'white',
     fontSize: 24,
+  },
+  unreadCountContainer: {
+    backgroundColor: 'red',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  unreadCountText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 

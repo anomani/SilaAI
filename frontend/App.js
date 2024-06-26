@@ -1,4 +1,3 @@
-// frontend/App.js
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import axios from 'axios';

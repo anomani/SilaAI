@@ -2,7 +2,7 @@ const twilio = require('twilio');
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
 const { handleUserInput } = require('../ai/scheduling');
-const { saveMessage } = require('../model/messages');
+const { saveMessage, toggleLastMessageReadStatus } = require('../model/messages');
 const { getClientByPhoneNumber } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -32,9 +32,6 @@ async function sendMessage(to, body) {
 };
 
 async function sendMessages(clients, message) {
-  console.log(clients) 
-  console.log(message)
-
   for (const client of clients) {
     await sendMessage(client, message);
   }
@@ -72,6 +69,7 @@ async function handleIncomingMessage(req, res) {
 
     const responseMessage = await handleUserInput(Body, Author);
     if (responseMessage == "user")  {
+      await toggleLastMessageReadStatus(clientId);
     } else {
       await sendMessage(Author, responseMessage);
     }
@@ -83,6 +81,7 @@ async function handleIncomingMessage(req, res) {
     res.status(500).send('Error processing message');
   }
 };
+
 
 
 module.exports = {

@@ -38,10 +38,10 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Chat')}>
           <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>Settings</Text>
-            <Text style={styles.menuSubtitle}>Manage your account and settings</Text>
+            <Text style={styles.menuTitle}>Client Outreach AI</Text>
+            <Text style={styles.menuSubtitle}>Chat with AI to assist with your client outreach</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>

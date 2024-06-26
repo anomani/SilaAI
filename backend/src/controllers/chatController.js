@@ -1,6 +1,6 @@
 const { handleUserInput } = require('../ai/scheduling');
 const {handleUserInputData} = require('../ai/clientData');
-const { getMessagesByClientId, getAllMessages, saveMessage } = require('../model/messages');
+const { getMessagesByClientId, getAllMessages, saveMessage,setMessagesRead } = require('../model/messages');
 const { sendMessage } = require('../config/twilio');
 
 const handleChatRequest = async (req, res) => {
@@ -75,4 +75,15 @@ const sendMessageController = async (req, res) => {
   }
 }
 
-module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController };
+const setMessagesReadController = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    await setMessagesRead(clientId);
+    res.status(200).json({ message: 'Messages marked as read' });
+  } catch (error) {
+    console.error('Error setting messages as read:', error);
+    res.status(500).json({ error: 'Error setting messages as read' });
+  }
+}
+
+module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController, setMessagesReadController };
