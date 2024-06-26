@@ -1,35 +1,35 @@
-const { Pool } = require('pg');
-
-let pool;
+const { Client } = require('pg');
+const dotenv = require('dotenv')
+dotenv.config({path : '../../.env'})
+let client;
 
 function connect() {
-    pool = new Pool({
-        user: 'postgres',
-        host: 'localhost',
-        database: 'postgres',
-        password: 'postgres',
-        port: 5432,
+    client = new Client({
+        connectionString: process.env.DATABASE_URL,
+        ssl: {
+          rejectUnauthorized: false
+        }
     });
 
-    pool.on('connect', () => {
-        console.log('Connected to the PostgreSQL database');
-    });
-
-    pool.on('error', (err) => {
-        console.error('Error connecting to the PostgreSQL database:', err.message);
+    client.connect(err => {
+        if (err) {
+            console.error('Connection error', err.stack);
+        } else {
+            console.log('Connected to PostgreSQL database');
+        }
     });
 }
 
 function getDB() {
-    if (!pool) {
+    if (!client) {
         connect();
     }
-    return pool;
+    return client;
 }
 
 function closeDB() {
-    if (pool) {
-        pool.end((err) => {
+    if (client) {
+        client.end(err => {
             if (err) {
                 console.error('Error closing the PostgreSQL database:', err.message);
             } else {
