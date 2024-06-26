@@ -2,17 +2,16 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
 const { Client } = require('pg');
-
+const dotenv = require('dotenv')
+dotenv.config({path : '../../../.env'})
+console.log(process.env.DATABASE_URL)
 const client = new Client({
-    host: "localhost",
-    user: "postgres",
-    port: 5432,
-    password: "postgres",
-    database: "postgres",
-    statement_timeout: 60000, // Increase statement timeout to 60 seconds
-    query_timeout: 60000, // Increase query timeout to 60 seconds
-    connectionTimeoutMillis: 60000 // Increase connection timeout to 60 seconds
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
 });
+
 
 const insertClient = async (clientData) => {
     const query = `
@@ -101,8 +100,8 @@ const readCSV = (filePath, insertFunction) => {
 async function migrateData() {
     try {
         await client.connect();
-        // await readCSV(csvFilePaths.client, insertClient);
-        // await readCSV(csvFilePaths.message, insertMessage);
+        await readCSV(csvFilePaths.client, insertClient);
+        await readCSV(csvFilePaths.message, insertMessage);
         await readCSV(csvFilePaths.appointment, insertAppointment);
         console.log('Data migration completed');
     } catch (err) {
