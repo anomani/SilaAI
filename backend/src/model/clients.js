@@ -111,8 +111,8 @@ async function getClientByPhoneNumber(phoneNumber) {
     const db = dbUtils.getDB();
     const sql = `
         SELECT * FROM Client 
-        WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phoneNumber, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(?, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '')
-        OR phoneNumber = ?
+        WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phoneNumber, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE($1, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '')
+        OR phoneNumber = $2
     `;
     const values = [phoneNumber, phoneNumber];
     try {
@@ -128,6 +128,13 @@ async function getClientByPhoneNumber(phoneNumber) {
         throw err;
     }
 }
+
+async function main() {
+    const client = await getClientByPhoneNumber('+12038324011');
+    console.log(client);
+}
+
+main();
 
 async function followUp(days) {
     const db = dbUtils.getDB();
