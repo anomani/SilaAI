@@ -12,14 +12,14 @@ async function getClients(req, res) {
 }
 
 async function addClient(req, res) {
-    const { firstName, lastName, phoneNumber, email } = req.body;
+    const { firstname, lastname, phonenumber, email } = req.body;
     try {
-        const result = await createClient(firstName, lastName, phoneNumber, email);
+        const result = await createClient(firstname, lastname, phonenumber, email);
         const client = {
             id: result.insertedId,
-            firstName,
-            lastName,
-            phoneNumber,
+            firstname,
+            lastname,
+            phonenumber,
             email
         };
         res.status(201).json(client);
@@ -65,8 +65,8 @@ async function clientIDGet(req, res) {
 async function updateTheClient(req, res) {
     try {
         const { id } = req.params;
-        const { firstName, lastName, phoneNumber, email, notes } = req.body;
-        const result = await updateClient(id, firstName, lastName, phoneNumber, email);
+        const { firstname, lastname, phonenumber, email, notes } = req.body;
+        const result = await updateClient(id, firstname, lastname, phonenumber, email);
         res.status(200).json(result);
     } catch (error) {
         res.status(500).send(`Error updating client: ${error.message}`);
