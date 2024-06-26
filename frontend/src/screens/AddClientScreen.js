@@ -3,8 +3,8 @@ import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import { addClient } from '../services/api';
 
 const AddClientScreen = ({ navigation }) => {
-  const [client, setClient] = useState({ firstName: '', lastName: '', phoneNumber: '', email: '' });
-
+  const [client, setClient] = useState({ firstname: '', lastname: '', phonenumber: '', email: '' });
+  
   const handleInputChange = (field, value) => {
     setClient({ ...client, [field]: value });
   };
@@ -22,11 +22,11 @@ const AddClientScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.label}>First Name</Text>
-      <TextInput style={styles.input} value={client.firstName} onChangeText={(value) => handleInputChange('firstName', value)} />
+      <TextInput style={styles.input} value={client.firstname} onChangeText={(value) => handleInputChange('firstname', value)} />
       <Text style={styles.label}>Last Name</Text>
-      <TextInput style={styles.input} value={client.lastName} onChangeText={(value) => handleInputChange('lastName', value)} />
+      <TextInput style={styles.input} value={client.lastname} onChangeText={(value) => handleInputChange('lastname', value)} />
       <Text style={styles.label}>Phone Number</Text>
-      <TextInput style={styles.input} value={client.phoneNumber} onChangeText={(value) => handleInputChange('phoneNumber', value)} />
+      <TextInput style={styles.input} value={client.phonenumber} onChangeText={(value) => handleInputChange('phonenumber', value)} />
       <Text style={styles.label}>Email</Text>
       <TextInput style={styles.input} value={client.email} onChangeText={(value) => handleInputChange('email', value)} />
       <Button title="Add Client" onPress={handleAddClient} />

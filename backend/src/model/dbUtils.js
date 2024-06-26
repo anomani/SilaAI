@@ -1,43 +1,45 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { Pool } = require('pg');
 
-let db;
+let pool;
 
 function connect() {
-    const dbPath = path.join(__dirname, 'app.db'); // Adjust the path as necessary
-    db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
-        if (err) {
-            console.error('Error connecting to the SQLite database:', err.message);
-        } else {
-            console.log('Connected to the SQLite database at', dbPath);
-        }
+    pool = new Pool({
+        user: 'postgres',
+        host: 'localhost',
+        database: 'postgres',
+        password: 'postgres',
+        port: 5432,
+    });
+
+    pool.on('connect', () => {
+        console.log('Connected to the PostgreSQL database');
+    });
+
+    pool.on('error', (err) => {
+        console.error('Error connecting to the PostgreSQL database:', err.message);
     });
 }
 
 function getDB() {
-    if (!db) {
+    if (!pool) {
         connect();
     }
-    return db;
+    return pool;
 }
 
 function closeDB() {
-    if (db) {
-        db.close((err) => {
+    if (pool) {
+        pool.end((err) => {
             if (err) {
-                console.error('Error closing the SQLite database:', err.message);
+                console.error('Error closing the PostgreSQL database:', err.message);
             } else {
-                console.log('SQLite database connection closed.');
+                console.log('PostgreSQL database connection closed.');
             }
         });
     }
 }
 
-async function main() {
-  
-}
 
-main()
 module.exports = {
     connect,
     getDB,

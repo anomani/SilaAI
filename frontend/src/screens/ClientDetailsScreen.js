@@ -75,8 +75,8 @@ const ClientDetailsScreen = ({ route, navigation }) => {
 
   const renderAppointment = ({ item }) => (
     <View style={styles.appointmentItem}>
-      <Text style={styles.appointmentType}>{item.appointmentType}</Text>
-      <Text style={styles.appointmentTime}>{formatTime(item.date, item.startTime)} - {formatTime(item.date, item.endTime)}</Text>
+      <Text style={styles.appointmentType}>{item.appointmenttype}</Text>
+      <Text style={styles.appointmentTime}>{formatTime(item.date, item.starttime)} - {formatTime(item.date, item.endtime)}</Text>
     </View>
   );
 
@@ -126,8 +126,8 @@ const ClientDetailsScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.name}>{client.firstName} {client.lastName}</Text>
-      <Text style={styles.details}>Phone: {client.phoneNumber}</Text>
+      <Text style={styles.name}>{client.firstname} {client.lastname}</Text>
+      <Text style={styles.details}>Phone: {client.phonenumber}</Text>
       <Text style={styles.details}>Email: {client.email}</Text>
       <Text style={styles.details}>Days since last appointment: {daysSinceLastAppointment}</Text>
       <Text style={styles.details}>Notes: {client.notes}</Text>

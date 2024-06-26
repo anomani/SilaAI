@@ -20,14 +20,14 @@ const ClientListScreen = () => {
   };
 
   const filteredClients = clients.filter(client =>
-    `${client.firstName} ${client.lastName}`.toLowerCase().includes(search.toLowerCase())
+    `${client.firstname} ${client.lastname}`.toLowerCase().includes(search.toLowerCase())
   );
 
   const renderItem = ({ item }) => (
     <TouchableOpacity onPress={() => navigation.navigate('ClientDetails', { client: item })}>
       <View style={styles.item}>
-        <Text style={styles.name}>{item.firstName} {item.lastName}</Text>
-        <Text style={styles.details}>{item.phoneNumber} | {item.email}</Text>
+        <Text style={styles.name}>{item.firstname} {item.lastname}</Text>
+        <Text style={styles.details}>{item.phonenumber} | {item.email}</Text>
       </View>
     </TouchableOpacity>
   );

@@ -4,119 +4,107 @@ async function createClient(firstName, lastName, phoneNumber, email, notes) {
     const db = dbUtils.getDB();
     const sql = `
         INSERT INTO Client (firstName, lastName, phoneNumber, email, notes)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
     `;
-    return new Promise((resolve, reject) => {
-        db.run(sql, [firstName, lastName, phoneNumber, email, notes], function(err) {
-            if (err) {
-                console.error('Error creating client:', err.message);
-                reject(err);
-            } else {
-                console.log('Client Created with ID:', this.lastID);
-                resolve(this.lastID);
-            }
-        });
-    });
+    const values = [firstName, lastName, phoneNumber, email, notes];
+    try {
+        const res = await db.query(sql, values);
+        console.log('Client Created with ID:', res.rows[0].id);
+        return res.rows[0].id;
+    } catch (err) {
+        console.error('Error creating client:', err.message);
+        throw err;
+    }
 }
 
 async function createAltClient(firstName, lastName, phoneNumber, email, daysSinceLastAppointment, notes) {
     const db = dbUtils.getDB();
     const sql = `
         INSERT INTO Client (firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
     `;
-    return new Promise((resolve, reject) => {
-        db.run(sql, [firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment], function(err) {
-            if (err) {
-                console.error('Error creating client:', err.message);
-                reject(err);
-            } else {
-                console.log('Client Created with ID:', this.lastID);
-                resolve(this.lastID);
-            }
-        });
-    });
+    const values = [firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment];
+    try {
+        const res = await db.query(sql, values);
+        console.log('Client Created with ID:', res.rows[0].id);
+        return res.rows[0].id;
+    } catch (err) {
+        console.error('Error creating client:', err.message);
+        throw err;
+    }
 }
 
 async function getClientById(clientId) {
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Client WHERE id = ?';
-    return new Promise((resolve, reject) => {
-        db.get(sql, [clientId], (err, row) => {
-            if (err) {
-                console.error('Error fetching client:', err.message);
-                reject(err);
-            } else {
-                resolve(row);
-            }
-        });
-    });
+    const sql = 'SELECT * FROM Client WHERE id = $1';
+    const values = [clientId];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error fetching client:', err.message);
+        throw err;
+    }
 }
 
 async function updateClient(clientId, firstName, lastName, phoneNumber, email, notes) {
     const db = dbUtils.getDB();
     const sql = `
         UPDATE Client
-        SET firstName = ?, lastName = ?, phoneNumber = ?, email = ?, notes = ?
-        WHERE id = ?
+        SET firstName = $1, lastName = $2, phoneNumber = $3, email = $4, notes = $5
+        WHERE id = $6
+        RETURNING *
     `;
     const params = [firstName, lastName, phoneNumber, email, notes, clientId];
-    return new Promise((resolve, reject) => {
-        db.run(sql, params, function(err) {
-            if (err) {
-                console.error('Error updating client:', err.message);
-                reject(err);
-            } else {
-                console.log(`Client Updated: ${this.changes} changes made`);
-                resolve(this.changes);
-            }
-        });
-    });
+    try {
+        const res = await db.query(sql, params);
+        console.log(`Client Updated: ${res.rowCount} changes made`);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error updating client:', err.message);
+        throw err;
+    }
 }
 
 async function deleteClient(clientId) {
     const db = dbUtils.getDB();
-    const sql = 'DELETE FROM Client WHERE id = ?';
-    return new Promise((resolve, reject) => {
-        db.run(sql, [clientId], function(err) {
-            if (err) {
-                console.error('Error deleting client:', err.message);
-                reject(err);
-            } else {
-                console.log('Client Deleted');
-                resolve(this.changes);
-            }
-        });
-    });
+    const sql = 'DELETE FROM Client WHERE id = $1';
+    const values = [clientId];
+    try {
+        const res = await db.query(sql, values);
+        console.log('Client Deleted');
+        return res.rowCount;
+    } catch (err) {
+        console.error('Error deleting client:', err.message);
+        throw err;
+    }
 }
+
 async function getAllClients() {
     const db = dbUtils.getDB();
     const sql = 'SELECT * FROM Client';
-    return new Promise((resolve, reject) => {
-        db.all(sql, [], (err, rows) => {
-            if (err) {
-                console.error('Error fetching clients:', err.message);
-                reject(err);
-            } else {
-                resolve(rows);
-            }
-        });
-    });
+    try {
+        const res = await db.query(sql);
+        return res.rows;
+    } catch (err) {
+        console.error('Error fetching clients:', err.message);
+        throw err;
+    }
 }
 
 async function checkClientExists(phoneNumber) {
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Client WHERE phoneNumber = ?';
-    return new Promise((resolve, reject) => {
-        db.get(sql, [phoneNumber], (err, row) => {
-            if (err) {
-                console.error('Error checking if client exists:', err.message);
-                reject(err);
-            } else {
-                resolve(row);
-            }
-        });
-    });
+    const sql = 'SELECT * FROM Client WHERE phoneNumber = $1';
+    const values = [phoneNumber];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error checking if client exists:', err.message);
+        throw err;
+    }
 }
 
 async function getClientByPhoneNumber(phoneNumber) {
@@ -126,23 +114,19 @@ async function getClientByPhoneNumber(phoneNumber) {
         WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phoneNumber, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(?, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '')
         OR phoneNumber = ?
     `;
-    return new Promise((resolve, reject) => {
-        db.get(sql, [phoneNumber, phoneNumber], async (err, row) => {
-            if (err) {
-                console.error('Error fetching client by phone number:', err.message);
-                reject(err);
-            } else if (row) {
-                try {
-                    const client = await getClientById(row.id.toString());
-                    resolve(client);
-                } catch (error) {
-                    reject(error);
-                }
-            } else {
-                reject(new Error('Client not found'));
-            }
-        });
-    });
+    const values = [phoneNumber, phoneNumber];
+    try {
+        const res = await db.query(sql, values);
+        if (res.rows[0]) {
+            const client = await getClientById(res.rows[0].id.toString());
+            return client;
+        } else {
+            throw new Error('Client not found');
+        }
+    } catch (err) {
+        console.error('Error fetching client by phone number:', err.message);
+        throw err;
+    }
 }
 
 async function followUp(days) {
@@ -154,18 +138,16 @@ async function followUp(days) {
         throw new Error("The 'days' parameter must be a valid number");
     }
 
-    const sql = 'SELECT * FROM Client WHERE daysSinceLastAppointment >= ?';
-    return new Promise((resolve, reject) => {
-        db.all(sql, [daysNumber], (err, rows) => {
-            if (err) {
-                console.error('Error fetching clients for follow-up:', err.message);
-                reject(err);
-            } else {
-                console.log('Clients found:', rows);
-                resolve(rows);
-            }
-        });
-    });
+    const sql = 'SELECT * FROM Client WHERE daysSinceLastAppointment >= $1';
+    const values = [daysNumber];
+    try {
+        const res = await db.query(sql, values);
+        console.log('Clients found:', res.rows);
+        return res.rows;
+    } catch (err) {
+        console.error('Error fetching clients for follow-up:', err.message);
+        throw err;
+    }
 }
 
 async function searchForClients(query) {
@@ -179,19 +161,17 @@ async function searchForClients(query) {
 
     const sql = `
         SELECT * FROM Client
-        WHERE firstName LIKE ? OR lastName LIKE ?
+        WHERE firstName LIKE $1 OR lastName LIKE $2
     `;
 
-    return new Promise((resolve, reject) => {
-        db.all(sql, [searchQuery, searchQuery], (err, rows) => {
-            if (err) {
-                console.error(`Error searching for clients: ${err.message}`);
-                reject(err);
-            } else {
-                resolve(rows);
-            }
-        });
-    });
+    const values = [searchQuery, searchQuery];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows;
+    } catch (err) {
+        console.error(`Error searching for clients: ${err.message}`);
+        throw err;
+    }
 }
 
 async function getDaysSinceLastAppointment(clientId) {
@@ -200,27 +180,27 @@ async function getDaysSinceLastAppointment(clientId) {
     const sql = `
         SELECT date
         FROM Appointment
-        WHERE clientId = ?
+        WHERE clientId = $1
         ORDER BY date DESC
         LIMIT 1
     `;
 
-    return new Promise((resolve, reject) => {
-        db.get(sql, [clientId], (err, row) => {
-            if (err) {
-                console.error('Error fetching last appointment date:', err.message);
-                reject(err);
-            } else if (row) {
-                const lastAppointmentDate = new Date(row.date);
-                const currentDate = new Date();
-                const timeDifference = currentDate - lastAppointmentDate;
-                const daysSinceLastAppointment = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
-                resolve(daysSinceLastAppointment);
-            } else {
-                resolve(null); // No appointments found for the client
-            }
-        });
-    });
+    const values = [clientId];
+    try {
+        const res = await db.query(sql, values);
+        if (res.rows[0]) {
+            const lastAppointmentDate = new Date(res.rows[0].date);
+            const currentDate = new Date();
+            const timeDifference = currentDate - lastAppointmentDate;
+            const daysSinceLastAppointment = Math.floor(timeDifference / (1000 * 60 * 60 * 24));
+            return daysSinceLastAppointment;
+        } else {
+            return null; // No appointments found for the client
+        }
+    } catch (err) {
+        console.error('Error fetching last appointment date:', err.message);
+        throw err;
+    }
 }
 
 module.exports = {
@@ -236,4 +216,3 @@ module.exports = {
     getDaysSinceLastAppointment,
     createAltClient
 };
-

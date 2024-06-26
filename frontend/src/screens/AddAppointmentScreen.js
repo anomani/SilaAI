@@ -24,7 +24,7 @@ const AddAppointmentScreen = ({ navigation }) => {
     setAppointment({ ...appointment, [field]: value });
     if (field === 'clientName') {
       const data = await searchClients(value);
-      setFilteredClients([{ id: 'new', firstName: 'New', lastName: 'Client' }, ...data]);
+      setFilteredClients([{ id: 'new', firstname: 'New', lastname: 'Client' }, ...data]);
     }
   };
 
@@ -48,7 +48,7 @@ const AddAppointmentScreen = ({ navigation }) => {
     if (item.id === 'new') {
       navigation.navigate('AddClient'); // Navigate to the add client screen
     } else {
-      setAppointment({ ...appointment, clientName: `${item.firstName} ${item.lastName}` });
+      setAppointment({ ...appointment, clientName: `${item.firstname} ${item.lastname}` });
       setSelectedClientId(item.id); // Store the selected client ID
     }
     setFilteredClients([]); // Clear the dropdown
@@ -93,7 +93,7 @@ const AddAppointmentScreen = ({ navigation }) => {
           keyExtractor: item => item.id,
           renderItem: ({ item }) => (
             <TouchableOpacity onPress={() => handleSelectClient(item)}>
-              <Text style={styles.itemText}>{item.firstName} {item.lastName}</Text>
+              <Text style={styles.itemText}>{item.firstname} {item.lastname}</Text>
             </TouchableOpacity>
           ),
         }}

@@ -39,14 +39,14 @@ const EditClientScreen = ({ route, navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="First Name"
-        value={client.firstName}
-        onChangeText={(value) => handleChange('firstName', value)}
+        value={client.firstname}
+        onChangeText={(value) => handleChange('firstname', value)}
       />
       <TextInput
         style={styles.input}
         placeholder="Last Name"
-        value={client.lastName}
-        onChangeText={(value) => handleChange('lastName', value)}
+        value={client.lastname}
+        onChangeText={(value) => handleChange('lastname', value)}
       />
       <TextInput
         style={styles.input}
@@ -57,8 +57,8 @@ const EditClientScreen = ({ route, navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Phone Number"
-        value={client.phoneNumber}
-        onChangeText={(value) => handleChange('phoneNumber', value)}
+        value={client.phonenumber}
+        onChangeText={(value) => handleChange('phonenumber', value)}
       />
       <TextInput
         style={styles.input}

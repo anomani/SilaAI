@@ -6,18 +6,18 @@ import twilioAvatar from '../../assets/uzi.png';
 import defaultAvatar from '../../assets/avatar.png';
 
 const ClientMessagesScreen = ({ route }) => {
-  const { clientId } = route.params; // Retrieve clientId from route params
+  const { clientid } = route.params; // Retrieve clientId from route params
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState(''); // State for new message
   const navigation = useNavigation(); // Initialize navigation
 
   useEffect(() => {
-    fetchMessages(clientId);
-  }, [clientId]);
+    fetchMessages(clientid);
+  }, [clientid]);
 
-  const fetchMessages = async (clientId) => {
+  const fetchMessages = async (clientid) => {
     try {
-      const data = await getMessagesByClientId(clientId);
+      const data = await getMessagesByClientId(clientid);
       setMessages(data);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -28,12 +28,12 @@ const ClientMessagesScreen = ({ route }) => {
     if (newMessage.trim() === '') return; // Prevent sending empty messages
     try {
       const lastMessage = messages[messages.length - 2];
-      const fromText = lastMessage ? lastMessage.fromText : clientId; // Use fromText of the last message or clientId if no messages
-      console.log(fromText)
+      const fromtext = lastMessage ? lastMessage.fromtext : clientid; // Use fromtext of the last message or clientId if no messages
+      console.log(fromtext)
       console.log(newMessage)
-      await sendMessage(fromText, newMessage);
+      await sendMessage(fromtext, newMessage);
       setNewMessage(''); // Clear the input field
-      fetchMessages(clientId); // Refresh messages
+      fetchMessages(clientid); // Refresh messages
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -41,13 +41,13 @@ const ClientMessagesScreen = ({ route }) => {
 
   const renderMessages = (messages) => {
     return messages.map((message) => {
-      const avatar = message.fromText === '+18446480598' ? twilioAvatar : defaultAvatar;
+      const avatar = message.fromtext === '+18446480598' ? twilioAvatar : defaultAvatar;
       return (
         <View key={message.id} style={styles.messageContainer}>
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.messageContent}>
             <View style={styles.messageHeader}>
-              <Text style={styles.messageSender}>{message.fromText}</Text>
+              <Text style={styles.messageSender}>{message.fromtext}</Text>
               <Text style={styles.messageTime}>{message.date}</Text>
             </View>
             <Text style={styles.messageText}>{message.body}</Text>

@@ -9,16 +9,16 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
   useEffect(() => {
     const fetchClientName = async () => {
       try {
-        const clientDetails = await getClientById(appointment.clientId);
-        console.log(clientDetails)
-        setClientName(`${clientDetails.firstName} ${clientDetails.lastName}`);
+        const clientDetails = await getClientById(appointment.clientid); // Use 'clientid' instead of 'clientId'
+        console.log(clientDetails);
+        setClientName(`${clientDetails.firstname} ${clientDetails.lastname}`);
       } catch (error) {
         Alert.alert('Error', 'Failed to fetch client details');
       }
     };
 
     fetchClientName();
-  }, [appointment.clientId]);
+  }, [appointment.clientid]); // Use 'clientid' instead of 'clientId'
 
   const handleDelete = async () => {
     try {
@@ -38,7 +38,7 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       <Text style={styles.label}>Client Name: {clientName}</Text>
       <Text style={styles.label}>Date: {appointment.date}</Text>
-      <Text style={styles.label}>Time: {appointment.startTime} - {appointment.endTime}</Text>
+      <Text style={styles.label}>Time: {appointment.starttime} - {appointment.endtime}</Text>
       <Text style={styles.label}>Details: {appointment.details}</Text>
       <Button title="Reschedule" onPress={handleReschedule} />
       <Button title="Delete" onPress={handleDelete} />

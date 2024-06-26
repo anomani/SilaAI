@@ -39,10 +39,10 @@ const getAllMessagesGroupedByClient = async (req, res) => {
   try {
     const messages = await getAllMessages();
     const groupedMessages = messages.reduce((acc, message) => {
-      if (!acc[message.clientId]) {
-        acc[message.clientId] = [];
+      if (!acc[message.clientid]) {
+        acc[message.clientid] = [];
       }
-      acc[message.clientId].push(message);
+      acc[message.clientid].push(message);
       return acc;
     }, {});
     res.status(200).json(groupedMessages);
@@ -55,6 +55,7 @@ const getAllMessagesGroupedByClient = async (req, res) => {
 const getMessagesByClientIdController = async (req, res) => {
   try {
     const { clientId } = req.params;
+    console.log(clientId)
     const messages = await getMessagesByClientId(clientId);
     res.status(200).json(messages);
   } catch (error) {
