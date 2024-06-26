@@ -1,75 +1,74 @@
 const dbUtils = require('./dbUtils');
 
-/*
-           id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fromText TEXT,
-            toText TEXT,
-            body TEXT,
-            date TEXT,
-            clientId INTEGER,
-            FOREIGN KEY(clientId) REFERENCES Client(id)
-*/
-
-async function saveMessage(from, to, body, date, clientId) {
+async function saveMessage(from, to, body, date, clientid) {
+  if (!clientid) {
+    throw new Error('Invalid clientid');
+  }
   const db = dbUtils.getDB();
-  const query = `INSERT INTO Messages (fromText, toText, body, date, clientId) VALUES (?, ?, ?, ?, ?)`;
-  return new Promise((resolve, reject) => {
-    db.run(query, [from, to, body, date, clientId], function (err) {
-      if (err) {
-        console.error('Error saving message:', err);
-        reject(err);
-      } else {
-        console.log("Message saved with id:", this.lastID);
-        resolve({ id: this.lastID });
-      }
-    });
-  });
+  const sql = `
+    INSERT INTO Messages (fromText, toText, body, date, clientid)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id
+  `;
+  const values = [from, to, body, date, clientid];
+  try {
+    const res = await db.query(sql, values);
+    console.log("Message saved with id:", res.rows[0].id);
+    return { id: res.rows[0].id };
+  } catch (err) {
+    console.error('Error saving message:', err.message);
+    throw err;
+  }
 }
 
 async function getAllMessages() {
   const db = dbUtils.getDB();
-  const query = `SELECT * FROM Messages`;
-  return new Promise((resolve, reject) => {
-    db.all(query, [], (err, rows) => {
-      if (err) {
-        console.error('Error fetching all messages:', err);
-        reject(err);
-      } else {
-        resolve(rows);
-      }
-    });
-  });
+  const sql = 'SELECT * FROM Messages';
+  try {
+    const res = await db.query(sql);
+    return res.rows;
+  } catch (err) {
+    console.error('Error fetching all messages:', err.message);
+    throw err;
+  }
 }
 
-async function getMessagesByClientId(clientId) {
+async function getMessagesByClientId(clientid) {
+  if (!clientid) {
+    throw new Error('Invalid clientid');
+  }
   const db = dbUtils.getDB();
-  const query = `SELECT * FROM Messages WHERE clientId = ?`;
-  return new Promise((resolve, reject) => {
-    db.all(query, [clientId], (err, rows) => {
-      if (err) {
-        console.error('Error fetching messages by clientId:', err);
-        reject(err);
-      } else {
-        resolve(rows);
-      }
-    });
-  });
+  const sql = 'SELECT * FROM Messages WHERE clientid = $1';
+  const values = [clientid];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows;
+  } catch (err) {
+    console.error('Error fetching messages by clientid:', err.message);
+    throw err;
+  }
 }
 
-async function deleteMessagesByClientId(clientId) {
+async function deleteMessagesByClientId(clientid) {
+  if (!clientid) {
+    throw new Error('Invalid clientid');
+  }
   const db = dbUtils.getDB();
-  const query = `DELETE FROM Messages WHERE clientId = ?`;
-  return new Promise((resolve, reject) => {
-    db.run(query, [clientId], function (err) {
-      if (err) {
-        console.error('Error deleting messages by clientId:', err);
-        reject(err);
-      } else {
-        console.log(`Messages deleted for clientId ${clientId}:`, this.changes);
-        resolve({ deletedCount: this.changes });
-      }
-    });
-  });
+  const sql = 'DELETE FROM Messages WHERE clientid = $1 RETURNING *';
+  const values = [clientid];
+  try {
+    const res = await db.query(sql, values);
+    console.log(`Messages deleted for clientid ${clientid}:`, res.rowCount);
+    return { deletedCount: res.rowCount };
+  } catch (err) {
+    console.error('Error deleting messages by clientid:', err.message);
+    throw err;
+  }
 }
 
-module.exports = { saveMessage, getAllMessages, getMessagesByClientId, deleteMessagesByClientId };
+module.exports = {
+  saveMessage,
+  getAllMessages,
+  getMessagesByClientId,
+  deleteMessagesByClientId,
+};

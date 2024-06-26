@@ -23,12 +23,13 @@ const CalendarScreen = ({ navigation }) => {
 
       const response = await getAppointmentsByDay(formattedDate);
       const adjustedAppointments = await Promise.all(response.map(async (appointment) => {
-        const client = await getClientById(appointment.clientId);
+        console.log('Fetching client for appointment:', appointment); // Add this line
+        const client = await getClientById(appointment.clientid); // Use 'clientid' instead of 'clientId'
         return {
           ...appointment,
-          clientName: `${client.firstName} ${client.lastName}`,
-          startTime: convertTo12HourFormat(appointment.startTime),
-          endTime: convertTo12HourFormat(appointment.endTime)
+          clientName: `${client.firstname} ${client.lastname}`,
+          startTime: convertTo12HourFormat(appointment.starttime), // Use 'starttime' instead of 'startTime'
+          endTime: convertTo12HourFormat(appointment.endtime) // Use 'endtime' instead of 'endTime'
         };
       }));
       setAppointments(adjustedAppointments);
@@ -74,7 +75,7 @@ const CalendarScreen = ({ navigation }) => {
         <Text style={styles.name}>{item.clientName}</Text>
         <Text style={styles.time}>{item.startTime} - {item.endTime}</Text>
       </View>
-      <Text style={styles.type}>{item.appointmentType}</Text>
+      <Text style={styles.type}>{item.appointmenttype}</Text>
     </TouchableOpacity>
   );
 

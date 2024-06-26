@@ -23,25 +23,26 @@ const ChatDashboard = ({ navigation }) => {
 
   const fetchClientNames = async (groupedMessages) => {
     const names = {};
-    for (const clientId of Object.keys(groupedMessages)) {
-      const client = await getClientById(clientId);
-      names[clientId] = `${client.firstName} ${client.lastName}`;
+    for (const clientid of Object.keys(groupedMessages)) { // Use 'clientid' instead of 'clientId'
+      console.log(clientid);
+      const client = await getClientById(clientid); // Use 'clientid' instead of 'clientId'
+      names[clientid] = `${client.firstname} ${client.lastname}`;
     }
     setClientNames(names);
   };
 
-  const filteredClients = Object.keys(groupedMessages).filter(clientId =>
-    clientNames[clientId]?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredClients = Object.keys(groupedMessages).filter(clientid =>
+    clientNames[clientid]?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderClient = ({ item: clientId }) => {
-    const messages = groupedMessages[clientId];
+  const renderClient = ({ item: clientid }) => { // Use 'clientid' instead of 'clientId'
+    const messages = groupedMessages[clientid];
     const lastMessage = messages[messages.length - 1];
     const avatar = lastMessage.from === '18446480598' ? require('../../assets/uzi.png') : require('../../assets/avatar.png');
-    const senderName = lastMessage.from === '18446480598' ? 'UZI' : clientNames[clientId];
+    const senderName = lastMessage.from === '18446480598' ? 'UZI' : clientNames[clientid];
 
     return (
-      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientId })}>
+      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid })}> 
         <View style={styles.clientContainer}>
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.clientContent}>

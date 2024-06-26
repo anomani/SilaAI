@@ -4,101 +4,89 @@ async function createAppointment(appointmentType, date, startTime, endTime, clie
     const db = dbUtils.getDB();
     const sql = `
         INSERT INTO Appointment (appointmentType, date, startTime, endTime, clientId, details)
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING id
     `;
-    return new Promise((resolve, reject) => {
-        db.run(sql, [appointmentType, date, startTime, endTime, clientId, details], function(err) {
-            if (err) {
-                console.error('Error creating appointment:', err.message);
-                reject(err);
-            } else {
-                console.log('Appointment Created with ID:', this.lastID);
-                resolve(this.lastID);
-            }
-        });
-    });
+    const values = [appointmentType, date, startTime, endTime, clientId, details];
+    try {
+        const res = await db.query(sql, values);
+        console.log('Appointment Created with ID:', res.rows[0].id);
+        return res.rows[0].id;
+    } catch (err) {
+        console.error('Error creating appointment:', err.message);
+        throw err;
+    }
 }
 
 async function getAppointmentById(appointmentId) {
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Appointment WHERE id = ?';
-    return new Promise((resolve, reject) => {
-        db.get(sql, [appointmentId], (err, row) => {
-            if (err) {
-                console.error('Error fetching appointment:', err.message);
-                reject(err);
-            } else {
-                resolve(row);
-            }
-        });
-    });
+    const sql = 'SELECT * FROM Appointment WHERE id = $1';
+    const values = [appointmentId];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error fetching appointment:', err.message);
+        throw err;
+    }
 }
 
 async function updateAppointment(appointmentId, updateData) {
     const db = dbUtils.getDB();
     const sql = `
         UPDATE Appointment
-        SET appointmentType = ?, date = ?, startTime = ?, endTime = ?, clientId = ?, details = ?
-        WHERE id = ?
+        SET appointmentType = $1, date = $2, startTime = $3, endTime = $4, clientId = $5, details = $6
+        WHERE id = $7
     `;
     const params = [updateData.appointmentType, updateData.date, updateData.startTime, updateData.endTime, updateData.clientId, updateData.details, appointmentId];
-    return new Promise((resolve, reject) => {
-        db.run(sql, params, function(err) {
-            if (err) {
-                console.error('Error updating appointment:', err.message);
-                reject(err);
-            } else {
-                console.log(`Appointment Updated: ${this.changes} changes made`);
-                resolve(this.changes);
-            }
-        });
-    });
+    try {
+        const res = await db.query(sql, params);
+        console.log(`Appointment Updated: ${res.rowCount} changes made`);
+        return res.rowCount;
+    } catch (err) {
+        console.error('Error updating appointment:', err.message);
+        throw err;
+    }
 }
 
 async function deleteAppointment(appointmentId) {
     const db = dbUtils.getDB();
-    const sql = 'DELETE FROM Appointment WHERE id = ?';
-    return new Promise((resolve, reject) => {
-        db.run(sql, [appointmentId], function(err) {
-            if (err) {
-                console.error('Error deleting appointment:', err.message);
-                reject(err);
-            } else {
-                console.log('Appointment Deleted');
-                resolve(this.changes);
-            }
-        });
-    });
+    const sql = 'DELETE FROM Appointment WHERE id = $1';
+    const values = [appointmentId];
+    try {
+        const res = await db.query(sql, values);
+        console.log('Appointment Deleted');
+        return res.rowCount;
+    } catch (err) {
+        console.error('Error deleting appointment:', err.message);
+        throw err;
+    }
 }
 
 async function getAppointmentsByDay(date) {
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Appointment WHERE date = ? ORDER BY startTime';
-    return new Promise((resolve, reject) => {
-        db.all(sql, [date], (err, rows) => {
-            if (err) {
-                console.error('Error fetching appointments by day:', err.message);
-                reject(err);
-            } else {
-                resolve(rows);
-            }
-        });
-    });
+    const sql = 'SELECT * FROM Appointment WHERE date = $1 ORDER BY startTime';
+    const values = [date];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows;
+    } catch (err) {
+        console.error('Error fetching appointments by day:', err.message);
+        throw err;
+    }
 }
 
 async function getAllAppointmentsByClientId(clientId) {
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Appointment WHERE clientId = ? ORDER BY date DESC';
-    return new Promise((resolve, reject) => {
-        db.all(sql, [clientId], (err, rows) => {
-            if (err) {
-                console.error('Error fetching appointments by client ID:', err.message);
-                reject(err);
-            } else {
-                resolve(rows);
-            }
-        });
-    });
+    const sql = 'SELECT * FROM Appointment WHERE clientId = $1 ORDER BY date DESC';
+    const values = [clientId];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows;
+    } catch (err) {
+        console.error('Error fetching appointments by client ID:', err.message);
+        throw err;
+    }
 }
 
 module.exports = {
