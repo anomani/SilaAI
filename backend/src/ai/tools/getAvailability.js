@@ -28,8 +28,8 @@ async function getAvailability(day, duration) {
             const nextTime = new Date(currentTime.getTime() + duration * 60000);
 
             const isSlotAvailable = appointments.every(appointment => {
-                const appointmentStart = new Date(`${appointment.date}T${appointment.startTime}`);
-                const appointmentEnd = new Date(`${appointment.date}T${appointment.endTime}`);
+                const appointmentStart = new Date(`${appointment.date}T${appointment.starttime}`);
+                const appointmentEnd = new Date(`${appointment.date}T${appointment.endtime}`);
 
                 return nextTime <= appointmentStart || currentTime >= appointmentEnd;
             });
@@ -51,6 +51,12 @@ async function getAvailability(day, duration) {
     }
 }
 
+(async () => {
+    const testDay = '2024-06-26';
+    const testDuration = 30; // duration in minutes
+    const availability = await getAvailability(testDay, testDuration);
+    console.log(`Availability for ${testDay}:`, availability);
+})();
 
 function getCurrentDate() {
     const now = new Date();

@@ -11,7 +11,7 @@ const client = twilio(accountSid, authToken);
 
 async function sendMessage(to, body) {
   const customer = await getClientByPhoneNumber(to);
-  const name = customer.firstName;
+  const name = customer.firstname;
   const clientId = customer.id
   const localDate = new Date().toLocaleString();
   await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId);

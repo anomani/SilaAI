@@ -20,8 +20,8 @@ let assistant;
 let thread;
 
 function getAppointmentDuration(appointment) {
-  const [startHour, startMinute] = appointment[0].startTime.split(':').map(Number);
-  const [endHour, endMinute] = appointment[0].endTime.split(':').map(Number);
+  const [startHour, startMinute] = appointment[0].starttime.split(':').map(Number);
+  const [endHour, endMinute] = appointment[0].endtime.split(':').map(Number);
 
   const startTotalMinutes = startHour * 60 + startMinute;
   const endTotalMinutes = endHour * 60 + endMinute;
@@ -160,14 +160,16 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
 async function handleUserInput(userMessage, phoneNumber) {
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
-    const messages = (await getMessagesByClientId(client.id)).slice(-5);
+    const messages = (await getMessagesByClientId(client.id)).slice(-10);
+    console.log(messages)
     const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0, 1);
+
     const appointmentDuration = getAppointmentDuration(appointment);
     const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
-    const fname = client.firstName;
-    const lname = client.lastName;
+    const fname = client.firstname;
+    const lname = client.lastname;
     const email = client.email;
-    const phone = client.phoneNumber; 
+    const phone = client.phonenumber; 
     const day = getCurrentDate();
 
     const thread = await createThread(phoneNumber); 
