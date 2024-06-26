@@ -108,6 +108,7 @@ async function checkClientExists(phoneNumber) {
 }
 
 async function getClientByPhoneNumber(phoneNumber) {
+    console.log(phoneNumber)
     const db = dbUtils.getDB();
     const sql = `
         SELECT * FROM Client 
