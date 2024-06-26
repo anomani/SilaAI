@@ -81,6 +81,7 @@ const readCSV = (filePath, insertFunction) => {
                 console.log(`${filePath} file successfully processed`);
                 try {
                     for (const row of rows) {
+                        console.log(row.id)
                         if(row.daysSinceLastAppointment === '') {
                             row.daysSinceLastAppointment = 0;
                         }
@@ -100,8 +101,8 @@ const readCSV = (filePath, insertFunction) => {
 async function migrateData() {
     try {
         await client.connect();
-        await readCSV(csvFilePaths.client, insertClient);
-        await readCSV(csvFilePaths.message, insertMessage);
+        // await readCSV(csvFilePaths.client, insertClient);
+        // await readCSV(csvFilePaths.message, insertMessage);
         await readCSV(csvFilePaths.appointment, insertAppointment);
         console.log('Data migration completed');
     } catch (err) {
