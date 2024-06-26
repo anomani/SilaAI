@@ -38,7 +38,7 @@ async function getMessagesByClientId(clientid) {
     throw new Error('Invalid clientid');
   }
   const db = dbUtils.getDB();
-  const sql = 'SELECT * FROM Messages WHERE clientid = $1';
+  const sql = 'SELECT * FROM Messages WHERE clientid = $1 ORDER BY date';
   const values = [clientid];
   try {
     const res = await db.query(sql, values);
@@ -66,9 +66,49 @@ async function deleteMessagesByClientId(clientid) {
   }
 }
 
+async function toggleLastMessageReadStatus(clientid) {
+  const db = dbUtils.getDB();
+  const sql = `
+    UPDATE Messages
+    SET read = NOT read
+    WHERE id = (
+      SELECT id FROM Messages
+      WHERE clientid = $1
+      ORDER BY date DESC
+      LIMIT 1
+    )
+  `;
+  const values = [clientid];
+  try {
+    const res = await db.query(sql, values);
+    console.log(`Last message for clientid ${clientid} read status toggled`);
+    return { updatedCount: res.rowCount };
+  } catch (err) {
+    console.error('Error toggling last message read status:', err.message);
+    throw err;
+  }
+}
+
+async function setMessagesRead(clientid) {
+  const db = dbUtils.getDB();
+  const sql = 'UPDATE Messages SET read = true WHERE clientid = $1';
+  const values = [clientid];
+
+  try {
+    const res = await db.query(sql, values);
+    console.log(`Messages marked as read for clientid ${clientid}:`, res.rowCount);
+    return { updatedCount: res.rowCount };
+  } catch (err) {
+    console.error('Error setting messages as read:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   saveMessage,
   getAllMessages,
   getMessagesByClientId,
   deleteMessagesByClientId,
+  toggleLastMessageReadStatus,
+  setMessagesRead
 };

@@ -180,3 +180,12 @@ export const sendMessage = async (to, message) => {
     throw error;
   }
 };
+
+export const setMessagesRead = async (clientId) => {
+  try {
+    await axios.post(`${API_URL}/chat/set-messages-read/${clientId}`);
+  } catch (error) {
+    console.error('Error setting messages as read:', error);
+    throw error;
+  }
+};
