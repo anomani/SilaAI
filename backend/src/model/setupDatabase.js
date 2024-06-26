@@ -1,12 +1,16 @@
 const { Client } = require('pg');
+const {Pool} = require('pg');
+const dotenv = require('dotenv')
+dotenv.config({path : '../../.env'})
+console.log(process.env.DATABASE_URL)
+
 
 const client = new Client({
-    host: "localhost",
-    user: "postgres",
-    port: 5432,
-    password: "postgres",
-    database: "postgres"
-});
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  });
 
 client.connect((err) => {
     if (err) {
