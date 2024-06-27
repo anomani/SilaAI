@@ -31,9 +31,7 @@ async function getAppointmentsByDate(req, res) {
     try {
 
         const date = req.params.date;
-        console.log(date)
         const appointments = await getAppointmentsByDay(date);
-        console.log(appointments)
 
         res.status(200).json(appointments);
     } catch (error) {
@@ -44,9 +42,7 @@ async function getAppointmentsByDate(req, res) {
 async function getAppointmentsByClientId(req, res) {
     try {
         const clientId = req.params.clientId;
-        console.log(clientId)
         const appointments = await getAllAppointmentsByClientId(clientId);
-        console.log(appointments)
         res.status(200).json(appointments);
     } catch (error) {
         res.status(500).send(`Error fetching appointments: ${error.message}`);

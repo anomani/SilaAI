@@ -8,6 +8,13 @@ const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
+const { getUserPushToken } = require('../model/pushToken');
+const { getUserByPhoneNumber } = require('../model/users');
+
+const { Expo } = require('expo-server-sdk');
+
+// Initialize the Expo SDK
+let expo = new Expo();
 
 async function sendMessage(to, body) {
   const customer = await getClientByPhoneNumber(to);
@@ -37,9 +44,6 @@ async function sendMessages(clients, message) {
   }
 };
 
-async function notifyUser(clientId) {
-  io.emit('notifyUser', { clientId });
-}
 
 async function handleIncomingMessage(req, res) {
   if (!req.body) {
@@ -63,17 +67,18 @@ async function handleIncomingMessage(req, res) {
     console.log(Author)
     const client = await getClientByPhoneNumber(Author);
     const clientId = client.id;
+    const clientName = `${client.firstname} ${client.lastname}`;
     const localDate = new Date().toLocaleString();
 
     await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
 
     const responseMessage = await handleUserInput(Body, Author);
-    if (responseMessage == "user")  {
+    if (responseMessage === "user")  {
       await toggleLastMessageReadStatus(clientId);
+      await sendNotificationToUser(clientName, Body);
     } else {
       await sendMessage(Author, responseMessage);
     }
-    
 
     res.status(200).send('Message sent');
   } catch (error) {
@@ -84,8 +89,45 @@ async function handleIncomingMessage(req, res) {
 
 
 
+async function sendNotificationToUser(clientName, message) {
+  const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+  const barber = await getUserByPhoneNumber(barberPhoneNumber);
+
+  if (!barber) {
+    console.log('No barber found with the given phone number');
+    return;
+  }
+
+  const pushToken = await getUserPushToken(barber.id);
+
+  if (!pushToken) {
+    console.log('No push token found for the barber');
+    return;
+  }
+
+  const notification = {
+    to: pushToken,
+    sound: 'default',
+    title: 'New Client Message',
+    body: `${clientName}: ${message}`,
+    data: { clientName, message },
+  };
+
+  console.log(notification)
+
+  try {
+    let ticketChunk = await expo.sendPushNotificationsAsync([notification]);
+    console.log(ticketChunk);
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+  }
+}
+
+
+
 module.exports = {
   sendMessage,
   handleIncomingMessage,
-  sendMessages
+  sendMessages,
+  sendNotificationToUser
 };
