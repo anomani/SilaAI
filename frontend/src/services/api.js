@@ -189,3 +189,12 @@ export const setMessagesRead = async (clientId) => {
     throw error;
   }
 };
+
+export const savePushToken = async (phoneNumber, pushToken) => {
+  try {
+    await axios.post(`${API_URL}/save-push-token`, { phoneNumber, pushToken });
+  } catch (error) {
+    console.error('Error saving push token:', error);
+    throw error;
+  }
+};

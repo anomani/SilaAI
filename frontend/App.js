@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import axios from 'axios';
 import { NavigationContainer } from '@react-navigation/native';
@@ -16,9 +16,40 @@ import ChatScreen from './src/screens/ChatScreen';
 import EditClientScreen from './src/screens/EditClientScreen';
 import ChatDashboard from './src/screens/ChatDashboard';
 import ClientMessagesScreen from './src/screens/ClientMessagesScreen';
+import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
+import { savePushToken } from './src/services/api';
+
 const Stack = createStackNavigator();
 
 export default function App() {
+  const notificationListener = useRef();
+  const responseListener = useRef();
+
+  useEffect(() => {
+    registerForPushNotificationsAsync().then(token => {
+      if (token) {
+        savePushToken('+18446480598', token);
+      }
+    });
+
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      // Handle received notification
+      console.log(notification);
+    });
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      // Handle notification response (e.g., when user taps the notification)
+      console.log(response);
+    });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
+    };
+  }, []);
+
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Homepage" screenOptions={{ headerShown: false }}>
@@ -48,3 +79,28 @@ const styles = StyleSheet.create({
   },
 });
 
+async function registerForPushNotificationsAsync() {
+  let token;
+  
+  // Check if the app is running in Expo Go
+  const isExpoGo = Constants.appOwnership === 'expo';
+
+  if (Constants.isDevice || isExpoGo) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      alert('Failed to get push token for push notification!');
+      return null;
+    }
+    token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log('Push Token:', token);
+  } else {
+    alert('Push notifications are only available on physical devices.');
+  }
+
+  return token;
+}
