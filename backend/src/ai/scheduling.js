@@ -133,7 +133,7 @@ async function createThread(phoneNumber) {
   return sessions.get(phoneNumber);
 }
 
-async function createAssistant(fname, lname, phone, messages, appointment, appointmentDuration, daysSinceLastAppointment) {
+async function createAssistant(fname, lname, phone, messages, appointment, appointmentDuration, daysSinceLastAppointment, day) {
   const instructionsPath = path.join(__dirname, 'assistantInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
   assistantInstructions = assistantInstructions
@@ -143,7 +143,8 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
     .replace('${lname}', lname)
     .replace('${phone}', phone)
     .replace('${messages}', JSON.stringify(messages, null, 2))
-    .replace('${daysSinceLastAppointment}', daysSinceLastAppointment);
+    .replace('${daysSinceLastAppointment}', daysSinceLastAppointment)
+    .replace('${day}', day);
   if (!assistant) {
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions,
@@ -169,9 +170,10 @@ async function handleUserInput(userMessage, phoneNumber) {
     const email = client.email;
     const phone = client.phonenumber; 
     const day = getCurrentDate();
+    console.log(day)
 
     const thread = await createThread(phoneNumber); 
-    const assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment);
+    const assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, day);
     
 
     const message = await openai.beta.threads.messages.create(thread.id, {
@@ -180,7 +182,8 @@ async function handleUserInput(userMessage, phoneNumber) {
     });
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
-      additional_instructions: "The current date and time is" + day
+      additional_instructions: "The current date and time is" + day,
+      
     });
 
     while (true) {
@@ -217,6 +220,7 @@ async function handleUserInput(userMessage, phoneNumber) {
             });
           } else if (funcName === "getCurrentDate") {
             const output = getCurrentDate();
+
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)

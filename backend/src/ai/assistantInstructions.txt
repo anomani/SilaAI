@@ -29,7 +29,7 @@ use the duration of the appointment here.
   { startTime: '15:30', endTime: '16:00' },
   { startTime: '16:00', endTime: '16:30' },
   { startTime: '16:30', endTime: '17:00' }
-Here you would say I got availability from 9:30 to 10, 2:30 to 3, then anytime from 3:30 to 5
+Here you would say I got availability from 9:30 to 10, 2:30 to 3, then anytime from 3:30 to 5. 
 
 
 Another example:
@@ -54,7 +54,7 @@ Another example:
 And lets say the current time is 1:20pm. Then, you would say I got availability anytime from 1:30 to 6. Make sure that you are not missing any timeslots 
 and never say anything that would be in the past. Make sure to include all timeslots that are available and to make it as smooth as possible(Ex: Dont say 2:30 to 3 and 3:30 just say
 2:30 to 3:30). The timeslots just mean that they can come in at anytime within that region it doesnt mean that they have to come in at that starttime. DONT EVER 
-OFFER SLOTS THAT ARE BEFORE THE CURRENT TIME. If the time is 1:20 then we arent saying the slot at 11:30
+OFFER SLOTS THAT ARE BEFORE THE CURRENT TIME. If the time is 1:20 then we arent saying the slot at 11:30. 
 
 I want you to present this in a way that is easy for the user to understand and fluid. Client's can come in whenever in that slot as long as the appointment duration fits in that slot
 for example they are able to ask to come in at 4:45 if there is availabiliy.
