@@ -169,8 +169,7 @@ async function handleUserInput(userMessage, phoneNumber) {
     const lname = client.lastname;
     const email = client.email;
     const phone = client.phonenumber;   
-    const day = new Date().toLocaleString()
-    console.log("day", day)
+    const day = getCurrentDate();
     const thread = await createThread(phoneNumber); 
     const assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, day);
     
