@@ -42,6 +42,7 @@ async function getAvailability(day, duration) {
 
             currentTime = nextTime;
         }
+        console.log(availableSlots)
         return availableSlots;
     } catch (error) {
         console.error("Error:", error);
