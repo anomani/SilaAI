@@ -23,32 +23,28 @@ async function getAvailability(day, duration) {
 
         let currentTime = startOfDay;
 
-        while (currentTime < endOfDay) {
-            const nextTime = new Date(currentTime.getTime() + duration * 60000);
+        for (let i = 0; i <= appointments.length; i++) {
+            const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfDay;
+            const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfDay;
 
-            const isSlotAvailable = appointments.every(appointment => {
-                const appointmentStart = new Date(`${appointment.date}T${appointment.starttime}`);
-                const appointmentEnd = new Date(`${appointment.date}T${appointment.endtime}`);
-
-                return nextTime <= appointmentStart || currentTime >= appointmentEnd;
-            });
-
-            if (isSlotAvailable) {
+            if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000) {
                 availableSlots.push({
                     startTime: currentTime.toTimeString().slice(0, 5),
-                    endTime: nextTime.toTimeString().slice(0, 5)
+                    endTime: appointmentStart.toTimeString().slice(0, 5)
                 });
             }
 
-            currentTime = nextTime;
+            currentTime = appointmentEnd > currentTime ? appointmentEnd : currentTime;
         }
-        console.log(availableSlots)
+
+        console.log(availableSlots);
         return availableSlots;
     } catch (error) {
         console.error("Error:", error);
         return [];
     }
 }
+
 
 
 function getCurrentDate() {
