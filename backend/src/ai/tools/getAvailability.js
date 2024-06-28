@@ -15,6 +15,7 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function getAvailability(day, duration) {
     try {
+        
         const appointments = await getAppointmentsByDay(day);
 
         const startOfDay = new Date(`${day}T09:00:00`);
@@ -22,7 +23,6 @@ async function getAvailability(day, duration) {
         const availableSlots = [];
 
         let currentTime = startOfDay;
-
         for (let i = 0; i <= appointments.length; i++) {
             const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfDay;
             const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfDay;
@@ -36,7 +36,6 @@ async function getAvailability(day, duration) {
 
             currentTime = appointmentEnd > currentTime ? appointmentEnd : currentTime;
         }
-
         console.log(availableSlots);
         return availableSlots;
     } catch (error) {
@@ -45,12 +44,47 @@ async function getAvailability(day, duration) {
     }
 }
 
+function isAfter(slot, currentTime) {
+    const slotStartTime = slot.startTime.replace(':', '');
+    const currentMilitaryTime = currentTime.replace(':', '');
+    console.log(parseInt(slotStartTime) > parseInt(currentMilitaryTime))
+    return parseInt(slotStartTime) > parseInt(currentMilitaryTime);
+}
 
+function getCurrentTime() {
+    const now = getCurrentDate();
+    const nowTime = now.split(', ')[1].split(' ')[0];
+    const [hours, minutes] = nowTime.split(':');
+    const period = now.split(' ')[2];
+    let militaryHours = parseInt(hours, 10);
+
+    if (period === 'PM' && militaryHours !== 12) {
+        militaryHours += 12;
+    } else if (period === 'AM' && militaryHours === 12) {
+        militaryHours = 0;
+    }
+    const militaryTime = `${String(militaryHours).padStart(2, '0')}:${minutes}`;
+    
+    const [month, day, year] = now.split(', ')[0].split('/');
+    const nowDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    return { militaryTime, nowDate };
+}
 function getCurrentDate() {
     const now = new Date();
     const dateTimeString = now.toLocaleString();
     return dateTimeString;
 }
 
+function timeToMinutes(time) {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+}
+
+async function main() {
+    await getAvailability("2024-06-28", 30)
+}
+
+main()
 
 module.exports = {getAvailability, getCurrentDate}
