@@ -81,10 +81,10 @@ function timeToMinutes(time) {
     return hours * 60 + minutes;
 }
 
-async function main() {
-    await getAvailability("2024-06-28", 30)
-}
+// async function main() {
+//     await getAvailability("2024-06-28", 30)
+// }
 
-main()
+// main()
 
 module.exports = {getAvailability, getCurrentDate}
