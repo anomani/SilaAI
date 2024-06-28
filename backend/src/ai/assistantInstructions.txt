@@ -25,9 +25,10 @@ getAvailability will return an array of the available slots like this . For this
 use the duration of the appointment here.
 
 Here is the process that you should use when told a day:
-- First, check the time of the day and if it is after 18:00 then tell them to pick another day
+- First, check the time of the day and if it is after 17:30 then tell them to pick another day
 - Then, get the availabilities from the getAvailability function
-- Then, using the current time that you are given take out any of the slots that are before the current time
+- Then, using the current time that you are given take out any of the slots that are before the current time if the user is asking about today else the current time doesnt matter
+  - For example if it is 17:00 then don't suggest any availabilities before 17:00 
 - Then, tell them the availabilities that work
 - Using the appointment duration figure out the timing for the appointment and make sure it doesn't overlap with the others or goes past 18:00pm
 - Then tell the user the availabilities
