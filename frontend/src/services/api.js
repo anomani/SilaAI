@@ -4,9 +4,41 @@ import axios from 'axios';
 // Replace with your backend API URL
 const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
 
+const api = axios.create({
+  baseURL: API_URL,
+});
+
+// Implement exponential backoff
+const retryRequest = async (fn, retries = 3, delay = 1000) => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries === 0 || error.response.status !== 429) throw error;
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return retryRequest(fn, retries - 1, delay * 2);
+  }
+};
+
+// Add request throttling
+let lastRequestTime = 0;
+const minRequestInterval = 1000; // 1 second
+
+const throttledRequest = async (fn) => {
+  const now = Date.now();
+  if (now - lastRequestTime < minRequestInterval) {
+    await new Promise(resolve => setTimeout(resolve, minRequestInterval - (now - lastRequestTime)));
+  }
+  lastRequestTime = Date.now();
+  return fn();
+};
+
+// Implement caching
+const cache = new Map();
+const cacheTimeout = 5 * 60 * 1000; // 5 minutes
+
 export const sendFollowUpMessages = async () => {
   try {
-    const response = await axios.get(`${API_URL}/followup/send-followups`);
+    const response = await retryRequest(() => throttledRequest(() => api.get('/followup/send-followups')));
     return response.data;
   } catch (error) {
     console.error('Error sending follow-up messages:', error);
@@ -17,7 +49,7 @@ export const sendFollowUpMessages = async () => {
 
 export const getClients = async () => {
   try {
-    const response = await axios.get(`${API_URL}/clients`);
+    const response = await retryRequest(() => throttledRequest(() => api.get('/clients')));
     return response.data;
   } catch (error) {
     console.error('Error fetching clients:', error);
@@ -27,7 +59,7 @@ export const getClients = async () => {
 
 export const handleChat = async (message) => {
   try {
-    const response = await axios.post(`${API_URL}/chat/schedule`, { message });
+    const response = await retryRequest(() => throttledRequest(() => api.post('/chat/schedule', { message })));
     return response.data.message;
   } catch (error) {
     console.error('Error sending message:', error);
@@ -37,7 +69,7 @@ export const handleChat = async (message) => {
 
 export const getAppointmentsByDay = async (date) => {
   try {
-    const response = await axios.get(`${API_URL}/appointments/${date}`);
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/appointments/${date}`)));
     return response.data;
   } catch (error) {
     console.error('Error fetching appointments:', error);
@@ -48,7 +80,7 @@ export const getAppointmentsByDay = async (date) => {
 
 export const addAppointment = async (appointment) => {
   try {
-    await axios.post(`${API_URL}/appointments`, appointment);
+    await retryRequest(() => throttledRequest(() => api.post('/appointments', appointment)));
   } catch (error) {
     console.log(appointment)
     console.error('Error adding appointment:', error);
@@ -58,7 +90,7 @@ export const addAppointment = async (appointment) => {
 
 export const addClient = async (client) => {
   try {
-    await axios.post(`${API_URL}/clients`, client);
+    await retryRequest(() => throttledRequest(() => api.post('/clients', client)));
   } catch (error) {
     console.error('Error adding client:', error);
     throw error;
@@ -67,7 +99,7 @@ export const addClient = async (client) => {
 
 export const searchClients = async (query) => {
   try {
-    const response = await axios.get(`${API_URL}/clients/search`, { params: { query: query } });
+    const response = await retryRequest(() => throttledRequest(() => api.get('/clients/search', { params: { query: query } })));
     return response.data;
   } catch (error) {
     console.error('Error searching clients:', error);
@@ -77,7 +109,7 @@ export const searchClients = async (query) => {
 
 export const getAppointmentsByClientId = async (clientId) => {
   try {
-    const response = await axios.get(`${API_URL}/appointments/client/${clientId}`);
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/appointments/client/${clientId}`)));
     return response.data;
   } catch (error) {
     console.error('Error fetching appointments:', error);
@@ -87,7 +119,7 @@ export const getAppointmentsByClientId = async (clientId) => {
 
 export const deleteClient = async (clientId) => {
   try {
-    await axios.delete(`${API_URL}/clients/${clientId}`);
+    await retryRequest(() => throttledRequest(() => api.delete(`/clients/${clientId}`)));
   } catch (error) {
     console.error('Error deleting client:', error);
     throw error;
@@ -96,7 +128,7 @@ export const deleteClient = async (clientId) => {
 
 export const getSuggestedFollowUps = async (days) => {
   try {
-    const response = await axios.get(`${API_URL}/clients/suggested-followup/${days}`);
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/clients/suggested-followup/${days}`)));
     return response.data;
   } catch (error) {
     console.error('Error fetching suggested follow-ups:', error);
@@ -105,18 +137,21 @@ export const getSuggestedFollowUps = async (days) => {
 };
 
 export const getClientById = async (clientId) => {
-  try {
-    const response = await axios.get(`${API_URL}/clients/${clientId}`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching client:', error);
-    throw error;
+  const cacheKey = `client_${clientId}`;
+  if (cache.has(cacheKey) && Date.now() - cache.get(cacheKey).timestamp < cacheTimeout) {
+    return cache.get(cacheKey).data;
   }
+
+  return retryRequest(async () => {
+    const response = await throttledRequest(() => api.get(`/clients/${clientId}`));
+    cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
+    return response.data;
+  });
 };
 
 export const deleteAppointment = async (appointmentId) => {
   try {
-    await axios.delete(`${API_URL}/appointments/${appointmentId}`);
+    await retryRequest(() => throttledRequest(() => api.delete(`/appointments/${appointmentId}`)));
   } catch (error) {
     console.error('Error deleting appointment:', error);
     throw error;
@@ -125,7 +160,7 @@ export const deleteAppointment = async (appointmentId) => {
 
 export const handleUserInput = async (message) => {
   try {
-    const response = await axios.post(`${API_URL}/chat/handle-user-input`, { message });
+    const response = await retryRequest(() => throttledRequest(() => api.post('/chat/handle-user-input', { message })));
     return response.data;
   } catch (error) {
     console.error('Error handling user input:', error);
@@ -135,7 +170,7 @@ export const handleUserInput = async (message) => {
 
 export const updateClient = async (clientId, client) => {
   try {
-    await axios.put(`${API_URL}/clients/${clientId}`, client);
+    await retryRequest(() => throttledRequest(() => api.put(`/clients/${clientId}`, client)));
   } catch (error) {
     console.error('Error updating client:', error);
     throw error;
@@ -144,7 +179,7 @@ export const updateClient = async (clientId, client) => {
 
 export const getMessagesByClientId = async (clientId) => {
   try {
-    const response = await axios.get(`${API_URL}/chat/messages/${clientId}`);
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/chat/messages/${clientId}`)));
     return response.data;
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -153,18 +188,21 @@ export const getMessagesByClientId = async (clientId) => {
 };
 
 export const getAllMessagesGroupedByClient = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/chat/messages`);
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    throw error;
+  const cacheKey = 'groupedMessages';
+  if (cache.has(cacheKey) && Date.now() - cache.get(cacheKey).timestamp < cacheTimeout) {
+    return cache.get(cacheKey).data;
   }
+
+  return retryRequest(async () => {
+    const response = await throttledRequest(() => api.get('/chat/messages'));
+    cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
+    return response.data;
+  });
 };
 
 export const getDaysSinceLastAppointment = async (clientId) => {
   try {
-    const response = await axios.get(`${API_URL}/clients/days-since-last-appointment/${clientId}`);
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/clients/days-since-last-appointment/${clientId}`)));
     return response.data;
   } catch (error) {
     console.error('Error fetching days since last appointment:', error);
@@ -174,7 +212,7 @@ export const getDaysSinceLastAppointment = async (clientId) => {
 
 export const sendMessage = async (to, message) => {
   try {
-    await axios.post(`${API_URL}/chat/send-message`, { to, message });
+    await retryRequest(() => throttledRequest(() => api.post('/chat/send-message', { to, message })));
   } catch (error) {
     console.error('Error sending message:', error);
     throw error;
@@ -183,7 +221,7 @@ export const sendMessage = async (to, message) => {
 
 export const setMessagesRead = async (clientId) => {
   try {
-    await axios.post(`${API_URL}/chat/set-messages-read/${clientId}`);
+    await retryRequest(() => throttledRequest(() => api.post(`/chat/set-messages-read/${clientId}`)));
   } catch (error) {
     console.error('Error setting messages as read:', error);
     throw error;
@@ -192,7 +230,7 @@ export const setMessagesRead = async (clientId) => {
 
 export const savePushToken = async (phoneNumber, pushToken) => {
   try {
-    await axios.post(`${API_URL}/save-push-token`, { phoneNumber, pushToken });
+    await retryRequest(() => throttledRequest(() => api.post('/save-push-token', { phoneNumber, pushToken })));
   } catch (error) {
     console.error('Error saving push token:', error);
     throw error;

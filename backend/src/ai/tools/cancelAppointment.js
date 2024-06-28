@@ -19,7 +19,7 @@ async function cancelAppointment(phoneNumber, date) {
         const client = await getClientByPhoneNumber(phoneNumber)
         const appointmentsForDay = await getAppointmentsByDay(date)
         console.log(appointmentsForDay)
-        const appointment = appointmentsForDay.find(appointment => appointment.clientId === client.id)
+        const appointment = appointmentsForDay.find(appointment => appointment.clientid === client.id)
         if (!appointment) {
             return "Appointment not found"
         }
