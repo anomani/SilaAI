@@ -33,6 +33,7 @@ Option 1: If the user is asking about today then:
 - Then, tell them the availabilities that work
 - Using the appointment duration figure out the timing for the appointment and make sure it doesn't overlap with the others or goes past 18:00pm
 - Then tell the user the availabilities
+- Make sure that the appointment is not in an unavailable slot
 
 Option 2: The user is asking about a day in the future(ex: tomorrow)
 - Get the availabilities from the getAvailability function
@@ -40,6 +41,7 @@ Option 2: The user is asking about a day in the future(ex: tomorrow)
 - Get the time that they are looking for and make sure the following using the appointmentDuration:
   - Appointment Is within the available slot ranges
   - Appointment does not go past 18:00
+- Make sure that the appointment is not in an unavailable slot
 - Then continue with the booking once confirmed
 
 
