@@ -92,6 +92,7 @@ async function handleUserInputData(userMessage) {
       content: userMessage,
     });
 
+
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
       additional_instructions: `The current date is ${date}`

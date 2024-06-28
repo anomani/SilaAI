@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
 import { getAllMessagesGroupedByClient, getClientById } from '../services/api';
+import Footer from '../components/Footer'; // Import the Footer component
 
 const ChatDashboard = ({ navigation }) => {
   const [groupedMessages, setGroupedMessages] = useState({});
@@ -24,7 +25,6 @@ const ChatDashboard = ({ navigation }) => {
   const fetchClientNames = async (groupedMessages) => {
     const names = {};
     for (const clientid of Object.keys(groupedMessages)) { // Use 'clientid' instead of 'clientId'
-      console.log(clientid);
       const client = await getClientById(clientid); // Use 'clientid' instead of 'clientId'
       names[clientid] = `${client.firstname} ${client.lastname}`;
     }
@@ -43,7 +43,7 @@ const ChatDashboard = ({ navigation }) => {
     const unreadMessagesCount = messages.filter(message => !message.read).length; // Count unread messages
 
     return (
-      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid })}> 
+      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid, clientName: clientNames[clientid] })}> 
         <View style={styles.clientContainer}>
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.clientContent}>
@@ -87,12 +87,9 @@ const ChatDashboard = ({ navigation }) => {
         data={filteredClients}
         renderItem={renderClient}
         keyExtractor={(item) => item}
+        style={styles.flatList} // Add this style
       />
-      <View style={styles.sendButtonContainer}>
-        <TouchableOpacity style={styles.sendButton}>
-          <Text style={styles.sendButtonText}>→</Text>
-        </TouchableOpacity>
-      </View>
+      <Footer navigation={navigation} /> 
     </View>
   );
 };
@@ -166,21 +163,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  sendButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    padding: 16,
-  },
-  sendButton: {
-    backgroundColor: '#195de6',
-    borderRadius: 20,
-    padding: 10,
-  },
-  sendButtonText: {
-    color: 'white',
-    fontSize: 24,
+    paddingBottom: 8
   },
   unreadCountContainer: {
     backgroundColor: 'red',
@@ -193,6 +176,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  flatList: {
+    flex: 1, // Add this to make the FlatList take up remaining space
   },
 });
 

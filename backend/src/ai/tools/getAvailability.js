@@ -14,7 +14,6 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
 async function getAvailability(day, duration) {
-    console.log("One moment please...");
     try {
         const appointments = await getAppointmentsByDay(day);
 
@@ -54,7 +53,6 @@ async function getAvailability(day, duration) {
 function getCurrentDate() {
     const now = new Date();
     const dateTimeString = now.toLocaleString();
-    console.log(dateTimeString)
     return dateTimeString;
 }
 

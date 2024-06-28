@@ -145,7 +145,6 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
     .replace('${messages}', JSON.stringify(messages, null, 2))
     .replace('${daysSinceLastAppointment}', daysSinceLastAppointment);
   if (!assistant) {
-    console.log("Creating assistant")
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions,
       name: "Scheduling Assistant",
@@ -161,7 +160,6 @@ async function handleUserInput(userMessage, phoneNumber) {
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
     const messages = (await getMessagesByClientId(client.id)).slice(-10);
-    console.log(messages)
     const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0, 1);
 
     const appointmentDuration = getAppointmentDuration(appointment);
