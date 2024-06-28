@@ -128,6 +128,6 @@ async function handleIncomingMessage(req, res) {
 module.exports = {
   sendMessage,
   handleIncomingMessage,
-  sendMessages,
-  sendNotificationToUser
+  sendMessages
+  // sendNotificationToUser
 };
