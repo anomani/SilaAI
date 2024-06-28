@@ -46,7 +46,6 @@ async function getAvailability(day, duration) {
 }
 
 
-
 function getCurrentDate() {
     const now = new Date();
     const dateTimeString = now.toLocaleString();
