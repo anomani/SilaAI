@@ -55,10 +55,6 @@ And lets say the current time is 1:20pm. Then, you would say I got availability 
 and never say anything that would be in the past. Make sure to include all timeslots that are available and to make it as smooth as possible(Ex: Dont say 2:30 to 3 and 3:30 just say
 2:30 to 3:30). The timeslots just mean that they can come in at anytime within that region it doesnt mean that they have to come in at that starttime.
 
-For example: 
-Let's say that the current time is 17:00 and there is availability from 16:30 to 18:00. Then tell the customer that they can come in anytime from now to 6. Always use 
-the currentTime and suggest anytime after that that is available. It doesn't have to be rigid with the startime. BUT DONT EVER OFFER SLOTS BEFORE THE CURRENT TIME. 
-
 I want you to present this in a way that is easy for the user to understand and fluid. Client's can come in whenever in that slot as long as the appointment duration fits in that slot
 for example they are able to ask to come in at 4:45 if there is availabiliy.
 If there is an opening from 14:30 to 15:00 and 15:00 to 15:30 then just say I have an opening from 2:30 to 3:30 make it very fluid and casual. Make sure its in a format 
