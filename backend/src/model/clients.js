@@ -122,7 +122,7 @@ async function getClientByPhoneNumber(phoneNumber) {
             const client = await getClientById(res.rows[0].id.toString());
             return client;
         } else {
-            throw new Error('Client not found');
+            return null;
         }
     } catch (err) {
         console.error('Error fetching client by phone number:', err.message);
