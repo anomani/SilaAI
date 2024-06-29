@@ -15,7 +15,12 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function getAvailability(day, duration) {
     try {
-        
+        // Check if the day is Sunday
+        const date = new Date(day);
+        if (date.getDay() === 0) {
+            return "I don't take appointments on Sunday";
+        }
+
         const appointments = await getAppointmentsByDay(day);
 
         const startOfDay = new Date(`${day}T09:00:00`);
