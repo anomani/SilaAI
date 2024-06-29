@@ -74,31 +74,38 @@ async function getClients() {
 
                 const clientName = await page.$eval(".field-rendered.edit-client", el => el.innerText);
                 const clientNumber = await page.$eval("a.real-link[data-testid='added-client-phone']", el => el.innerText);
-                const startTime = await page.$eval(".start-time", el => el.innerText);
-                const endTime = await page.$eval(".end-time", el => el.innerText);
-                const dateOfAppointment = await page.$eval("a[data-testid='docket-appointment-detail-link']", el => el.innerText);
-                const typeOfAppointment = await page.$eval(".appointment-type-name", el => el.innerText);
 
-                // Convert times to HH:MM in military time
-                const startTimeMilitary = moment(startTime, ["h:mm A"]).format("HH:mm");
-                const endTimeMilitary = moment(endTime, ["h:mm A"]).format("HH:mm");
-                // Convert date to YYYY-MM-DD
-                const dateOfAppointmentFormatted = moment(dateOfAppointment, "dddd, MMMM D, YYYY").format("YYYY-MM-DD");
-                console.log({
-                    clientName,
-                    clientNumber,
-                    startTime: startTimeMilitary,
-                    endTime: endTimeMilitary,
-                    dateOfAppointment: dateOfAppointmentFormatted,
-                    typeOfAppointment
-                });
-                const client = await getClientByPhoneNumber(clientNumber)
+                await page.waitForSelector(".appointment-item");
+                const appointments = await page.$$(".appointment-item");
 
-                // //async function createAppointment(appointmentType, date, startTime, endTime, clientId, details)
-                // //17|1950|2024-06-24|09:15|09:45|Haircut and Beard|
-                if(client) {
-                    const appointment = await createAppointment(typeOfAppointment, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "")
-                }                
+                for (const appointmentElement of appointments) {
+                    const startTime = await appointmentElement.$eval(".start-time", el => el.innerText);
+                    const endTime = await appointmentElement.$eval(".end-time", el => el.innerText);
+                    const dateOfAppointment = await appointmentElement.$eval("a[data-testid='docket-appointment-detail-link']", el => el.innerText);
+                    const typeOfAppointment = await appointmentElement.$eval(".appointment-type-name", el => el.innerText);
+
+                    // Convert times to HH:MM in military time
+                    const startTimeMilitary = moment(startTime, ["h:mm A"]).format("HH:mm");
+                    const endTimeMilitary = moment(endTime, ["h:mm A"]).format("HH:mm");
+                    // Convert date to YYYY-MM-DD
+                    const dateOfAppointmentFormatted = moment(dateOfAppointment, "dddd, MMMM D, YYYY").format("YYYY-MM-DD");
+
+                    console.log({
+                        clientName,
+                        clientNumber,
+                        startTime: startTimeMilitary,
+                        endTime: endTimeMilitary,
+                        dateOfAppointment: dateOfAppointmentFormatted,
+                        typeOfAppointment
+                    });
+
+                    const client = await getClientByPhoneNumber(clientNumber);
+
+                    if (client) {
+                        const appointment = await createAppointment(typeOfAppointment, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "");
+                        console.log(`Appointment created: ${appointment.id}`);
+                    }
+                }
 
                 await page.click("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
                 console.log("Back button clicked");
@@ -107,7 +114,6 @@ async function getClients() {
                 console.log(`Error processing client at index ${i}: ${e.message}`);
                 await page.click("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
                 console.log("Back button clicked");
-                await delay(2000);
                 continue;
             }
         }
@@ -120,7 +126,11 @@ async function getClients() {
     }
 }
 
+async function main() {
+    await getClients()
+}
 
+main()
 
 
 //Gets the CSV from my downloads folder and saves it locally in the program

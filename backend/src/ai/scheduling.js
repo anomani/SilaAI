@@ -162,8 +162,13 @@ async function handleUserInput(userMessage, phoneNumber) {
     const client = await getClientByPhoneNumber(phoneNumber);
     const messages = (await getMessagesByClientId(client.id)).slice(-10);
     const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0, 1);
-
-    const appointmentDuration = getAppointmentDuration(appointment);
+    let appointmentDuration;
+    if(appointment.length > 0){
+      appointmentDuration = getAppointmentDuration(appointment);
+    }
+    else{
+      appointmentDuration = 30;
+    }
     const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
     const fname = client.firstname;
     const lname = client.lastname;
