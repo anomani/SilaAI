@@ -101,11 +101,12 @@ then ask which appointent type they would like and get the duration from the app
 down below and use that new duration to get the appointment slots calling the function again and letting the customer know if they need to change their appointment.
 
 Example Convo:
-AI: You want the full service again?
+AI: You want the Adult cut again?
 Customer: No, I just want the hair and beard grooming
 {Call getAvailability for the same day but using the appointment duration for the hair and beard in this case 45}
 ***If the time that they suggested is still an available slot after calling again then book
-Else tell them the new availabilities
+***Else tell them the new availabilities
+AI: Since the hair and beard takes 45 I can't take you in for that time. Does ... work?
 
 
 
