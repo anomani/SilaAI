@@ -4,7 +4,7 @@ dotenv.config({ path: '../../.env' });
 const { getAvailability, getCurrentDate } = require('./tools/getAvailability');
 const { bookAppointment } = require('./tools/bookAppointment');
 const {cancelAppointment} = require('./tools/cancelAppointment')
-const { getClientByPhoneNumber,getDaysSinceLastAppointment } = require('../model/clients');
+const { getClientByPhoneNumber,getDaysSinceLastAppointment, createClient } = require('../model/clients');
 const {getMessagesByClientId} = require('../model/messages')
 const {getAllAppointmentsByClientId} = require('../model/appointment')
 const fs = require('fs');
@@ -119,9 +119,41 @@ const tools = [
         required: ["clientId"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "createClient",
+      description: "Creates a new client if it's the first interaction with the client",
+      parameters: {
+        type: "object",
+        properties: {
+          firstName: {
+            type: "string",
+            description: "The first name of the client"
+          },
+          lastName: {
+            type: "string",
+            description: "The last name of the client"
+          },
+          phoneNumber: {
+            type: "string",
+            description: "The phone number of the client"
+          },
+          email: {
+            type: "string",
+            description: "The email address of the client"
+          },
+          notes: {
+            type: "string",
+            description: "Additional notes about the client"
+          }
+        },
+        required: ["firstName", "lastName"]
+      }
+    }
   }
 ];
-
 
 const sessions = new Map();
 
@@ -160,6 +192,9 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
 async function handleUserInput(userMessage, phoneNumber) {
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
+    if (!client) {
+      return "Hey bro, don't think I've heard from you before. Can you just give me your first and last name so I can save it";
+    }
     const messages = (await getMessagesByClientId(client.id)).slice(-10);
     const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0, 1);
     let appointmentDuration;
