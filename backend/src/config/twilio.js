@@ -18,16 +18,12 @@ const { getUserByPhoneNumber } = require('../model/users');
 
 async function sendMessage(to, body) {
   const customer = await getClientByPhoneNumber(to);
-  const name = customer.firstname;
   const localDate = new Date().toLocaleString();
   let clientId;
-  if (customer) {
+  if (customer.id != '') {
     clientId = customer.id
-  } else {
-    clientId = null
+    await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId);
   }
-  
-  await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId);
 
   return client.messages.create({
     from: process.env.TWILIO_PHONE_NUMBER,
@@ -72,14 +68,13 @@ async function handleIncomingMessage(req, res) {
   try {
     console.log(Author)
     const client = await getClientByPhoneNumber(Author);
+    console.log(client)
     let clientId;
     const localDate = new Date().toLocaleString();
-    if (client) {
+    if (client.id != '') {
       clientId = client.id
-    } else {
-      clientId = null
+      await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
     }
-    await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
 
     const responseMessage = await handleUserInput(Body, Author);
     if (responseMessage === "user")  {

@@ -17,7 +17,10 @@ async function getAvailability(day, duration) {
     try {
         // Check if the day is Sunday
         const date = new Date(day);
-        if (date.getDay() === 0) {
+        console.log(date.getDay())
+        console.log(day)
+        if (date.getDay() === 6) {
+            console.log("I don't take appointments on Sunday")
             return "I don't take appointments on Sunday";
         }
 
