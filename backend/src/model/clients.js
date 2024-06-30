@@ -121,16 +121,15 @@ async function getClientByPhoneNumber(phoneNumber) {
             const client = await getClientById(res.rows[0].id.toString());
             return client;
         } else {
-            return null;
-            // return {
-            //     id: '',
-            //     firstname: '',
-            //     lastnqame: '',
-            //     phonenumber: '',
-            //     email: '',
-            //     notes: '',
-            //     dayssincelastappointment: ''
-            // };
+            return {
+                id: '',
+                firstname: '',
+                lastnqame: '',
+                phonenumber: '',
+                email: '',
+                notes: '',
+                dayssincelastappointment: ''
+            };
         }
     } catch (err) {
         console.error('Error fetching client by phone number:', err.message);

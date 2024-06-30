@@ -124,7 +124,7 @@ const tools = [
     type: "function",
     function: {
       name: "createClient",
-      description: "Creates a new client if it's the first interaction with the client",
+      description: "Creates a new client if the client doesn't exist",
       parameters: {
         type: "object",
         properties: {
@@ -146,10 +146,10 @@ const tools = [
           },
           notes: {
             type: "string",
-            description: "Additional notes about the client"
+            description: "Any additional notes about the client"
           }
         },
-        required: ["firstName", "lastName"]
+        required: ["firstName", "lastName", "phoneNumber"]
       }
     }
   }
@@ -192,29 +192,32 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
 async function handleUserInput(userMessage, phoneNumber) {
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
-    if (!client) {
-      return "Hey bro, don't think I've heard from you before. Can you just give me your first and last name so I can save it";
-    }
-    const messages = (await getMessagesByClientId(client.id)).slice(-10);
-    const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0, 1);
-    let appointmentDuration;
-    if(appointment.length > 0){
-      appointmentDuration = getAppointmentDuration(appointment);
-    }
-    else{
-      appointmentDuration = 30;
-    }
-    const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
-    const fname = client.firstname;
-    const lname = client.lastname;
-    const email = client.email;
-    const phone = client.phonenumber;   
+    let thread;
+    let assistant;
     const day = getCurrentDate();
-    console.log("day", day)
-    const thread = await createThread(phoneNumber); 
-    const assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, day);
-    
-
+    if (client.id == '') {
+      thread = await createThread(phoneNumber); 
+      assistant = await createAssistant();
+    } else {
+      const messages = (await getMessagesByClientId(client.id)).slice(-10);
+      const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0, 1);
+      let appointmentDuration;
+      if(appointment.length > 0){
+        appointmentDuration = getAppointmentDuration(appointment);
+      }
+      else{
+        appointmentDuration = 30;
+      }
+  
+      const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
+      const fname = client.firstname;
+      const lname = client.lastname;
+      const email = client.email;
+      const phone = client.phonenumber;   
+      console.log("day", day)
+      thread = await createThread(phoneNumber); 
+      assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, day);
+    }
     const message = await openai.beta.threads.messages.create(thread.id, {
       role: "user",
       content: userMessage,
@@ -276,6 +279,12 @@ async function handleUserInput(userMessage, phoneNumber) {
               tool_call_id: action.id,
               output: JSON.stringify(output)
             });
+          } else if (funcName === "createClient") {
+            const output = await createClient(args.firstName, args.lastName, phoneNumber);
+            toolOutputs.push({
+              tool_call_id: action.id,
+              output: JSON.stringify(output)
+            });
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
@@ -296,4 +305,3 @@ async function handleUserInput(userMessage, phoneNumber) {
 }
 
 module.exports = { getAvailability, bookAppointment, handleUserInput };
-
