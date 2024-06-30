@@ -126,13 +126,6 @@ async function getClients() {
     }
 }
 
-async function main() {
-    await getClients()
-}
-
-main()
-
-
 //Gets the CSV from my downloads folder and saves it locally in the program
 async function getCSV() {
     const downloadsDir = path.resolve(os.homedir(), 'Downloads');
