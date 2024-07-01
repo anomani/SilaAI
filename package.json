@@ -4,7 +4,7 @@
     "description": "Automation services for barbers",
     "main": "index.js",
     "scripts": {
-        "start": "cd backend && npm install && node /api/index.js",
+        "start": "cd backend && npm install && node api/index.js",
         "test": "jest"
     },
     "dependencies": {
