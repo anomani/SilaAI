@@ -124,11 +124,10 @@ async function getClientByPhoneNumber(phoneNumber) {
             return {
                 id: '',
                 firstname: '',
-                lastnqame: '',
+                lastname: '',
                 phonenumber: '',
                 email: '',
-                notes: '',
-                dayssincelastappointment: ''
+                notes: ''
             };
         }
     } catch (err) {

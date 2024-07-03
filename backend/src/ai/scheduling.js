@@ -195,10 +195,13 @@ async function handleUserInput(userMessage, phoneNumber) {
     let thread;
     let assistant;
     const day = getCurrentDate();
+    let fname, lname, email;
+
     if (client.id == '') {
       thread = await createThread(phoneNumber); 
       assistant = await createAssistant();
     } else {
+      console.log("Client already exists");
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0, 1);
       let appointmentDuration;
@@ -210,14 +213,16 @@ async function handleUserInput(userMessage, phoneNumber) {
       }
       
       const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
-      const fname = client.firstname;
-      const lname = client.lastname;
-      const email = client.email;
+      fname = client.firstname;
+      lname = client.lastname;
+      email = client.email;
       const phone = client.phonenumber;   
       console.log("day", day)
       thread = await createThread(phoneNumber); 
+      console.log(fname + lname)
       assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, day);
     }
+
     const message = await openai.beta.threads.messages.create(thread.id, {
       role: "user",
       content: userMessage,
@@ -255,11 +260,18 @@ async function handleUserInput(userMessage, phoneNumber) {
               output: JSON.stringify(output)
             });
           } else if (funcName === "bookAppointment") {
-            const output = await bookAppointment(args.date, args.startTime, fname, lname, phone, email, args.appointmentType, args.appointmentDuration);
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
+            if (fname && lname && email) {
+              const output = await bookAppointment(args.date, args.startTime, fname, lname, phoneNumber, email, args.appointmentType, args.appointmentDuration);
+              toolOutputs.push({
+                tool_call_id: action.id,
+                output: JSON.stringify(output)
+              });
+            } else {
+              toolOutputs.push({
+                tool_call_id: action.id,
+                output: JSON.stringify({ error: "Client information not available" })
+              });
+            }
           } else if (funcName === "getCurrentDate") {
             const output = getCurrentDate();
 
