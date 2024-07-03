@@ -22,8 +22,14 @@ const tools = [
     name: "getInfo",
     description: "Gets information about a client based on the given query",
     parameters: {
-      type: "string",
-      description: "The SQL query to get the information"
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "The SQL query to get the information"
+        }
+      },
+      required: ["query"]
     }
   }
 },
