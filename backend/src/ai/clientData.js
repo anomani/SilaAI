@@ -5,6 +5,7 @@ const { getInfo } = require('./tools/getCustomers');
 const {sendMessage, sendMessages} = require('../config/twilio');
 const fs = require('fs');
 const path = require('path');
+const { createCustomList, getCustomList } = require('../model/customLists');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -18,41 +19,38 @@ const tools = [
 {
   type: "function",
   function: {
-    name: "sendMessages",
-    description: "Sends messages to clients that are passed in as a parameter",
+    name: "getInfo",
+    description: "Gets information about a client based on the given query",
     parameters: {
       type: "object",
       properties: {
-        clients: {
-          type: "array",
-          description: "An array of client phonenumbers",
-          items: {
-            type: "string"
-          }
-        },
-        message: {
-          type: "object",
-          description: "The message to send to the clients."
+        query: {
+          type: "string",
+          description: "The SQL query to get the information"
         }
       },
-      required: ["clients", "message"]
+      required: ["query"]
     }
   }
 },
 {
   type: "function",
   function: {
-    name: "getInfo",
-    description: "Retrieves a list of clients who have not visited in the specified number of days.",
+    name: "createCustomList",
+    description: "Creates a custom list of clients based on the given query and returns a link to view/edit the list",
     parameters: {
       type: "object",
       properties: {
+        name: {
+          type: "string",
+          description: "The name of the custom list"
+        },
         query: {
           type: "string",
-          description: "The SQL query to search the clients for."
+          description: "The SQL query to create the custom list"
         }
       },
-      required: ["days"]
+      required: ["name", "query"]
     }
   }
 }
@@ -66,7 +64,8 @@ async function createAssistant() {
       instructions: assistantInstructions,
       name: "Client Data",
       model: "gpt-4o",
-      tools: tools
+      tools: tools,
+      temperature: 0.1
     });
   }
   return assistant;
@@ -120,10 +119,16 @@ async function handleUserInputData(userMessage) {
 
           let output;
           if (funcName === "getInfo") {
-            console.log(args.query)
+            console.log("getInfo", args.query);
             output = await getInfo(args.query);
           } else if (funcName === "sendMessages") {
             output = await sendMessages(args.clients, args.message);
+          } else if (funcName === "createCustomList") {
+            console.log("createCustomList", args.query)
+            const list = await createCustomList(args.name, args.query);
+            const encodedQuery = encodeURIComponent(args.query);
+            const listLink = `/custom-list?query=${encodedQuery}`;
+            output = `Custom list "${args.name}" has been created. You can view and edit the list here: ${listLink}`;
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
@@ -147,8 +152,5 @@ async function handleUserInputData(userMessage) {
     throw new Error('Error processing request');
   }
 }
-
-
-
 
 module.exports = { handleUserInputData };

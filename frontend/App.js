@@ -10,7 +10,7 @@ import CalendarScreen from './src/screens/CalendarScreen';
 import AddAppointmentScreen from './src/screens/AddAppointmentScreen';
 import ClientDetailsScreen from './src/screens/ClientDetailsScreen';
 import AddClientScreen from './src/screens/AddClientScreen';
-import SuggestedFollowUpsScreen from './src/screens/SuggestedFollowUpsScreen';
+import QueryResults from './src/screens/QueryResults';
 import AppointmentDetailsScreen from './src/screens/AppointmentDetailsScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import EditClientScreen from './src/screens/EditClientScreen';
@@ -20,6 +20,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { savePushToken } from './src/services/api';
+import { ChatProvider } from './src/components/ChatContext';
 
 const Stack = createStackNavigator();
 
@@ -52,7 +53,8 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Homepage" screenOptions={{ headerShown: false }}>
+      <ChatProvider>
+        <Stack.Navigator initialRouteName="Homepage" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Homepage" component={Homepage} />
         <Stack.Screen name="ClientList" component={ClientListScreen} />
         <Stack.Screen name="ScheduleScreen" component={ScheduleScreen} />
@@ -61,12 +63,13 @@ export default function App() {
         <Stack.Screen name="ClientDetails" component={ClientDetailsScreen} />
         <Stack.Screen name="AppointmentDetails" component={AppointmentDetailsScreen} />
         <Stack.Screen name="AddClient" component={AddClientScreen} />
-        <Stack.Screen name="SuggestedFollowUps" component={SuggestedFollowUpsScreen} />
+        <Stack.Screen name="QueryResults" component={QueryResults} />
         <Stack.Screen name="Chat" component={ChatScreen} />
         <Stack.Screen name="EditClient" component={EditClientScreen} />
         <Stack.Screen name="ChatDashboard" component={ChatDashboard} />
         <Stack.Screen name="ClientMessages" component={ClientMessagesScreen} />
       </Stack.Navigator>
+      </ChatProvider>
     </NavigationContainer>
   );
 }
@@ -79,13 +82,12 @@ const styles = StyleSheet.create({
   },
 });
 
+
 async function registerForPushNotificationsAsync() {
   let token;
   
-  // Check if the app is running in Expo Go
-  const isExpoGo = Constants.appOwnership === 'expo';
-
-  if (Constants.isDevice || isExpoGo) {
+  // Check if the app is running on a physical device, in Expo Go, or in the Expo development build
+  if (Constants.isDevice || Constants.appOwnership === 'expo' || __DEV__) {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
@@ -96,10 +98,15 @@ async function registerForPushNotificationsAsync() {
       alert('Failed to get push token for push notification!');
       return null;
     }
-    token = (await Notifications.getExpoPushTokenAsync()).data;
+    
+    // Get the push token with the project ID
+    token = (await Notifications.getExpoPushTokenAsync({
+      projectId: Constants.expoConfig.extra.eas.projectId,
+    })).data;
+    
     console.log('Push Token:', token);
   } else {
-    alert('Push notifications are only available on physical devices.');
+    alert('Push notifications are only available on physical devices or in Expo environments.');
   }
 
   return token;

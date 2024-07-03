@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -233,6 +233,29 @@ export const savePushToken = async (phoneNumber, pushToken) => {
     await retryRequest(() => throttledRequest(() => api.post('/save-push-token', { phoneNumber, pushToken })));
   } catch (error) {
     console.error('Error saving push token:', error);
+    throw error;
+  }
+};
+
+export const getCustomList = async (query) => {
+  try {
+    console.log(query)
+    const response = await fetch(`${API_URL}/chat/custom-list?query=${query}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch custom list');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error in getCustomList:', error);
+    throw error;
+  }
+};
+
+export const sendMessagesToSelectedClients = async (ids, messageTemplate) => {
+  try {
+      await retryRequest(() => throttledRequest(() => api.post('/chat/send-messages-to-selected-clients', { ids, messageTemplate })));
+  } catch (error) {
+    console.error('Error sending messages to selected clients:', error);
     throw error;
   }
 };

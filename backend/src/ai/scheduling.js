@@ -208,7 +208,7 @@ async function handleUserInput(userMessage, phoneNumber) {
       else{
         appointmentDuration = 30;
       }
-  
+      
       const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
       const fname = client.firstname;
       const lname = client.lastname;

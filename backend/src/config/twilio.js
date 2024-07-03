@@ -16,7 +16,24 @@ const { Expo } = require('expo-server-sdk');
 // Initialize the Expo SDK
 let expo = new Expo();
 
+function formatPhoneNumber(phoneNumber) {
+  // Remove all non-digit characters
+  let cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // Ensure the number has 10 digits
+  if (cleaned.length === 10) {
+    // Add the +1 country code
+    cleaned = '1' + cleaned;
+  } else if (cleaned.length === 11 && cleaned.startsWith('1')) {
+  } else {
+    return null;
+  }
+  
+  return '+' + cleaned;
+}
+
 async function sendMessage(to, body) {
+  console.log("To: ", to)
   const customer = await getClientByPhoneNumber(to);
   const localDate = new Date().toLocaleString();
   let clientId;
@@ -24,10 +41,11 @@ async function sendMessage(to, body) {
     clientId = customer.id
     await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId);
   }
-
+  const to_formatted = formatPhoneNumber(to);
+  console.log("To formatted: ", to_formatted)
   return client.messages.create({
     from: process.env.TWILIO_PHONE_NUMBER,
-    to: to,
+    to: to_formatted,
     body: body
   })
   .then(message => {
@@ -133,5 +151,6 @@ module.exports = {
   sendMessage,
   handleIncomingMessage,
   sendMessages,
-  sendNotificationToUser
+  sendNotificationToUser,
+  formatPhoneNumber
 };
