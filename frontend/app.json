@@ -13,7 +13,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.frontend"
+      "bundleIdentifier": "com.adam.uzi"
     },
     "android": {
       "adaptiveIcon": {
@@ -27,11 +27,10 @@
     "extra": {
       "eas": {
         "projectId": "89102495-37af-438a-aa98-b36be7e81690"
-      }
+      },
+      "suppressRNWarnings": ["Sending `onAnimatedValueUpdate` with no listeners registered."]
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/89102495-37af-438a-aa98-b36be7e81690"
     }

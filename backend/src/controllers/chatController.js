@@ -2,6 +2,8 @@ const { handleUserInput } = require('../ai/scheduling');
 const {handleUserInputData} = require('../ai/clientData');
 const { getMessagesByClientId, getAllMessages, saveMessage,setMessagesRead } = require('../model/messages');
 const { sendMessage } = require('../config/twilio');
+const { getCustomList } = require('../model/customLists');
+const { getClientById } = require('../model/clients');
 
 const handleChatRequest = async (req, res) => {
   try {
@@ -101,4 +103,36 @@ const savePushTokenController = async (req, res) => {
   }
 }
 
-module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController, setMessagesReadController };
+const getCustomListController = async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query) {
+      return res.status(400).json({ error: 'Query parameter is required' });
+    }
+    const customList = await getCustomList(query);
+    res.json(customList);
+  } catch (error) {
+    console.error('Error fetching custom list:', error);
+    res.status(500).json({ error: 'Error fetching custom list' });
+  }
+}
+
+const sendMessagesToSelectedClients = async (req, res) => {
+  try {
+    const { ids, messageTemplate } = req.body;
+    for (const id of ids) {
+      const client = await getClientById(id);
+      if (client) {
+        const personalizedMessage = messageTemplate.replace('{firstName}', client.firstname);
+        await sendMessage(client.phonenumber, personalizedMessage);
+      } else {
+        console.log(`Client not found for id: ${id}`);
+      }
+    }
+    res.status(200).json({ message: 'Messages sent' });
+  } catch (error) {
+    console.error('Error sending messages to selected clients:', error);
+    res.status(500).json({ error: 'Error sending messages' });
+  }
+}
+module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController, setMessagesReadController, getCustomListController, sendMessagesToSelectedClients };
