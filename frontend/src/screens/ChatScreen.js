@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { handleUserInput } from '../services/api';
@@ -11,9 +11,15 @@ const ChatScreen = () => {
   const navigation = useNavigation();
   const [showIntro, setShowIntro] = useState(true);
 
+  useEffect(() => {
+    if (messages.length > 0) {
+      setShowIntro(false);
+    }
+  }, [messages]);
+
   const suggestedPrompts = [
     "Create a list of clients who have not shown up in more than 6 months",
-    "How many appointments have I done this past month?",
+    "How many appointments have I done in June?",
     "How many active clients do I have",
   ];
 
@@ -89,7 +95,7 @@ const ChatScreen = () => {
 
   return (
     <View style={styles.container}>
-      {showIntro && renderIntro()}
+      {showIntro && messages.length === 0 && renderIntro()}
       <FlatList
         data={messages}
         renderItem={renderItem}
