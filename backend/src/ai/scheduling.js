@@ -16,8 +16,7 @@ const openai = new OpenAI({
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-let assistant;
-let thread;
+const assistants = new Map();
 
 function getAppointmentDuration(appointment) {
   const [startHour, startMinute] = appointment[0].starttime.split(':').map(Number);
@@ -177,16 +176,18 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
     .replace('${messages}', JSON.stringify(messages, null, 2))
     .replace('${daysSinceLastAppointment}', daysSinceLastAppointment)
     .replace('${day}', day);
-  if (!assistant) {
-    assistant = await openai.beta.assistants.create({
+
+  if (!assistants.has(phone)) {
+    const newAssistant = await openai.beta.assistants.create({
       instructions: assistantInstructions,
-      name: "Scheduling Assistant",
-      model: "gpt-4o",
+      name: `Scheduling Assistant for ${fname} ${lname}`,
+      model: "gpt-4-0613",
       tools: tools,
       temperature: 0.2
     });
+    assistants.set(phone, newAssistant);
   }
-  return assistant;
+  return assistants.get(phone);
 }
 
 async function handleUserInput(userMessage, phoneNumber) {
@@ -199,18 +200,13 @@ async function handleUserInput(userMessage, phoneNumber) {
 
     if (client.id == '') {
       thread = await createThread(phoneNumber); 
-      assistant = await createAssistant();
+      // Create a temporary assistant for new users
+      assistant = await createAssistant('', '', phoneNumber, [], {}, 0, 0, day);
     } else {
       console.log("Client already exists");
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0, 1);
-      let appointmentDuration;
-      if(appointment.length > 0){
-        appointmentDuration = getAppointmentDuration(appointment);
-      }
-      else{
-        appointmentDuration = 30;
-      }
+      let appointmentDuration = appointment.length > 0 ? getAppointmentDuration(appointment) : 30;
       
       const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
       fname = client.firstname;
