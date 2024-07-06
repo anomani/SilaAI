@@ -20,7 +20,7 @@ async function getAvailability(day, duration) {
         console.log(date)
         console.log(date.getDay())
         console.log(day)
-        if (date.getDay() === 7) {
+        if (date.getDay() === 0) {
             console.log("I don't take appointments on Sunday")
             return "I don't take appointments on Sunday";
         }
