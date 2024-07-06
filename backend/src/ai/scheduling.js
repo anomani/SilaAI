@@ -17,7 +17,7 @@ const openai = new OpenAI({
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const assistants = new Map();
-
+const sessions = new Map();
 function getAppointmentDuration(appointment) {
   const [startHour, startMinute] = appointment[0].starttime.split(':').map(Number);
   const [endHour, endMinute] = appointment[0].endtime.split(':').map(Number);
@@ -78,13 +78,6 @@ const tools = [
       }
     }
   },
-  // {
-  //   type: "function",
-  //   function: {
-  //     name: "getCurrentDate",
-  //     description: "Gets the current date without taking any parameters"
-  //   }
-  // },
   {
     type: "function",
     function: {
@@ -154,7 +147,6 @@ const tools = [
   }
 ];
 
-const sessions = new Map();
 
 async function createThread(phoneNumber) {
   if (!sessions.has(phoneNumber)) {
