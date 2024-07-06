@@ -95,7 +95,7 @@ async function handleIncomingMessage(req, res) {
     }
 
     const responseMessage = await handleUserInput(Body, Author);
-    if (responseMessage === "user")  {
+    if (responseMessage === "user" || responseMessage === "User")  {
       await toggleLastMessageReadStatus(clientId);
       await sendNotificationToUser(client.firstname, Body);
     } else {
