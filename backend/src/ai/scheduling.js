@@ -43,9 +43,13 @@ const tools = [
           duration: {
             type: "number",
             description: "The duration of the appointment in minutes"
+          },
+          group: {
+            type: "string",
+            description: "The appointment group that the appointment is in"
           }
         },
-        required: ["day", "duration"]
+        required: ["day", "duration", "group"]
       }
     }
   },
