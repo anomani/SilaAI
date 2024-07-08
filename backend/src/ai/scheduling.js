@@ -177,7 +177,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
     const newAssistant = await openai.beta.assistants.create({
       instructions: assistantInstructions,
       name: `Scheduling Assistant for ${fname} ${lname}`,
-      model: "gpt-4-0613",
+      model: "gpt-4o",
       tools: tools,
       temperature: 0.2
     });
@@ -185,6 +185,18 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
   }
   return assistants.get(phone);
 }
+
+async function createTemporaryAssistant(phoneNumber) {
+  const newAssistant = await openai.beta.assistants.create({
+    instructions: "Simply say. Hey bro, don't think I've heard from you before. Can you just give me your first and last name so I can save it? Then call the createClient tool with the corresponding first name and last name",
+    name: `Assistant to get name of the client`,
+    model: "gpt-4o",
+    tools: tools,
+    temperature: 0.1
+  });
+  return newAssistant;
+}
+
 
 async function handleUserInput(userMessage, phoneNumber) {
   try {
@@ -197,8 +209,7 @@ async function handleUserInput(userMessage, phoneNumber) {
 
     if (client.id == '') {
       thread = await createThread(phoneNumber); 
-      // Create a temporary assistant for new users
-      assistant = await createAssistant('', '', phoneNumber, [], {}, 0, 0, day);
+      assistant = await createTemporaryAssistant(phoneNumber);
     } else {
       console.log("Client already exists");
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
