@@ -213,7 +213,7 @@ async function handleUserInput(userMessage, phoneNumber) {
       console.log("day", day)
       thread = await createThread(phoneNumber); 
       console.log(fname + lname)
-      assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, day);
+      assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, currentDate);
     }
 
     const message = await openai.beta.threads.messages.create(thread.id, {
