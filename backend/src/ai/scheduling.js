@@ -222,7 +222,7 @@ async function handleUserInput(userMessage, phoneNumber) {
     });
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
-      additional_instructions: "The current date and time is" + day,
+      additional_instructions: "The current date and time is" + currentDate +"and the day of the week is"+ day,
       
     });
 
@@ -300,5 +300,15 @@ async function handleUserInput(userMessage, phoneNumber) {
     throw new Error('Error processing request');
   }
 }
+
+
+// async function main() {
+//   const currentDate = new Date(getCurrentDate());
+//   console.log("Current Date:", currentDate)
+//   const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
+//   console.log("Day:", day)
+// }
+
+// main()
 
 module.exports = { getAvailability, bookAppointment, handleUserInput };
