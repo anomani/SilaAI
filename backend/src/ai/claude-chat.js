@@ -262,11 +262,11 @@ async function handleUserInput(userMessage, phoneNumber) {
   }
 }
 
-async function main() {
-    const response = await handleUserInput("whats your availability for tomorrow", "+12038324011");
-    console.log(response);
-}
+// async function main() {
+//     const response = await handleUserInput("whats your availability for tomorrow", "+12038324011");
+//     console.log(response);
+// }
 
-main();
+// main();
 
 module.exports = { handleUserInput };

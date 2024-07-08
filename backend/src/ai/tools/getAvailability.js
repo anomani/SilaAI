@@ -97,10 +97,10 @@ function getCurrentDate() {
 }
 
 
-async function main() {
-    console.log(await getAvailability('2024-07-10', 30, 1))
-}
+// async function main() {
+//     console.log(await getAvailability('2024-07-10', 30, 1))
+// }
 
-main()
+// main()
 
 module.exports = {getAvailability, getCurrentDate}
