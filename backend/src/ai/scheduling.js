@@ -247,27 +247,19 @@ async function handleUserInput(userMessage, phoneNumber) {
           const args = JSON.parse(action.function.arguments);
 
           if (funcName === "getAvailability") {
-            const output = await getAvailability(args.day, args.duration);
+            const output = await getAvailability(args.day, args.duration, args.group);
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
             });
           } else if (funcName === "bookAppointment") {
-            if (fname && lname && email) {
-              const output = await bookAppointment(args.date, args.startTime, fname, lname, phoneNumber, email, args.appointmentType, args.appointmentDuration);
-              toolOutputs.push({
-                tool_call_id: action.id,
-                output: JSON.stringify(output)
-              });
-            } else {
-              toolOutputs.push({
-                tool_call_id: action.id,
-                output: JSON.stringify({ error: "Client information not available" })
-              });
-            }
+            const output = await bookAppointment(args.date, args.startTime, fname, lname, phoneNumber, email, args.appointmentType, args.appointmentDuration);
+            toolOutputs.push({
+              tool_call_id: action.id,
+              output: JSON.stringify(output)
+            });
           } else if (funcName === "getCurrentDate") {
             const output = getCurrentDate();
-
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
