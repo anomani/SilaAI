@@ -5,6 +5,13 @@ async function saveMessage(from, to, body, date, clientid) {
     throw new Error('Invalid clientid');
   }
   const db = dbUtils.getDB();
+  
+  // First, let's check the current max ID
+  const checkMaxIdSql = 'SELECT MAX(id) FROM Messages';
+  const maxIdResult = await db.query(checkMaxIdSql);
+  const currentMaxId = maxIdResult.rows[0].max;
+  console.log("Current max ID in Messages table:", currentMaxId);
+
   const sql = `
     INSERT INTO Messages (fromText, toText, body, date, clientid)
     VALUES ($1, $2, $3, $4, $5)
@@ -13,8 +20,15 @@ async function saveMessage(from, to, body, date, clientid) {
   const values = [from, to, body, date, clientid];
   try {
     const res = await db.query(sql, values);
-    console.log("Message saved with id:", res.rows[0].id);
-    return { id: res.rows[0].id };
+    const newId = res.rows[0].id;
+    console.log("Message saved with id:", newId);
+    
+    // Check if the new ID is less than or equal to the max ID
+    if (newId <= currentMaxId) {
+      console.warn(`Warning: New ID (${newId}) is not greater than current max ID (${currentMaxId})`);
+    }
+    
+    return { id: newId };
   } catch (err) {
     console.error('Error saving message:', err.message);
     throw err;
