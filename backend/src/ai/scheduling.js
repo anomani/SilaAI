@@ -187,7 +187,8 @@ async function handleUserInput(userMessage, phoneNumber) {
     const client = await getClientByPhoneNumber(phoneNumber);
     let thread;
     let assistant;
-    const day = getCurrentDate();
+    const currentDate = new Date(getCurrentDate());
+    const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
     let fname, lname, email;
 
     if (client.id == '') {
