@@ -73,7 +73,7 @@ const QueryResults = ({ route }) => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Clients Not Seen in Over 180 Days</Text>
+        <Text style={styles.title}>Custom List</Text>
         {loading ? (
           <ActivityIndicator size="large" color="#007bff" />
         ) : (
