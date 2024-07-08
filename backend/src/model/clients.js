@@ -209,6 +209,25 @@ async function getDaysSinceLastAppointment(clientId) {
     }
 }
 
+async function updateClientOutreachDate(clientId, outreachDate) {
+    const db = dbUtils.getDB();
+
+    const sql = `
+        UPDATE Client
+        SET outreach_date = $1
+        WHERE id = $2
+    `;
+
+    const values = [outreachDate, clientId];
+    try {
+        const res = await db.query(sql, values);
+        return res.rowCount > 0;
+    } catch (err) {
+        console.error('Error updating client outreach date:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createClient,
     getClientById,
@@ -220,5 +239,6 @@ module.exports = {
     followUp,
     searchForClients,
     getDaysSinceLastAppointment,
-    createAltClient
+    createAltClient,    
+    updateClientOutreachDate
 };

@@ -164,8 +164,15 @@ async function createThread(phoneNumber) {
   return sessions.get(phoneNumber);
 }
 
-async function createAssistant(fname, lname, phone, messages, appointment, appointmentDuration, daysSinceLastAppointment, day) {
-  const instructionsPath = path.join(__dirname, 'assistantInstructions.txt');
+async function createAssistant(fname, lname, phone, messages, appointment, appointmentDuration, daysSinceLastAppointment, day, client) {
+  let instructionsPath;
+  if (client.outreach_date) {
+    console.log("Campaign")
+    instructionsPath = path.join(__dirname, 'campaigninstructions.txt');
+  } else {
+    instructionsPath = path.join(__dirname, 'assistantInstructions.txt');
+  }
+
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
   assistantInstructions = assistantInstructions
     .replace('${appointment}', JSON.stringify(appointment, null, 2))
@@ -228,7 +235,7 @@ async function handleUserInput(userMessage, phoneNumber) {
       console.log("day", day)
       thread = await createThread(phoneNumber); 
       console.log(fname + lname)
-      assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, currentDate);
+      assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, currentDate, client);
     }
 
     const message = await openai.beta.threads.messages.create(thread.id, {

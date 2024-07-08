@@ -1,4 +1,6 @@
-const { getAllClients, createClient, searchForClients, deleteClient, followUp, getClientById, updateClient, getDaysSinceLastAppointment } = require('../model/clients');
+const { getAllClients, createClient, searchForClients, 
+    deleteClient, followUp, getClientById, updateClient, getDaysSinceLastAppointment, 
+    updateClientOutreachDate } = require('../model/clients');
 const dbUtils = require('../model/dbUtils');
 
 
@@ -78,4 +80,11 @@ async function daysSinceLastAppointment(req, res) {
     const daysSinceLastAppointment = await getDaysSinceLastAppointment(id);
     res.status(200).json({ daysSinceLastAppointment });
 }
-module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment };
+
+async function updateClientOutreachDateController(req, res) {
+    const { id } = req.params;
+    const { outreachDate } = req.body;
+    await updateClientOutreachDate(id, outreachDate);
+    res.status(200).send(`Client outreach date updated: ${id}`);
+}
+module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment, updateClientOutreachDateController };
