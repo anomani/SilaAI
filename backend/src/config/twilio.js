@@ -91,7 +91,15 @@ async function handleIncomingMessage(req, res) {
     const localDate = new Date().toLocaleString();
     if (client.id != '') {
       clientId = client.id
-      await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
+      try {
+        await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
+      } catch (saveError) {
+        if (saveError.code !== '23505') {  // If it's not a duplicate key error, rethrow
+          throw saveError;
+        }
+        // If it's a duplicate key error, log it and continue
+        console.log('Duplicate message detected, skipping save');
+      }
     }
 
     const responseMessage = await handleUserInput(Body, Author);
