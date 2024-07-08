@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, Image, ActivityIndicator, TouchableOpacity, Modal, TextInput, SafeAreaView } from 'react-native';
-import { getCustomList, sendMessagesToSelectedClients } from '../services/api';
+import { getCustomList, sendMessagesToSelectedClients, updateClientOutreachDate } from '../services/api';
 import Checkbox from 'expo-checkbox';
+import { Ionicons } from '@expo/vector-icons';
 
 const QueryResults = ({ route }) => {
   const [clients, setClients] = useState([]);
@@ -9,6 +10,7 @@ const QueryResults = ({ route }) => {
   const [selectedClients, setSelectedClients] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [conversationMessage, setConversationMessage] = useState('');
+  const [search, setSearch] = useState('');
   const { query } = route.params;
 
   useEffect(() => {
@@ -50,15 +52,22 @@ const QueryResults = ({ route }) => {
       return;
     }
     try {
-      console.log(selectedClients, conversationMessage)
+      console.log(selectedClients, conversationMessage);
       await sendMessagesToSelectedClients(selectedClients, conversationMessage);
-      alert('Conversations initiated successfully. You can view the chats in the chat dashboard and will get notifications when you need to jump in.');
+      
+      // Update client outreach date for each selected client
+      const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      for (const clientId of selectedClients) {
+        await updateClientOutreachDate(clientId, today);
+      }
+
+      alert('Conversations initiated successfully and client outreach dates updated. You can view the chats in the chat dashboard and will get notifications when you need to jump in.');
       setSelectedClients([]);
       setConversationMessage('');
       setModalVisible(false);
     } catch (error) {
-      console.error('Error initiating conversations:', error);
-      alert('Failed to initiate conversations');
+      console.error('Error initiating conversations or updating outreach dates:', error);
+      alert('Failed to initiate conversations or update outreach dates');
     }
   };
 
@@ -70,6 +79,10 @@ const QueryResults = ({ route }) => {
     setSelectedClients([]);
   };
 
+  const filteredClients = clients.filter(client =>
+    `${client.firstname} ${client.lastname}`.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -78,6 +91,18 @@ const QueryResults = ({ route }) => {
           <ActivityIndicator size="large" color="#007bff" />
         ) : (
           <>
+            <View style={styles.header}>
+              <TextInput
+                style={styles.searchBar}
+                placeholder="Search"
+                placeholderTextColor="white"
+                value={search}
+                onChangeText={setSearch}
+              />
+              <TouchableOpacity style={styles.refreshButton} onPress={fetchQueryResults}>
+                <Ionicons name="refresh" size={24} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
             <View style={styles.selectionControls}>
               <TouchableOpacity style={styles.selectionButton} onPress={selectAllClients}>
                 <Text style={styles.selectionButtonText}>Select All</Text>
@@ -88,7 +113,7 @@ const QueryResults = ({ route }) => {
               <Text style={styles.selectedCount}>{selectedClients.length} selected</Text>
             </View>
             <FlatList
-              data={clients}
+              data={filteredClients}
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
                 <View style={styles.clientItem}>
@@ -296,6 +321,22 @@ const styles = StyleSheet.create({
   selectedCount: {
     color: '#fff',
     fontSize: 14,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  searchBar: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#333',
+    borderRadius: 5,
+    color: 'white',
+    marginRight: 10,
+  },
+  refreshButton: {
+    marginLeft: 10,
   },
 });
 
