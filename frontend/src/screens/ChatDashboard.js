@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
 import { getAllMessagesGroupedByClient, getClientById } from '../services/api';
-import Footer from '../components/Footer'; // Import the Footer component
+import Footer from '../components/Footer'; 
 
 const ChatDashboard = ({ navigation }) => {
   const [groupedMessages, setGroupedMessages] = useState({});
@@ -24,8 +24,8 @@ const ChatDashboard = ({ navigation }) => {
 
   const fetchClientNames = async (groupedMessages) => {
     const names = {};
-    for (const clientid of Object.keys(groupedMessages)) { // Use 'clientid' instead of 'clientId'
-      const client = await getClientById(clientid); // Use 'clientid' instead of 'clientId'
+    for (const clientid of Object.keys(groupedMessages)) { 
+      const client = await getClientById(clientid); 
       names[clientid] = `${client.firstname} ${client.lastname}`;
     }
     setClientNames(names);
@@ -35,20 +35,38 @@ const ChatDashboard = ({ navigation }) => {
     clientNames[clientid]?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderClient = ({ item: clientid }) => { // Use 'clientid' instead of 'clientId'
+  const renderClient = ({ item: clientid }) => {
     const messages = groupedMessages[clientid];
     const lastMessage = messages[messages.length - 1];
     const avatar = lastMessage.from === '18446480598' ? require('../../assets/uzi.png') : require('../../assets/avatar.png');
     const senderName = lastMessage.from === '18446480598' ? 'UZI' : clientNames[clientid];
-    const unreadMessagesCount = messages.filter(message => !message.read).length; // Count unread messages
+    const unreadMessagesCount = messages.filter(message => !message.read).length;
+
+    // Parse the date string and adjust by 4 hours
+    const [datePart, timePart] = lastMessage.date.split(', ');
+    const [month, day, year] = datePart.split('/');
+    const [time, period] = timePart.split(' ');
+    const [hours, minutes] = time.split(':');
+
+    let adjustedHours = parseInt(hours, 10) - 4;
+    let adjustedPeriod = period;
+
+    if (adjustedHours < 0) {
+      adjustedHours += 12;
+      adjustedPeriod = period === 'AM' ? 'PM' : 'AM';
+    } else if (adjustedHours === 0) {
+      adjustedHours = 12;
+    }
+
+    const adjustedDate = `${month}/${day}/${year}, ${adjustedHours.toString().padStart(2, '0')}:${minutes} ${adjustedPeriod}`;
 
     return (
-      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid, clientName: clientNames[clientid] })}> 
+      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid, clientName: clientNames[clientid] })}>
         <View style={styles.clientContainer}>
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.clientContent}>
             <Text style={styles.clientName}>{senderName}</Text>
-            <Text style={styles.messageTime}>{lastMessage.date}</Text>
+            <Text style={styles.messageTime}>{adjustedDate}</Text>
           </View>
           {unreadMessagesCount > 0 && (
             <View style={styles.unreadCountContainer}>
@@ -178,7 +196,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   flatList: {
-    flex: 1, // Add this to make the FlatList take up remaining space
+    flex: 1,
   },
 });
 
