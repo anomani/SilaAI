@@ -39,12 +39,6 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
         return "The appointment time is not in an available slot.";
     }
 
-    //For case that the appointment goes past 6
-    const endOfDay = "18:01";
-    if (isAfter(endTime, endOfDay)) {
-        return "The appointment cannot go past 18:00.";
-    }
-
     try {
         const client = await getClientByPhoneNumber(phone);
         console.log(client);
