@@ -14,7 +14,7 @@ appointmentType, date, startTime, endTime, clientId, details
 */
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration) {
+async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group) {
     console.log("Date:", date);
     console.log("Start Time:", startTime);
     console.log("First Name:", fname);
@@ -23,7 +23,7 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     console.log("Email:", email);
     console.log("Appointment Type:", appointmentType);
     console.log("Appointment Duration:", appointmentDuration);
-    const availability = await getAvailability(date, appointmentDuration);
+    const availability = await getAvailability(date, appointmentDuration, group);
     const endTime = addMinutes(startTime, appointmentDuration);
     console.log("End time: ", endTime);
     //For case that the slot overlaps
