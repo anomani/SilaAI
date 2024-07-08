@@ -14,7 +14,9 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
 async function getAvailability(day, duration, group) {
-    console.log("Group", group)
+    console.log("Day:", day);
+    console.log("Duration:", duration);
+    console.log("Group:", group);
     try {
         const date = new Date(day);
         const dayOfWeek = date.getDay();

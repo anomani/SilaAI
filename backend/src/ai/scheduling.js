@@ -67,7 +67,7 @@ const tools = [
           },
           startTime: {
             type: "string",
-            description: "The time for the appointment. This could be in 24-hour format like 14:30. Convert it into military time if it isnt already in the form of HH:MM."
+            description: "The start time for the appointment. This could be in 24-hour format like 14:30. Convert it into military time if it isnt already in the form of HH:MM."
           },
           appointmentType: {
             type: "string",
