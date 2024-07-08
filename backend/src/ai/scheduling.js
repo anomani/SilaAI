@@ -268,7 +268,7 @@ async function handleUserInput(userMessage, phoneNumber) {
               output: JSON.stringify(output)
             });
           } else if (funcName === "bookAppointment") {
-            const output = await bookAppointment(args.date, args.startTime, fname, lname, phoneNumber, email, args.appointmentType, args.appointmentDuration);
+            const output = await bookAppointment(args.date, args.startTime, fname, lname, phoneNumber, email, args.appointmentType, args.appointmentDuration,args.group);
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
