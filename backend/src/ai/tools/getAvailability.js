@@ -13,39 +13,44 @@ const apiKey = process.env.BROWSERCLOUD_API_KEY;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 
-async function getAvailability(day, duration) {
+async function getAvailability(day, duration, group) {
     try {
-        // Check if the day is Sunday
         const date = new Date(day);
-        console.log(date)
-        console.log(date.getDay())
-        console.log(day)
-        if (date.getDay() === 0) {
-            console.log("I don't take appointments on Sunday")
-            return "I don't take appointments on Sunday";
+        const dayOfWeek = date.getDay();
+        console.log(dayOfWeek)
+        if (dayOfWeek === 0 || dayOfWeek === 1) {
+            return `I don't take appointments on ${dayOfWeek === 0 ? 'Sunday' : 'Monday'}`;
+        }
+
+        const groupAvailability = getGroupAvailability(group, dayOfWeek);
+        if (!groupAvailability) {
+            return "No availability for this group on the selected day";
         }
 
         const appointments = await getAppointmentsByDay(day);
-
-        const startOfDay = new Date(`${day}T09:00:00`);
-        const endOfDay = new Date(`${day}T18:00:00`);
         const availableSlots = [];
 
-        let currentTime = startOfDay;
-        for (let i = 0; i <= appointments.length; i++) {
-            const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfDay;
-            const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfDay;
+        for (const slot of groupAvailability) {
+            const startOfSlot = new Date(`${day}T${slot.start}`);
+            const endOfSlot = new Date(`${day}T${slot.end}`);
+            let currentTime = startOfSlot;
 
-            if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000) {
-                availableSlots.push({
-                    startTime: currentTime.toTimeString().slice(0, 5),
-                    endTime: appointmentStart.toTimeString().slice(0, 5)
-                });
+            for (let i = 0; i <= appointments.length; i++) {
+                const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
+                const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
+
+                if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000 && currentTime < endOfSlot) {
+                    availableSlots.push({
+                        startTime: new Date(currentTime).toTimeString().slice(0, 5),
+                        endTime: new Date(Math.min(appointmentStart, endOfSlot)).toTimeString().slice(0, 5)
+                    });
+                }
+
+                currentTime = appointmentEnd > currentTime ? appointmentEnd : currentTime;
+                if (currentTime >= endOfSlot) break;
             }
-
-            currentTime = appointmentEnd > currentTime ? appointmentEnd : currentTime;
         }
-        console.log(availableSlots);
+
         return availableSlots;
     } catch (error) {
         console.error("Error:", error);
@@ -53,32 +58,34 @@ async function getAvailability(day, duration) {
     }
 }
 
-function isAfter(slot, currentTime) {
-    const slotStartTime = slot.startTime.replace(':', '');
-    const currentMilitaryTime = currentTime.replace(':', '');
-    console.log(parseInt(slotStartTime) > parseInt(currentMilitaryTime))
-    return parseInt(slotStartTime) > parseInt(currentMilitaryTime);
+function getGroupAvailability(group, dayOfWeek) {
+    const availabilityMap = {
+        1: {
+            2: [{ start: '09:00', end: '09:30' }, { start: '09:45', end: '11:45' }, { start: '12:00', end: '14:00' }], // Tuesday
+            3: [{ start: '09:00', end: '09:30' }, { start: '09:45', end: '11:45' }, { start: '12:00', end: '14:00' }], // Wednesday
+            4: [{ start: '09:00', end: '09:30' }, { start: '09:45', end: '11:45' }, { start: '12:00', end: '14:00' }], // Thursday
+            5: [{ start: '09:00', end: '09:30' }, { start: '09:45', end: '11:45' }, { start: '15:30', end: '16:00' }], // Friday
+            6: [{ start: '09:45', end: '11:45' }, { start: '12:00', end: '14:00' }] // Saturday
+        },
+        2: {
+            2: [{ start: '15:00', end: '18:00' }], // Tuesday
+            3: [{ start: '15:00', end: '18:00' }], // Wednesday
+            4: [{ start: '15:00', end: '17:00' }], // Thursday
+            5: [{ start: '16:00', end: '17:00' }], // Friday
+            6: [{ start: '15:00', end: '17:00' }]  // Saturday
+        },
+        3: {
+            3: [{ start: '18:00', end: '19:00' }], // Wednesday
+            4: [{ start: '18:00', end: '19:00' }], // Thursday
+            5: [{ start: '18:00', end: '19:00' }], // Friday
+            6: [{ start: '18:00', end: '19:00' }]  // Saturday
+        }
+    };
+
+    return availabilityMap[group] ? availabilityMap[group][dayOfWeek] : null;
 }
 
-function getCurrentTime() {
-    const now = getCurrentDate();
-    const nowTime = now.split(', ')[1].split(' ')[0];
-    const [hours, minutes] = nowTime.split(':');
-    const period = now.split(' ')[2];
-    let militaryHours = parseInt(hours, 10);
 
-    if (period === 'PM' && militaryHours !== 12) {
-        militaryHours += 12;
-    } else if (period === 'AM' && militaryHours === 12) {
-        militaryHours = 0;
-    }
-    const militaryTime = `${String(militaryHours).padStart(2, '0')}:${minutes}`;
-    
-    const [month, day, year] = now.split(', ')[0].split('/');
-    const nowDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    
-    return { militaryTime, nowDate };
-}
 function getCurrentDate() {
     const now = new Date();
     now.setHours(now.getHours() - 4);
@@ -87,15 +94,10 @@ function getCurrentDate() {
 }
 
 
-function timeToMinutes(time) {
-    const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes;
+async function main() {
+    console.log(await getAvailability('2024-07-10', 30, 1))
 }
 
-// async function main() {
-//     console.log(getCurrentDate())
-// }
-
-// main()
+main()
 
 module.exports = {getAvailability, getCurrentDate}
