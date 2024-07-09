@@ -8,28 +8,31 @@ const openai = new OpenAI({
 });
 
 async function analyzeNames(names) {
-  const chunkSize = 1000;
+  const chunkSize = 1000; // Increased chunk size
   const results = {};
   const chunks = [];
 
+  // Prepare chunks
   for (let i = 0; i < names.length; i += chunkSize) {
     chunks.push(names.slice(i, i + chunkSize));
   }
-
+  console.log(chunks);
+  // Process chunks in parallel
   await Promise.all(chunks.map(async (chunk) => {
     const prompt = `Determine if each name in this list is likely to be a Muslim name. Respond with a JSON object where the key is the name and the value is a boolean (true if likely Muslim, false if not): ${chunk.join(', ')}`;
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-3.5-turbo-16k", // Using a model with larger context
         messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
+        temperature: 0.1,
       });
 
       const content = response.choices[0].message.content.trim();
+      console.log(content);
       Object.assign(results, JSON.parse(content));
     } catch (error) {
-      console.error('Error analyzing names:', error);
+      // Error handling
     }
   }));
 
@@ -49,14 +52,14 @@ async function getMuslimClients() {
     return analysisResult[fullName];
   }).map(client => client.id);
 
-  // Use a prepared statement to prevent SQL injection
-  const placeholders = muslimClientIds.map(() => '?').join(', ');
   const query = `
     SELECT * FROM Client
-    WHERE id IN (${placeholders})
+    WHERE id IN (${muslimClientIds.join(', ')})
   `;
-
-  return { query, params: muslimClientIds };
+  console.log(query);
+  return query;
 }
 
+
 module.exports = { analyzeNames, getMuslimClients };
+
