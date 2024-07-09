@@ -63,7 +63,7 @@ const tools = [
   type: "function",
   function: {
     name: "getMuslimClients",
-    description: "Gets a SQL query to fetch clients with likely Muslim names",
+    description: "Gets a SQL query and parameters to fetch clients with likely Muslim names",
     parameters: {
       type: "object",
       properties: {},
@@ -157,9 +157,9 @@ async function handleUserInputData(userMessage) {
             console.log(listLink);
             output = `Custom list "${args.name}" has been created. You can view and edit the list here: ${listLink}`;
           } else if (funcName === "getMuslimClients") {
-            const query = await getMuslimClients();
+            const { query, params } = await getMuslimClients();
             const queryId = uuidv4();
-            queryStore[queryId] = query;
+            queryStore[queryId] = { query, params };
             const listLink = `/custom-list?id=${queryId}`;
             console.log(listLink);
             output = `Custom list "Muslim Clients" has been created. You can view and edit the list here: ${listLink}`;
@@ -188,9 +188,9 @@ async function handleUserInputData(userMessage) {
   }
 }
 
-// Add this function to retrieve the query
+// Update getStoredQuery function
 function getStoredQuery(id) {
-  return queryStore[id];
+  return queryStore[id] || null;
 }
 
 module.exports = { handleUserInputData, getStoredQuery };
