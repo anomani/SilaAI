@@ -14,6 +14,7 @@ async function createCustomList(name, query) {
 
 async function getCustomList(query) {
   const db = dbUtils.getDB();
+  console.log(query);
   try {
     const res = await db.query(query);
     return res.rows;

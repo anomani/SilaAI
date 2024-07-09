@@ -81,3 +81,8 @@ Note: I define active clients as clients who have had an appointment in the last
 If the user asks for a list of Muslim clients, use the getMuslimClients tool to create this list
 and then return "custom list has been created" with the sql query. Make sure to include the entire sql query
 
+Example: 
+- Custom list "Muslim Clients" has been created. You can view and edit the list here: (id)
+- Custom list "Active Clients" has been created. You can view and edit the list here: (id)
+
+Make it this exact format don't change any of the wording. Replace id with the id that the tool returns

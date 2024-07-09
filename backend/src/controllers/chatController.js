@@ -111,6 +111,7 @@ const getCustomListController = async (req, res) => {
       return res.status(400).json({ error: 'Query ID is required' });
     }
     const query = getStoredQuery(id);
+    console.log(query);
     if (!query) {
       return res.status(404).json({ error: 'Query not found' });
     }
@@ -141,3 +142,4 @@ const sendMessagesToSelectedClients = async (req, res) => {
   }
 }
 module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController, setMessagesReadController, getCustomListController, sendMessagesToSelectedClients };
+

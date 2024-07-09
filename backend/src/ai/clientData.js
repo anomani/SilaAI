@@ -42,7 +42,7 @@ const tools = [
   type: "function",
   function: {
     name: "createCustomList",
-    description: "Creates a custom list of clients based on the given query and returns a link to view/edit the list",
+    description: "Creates a custom list of clients based on the given query and returns the id of the list to view",
     parameters: {
       type: "object",
       properties: {
@@ -110,8 +110,7 @@ async function handleUserInputData(userMessage) {
 
 
     const run = await openai.beta.threads.runs.create(thread.id, {
-      assistant_id: assistant.id,
-      additional_instructions: `The current date is ${date}`
+      assistant_id: assistant.id
     });
 
     while (true) {
@@ -155,14 +154,14 @@ async function handleUserInputData(userMessage) {
             queryStore[queryId] = args.query;
             const listLink = `/custom-list?id=${queryId}`;
             console.log(listLink);
-            output = `Custom list "${args.name}" has been created. You can view and edit the list here: ${listLink}`;
+            output = queryId;
           } else if (funcName === "getMuslimClients") {
-            const { query, params } = await getMuslimClients();
+            const query = await getMuslimClients();
             const queryId = uuidv4();
-            queryStore[queryId] = { query, params };
+            queryStore[queryId] = query;
             const listLink = `/custom-list?id=${queryId}`;
             console.log(listLink);
-            output = `Custom list "Muslim Clients" has been created. You can view and edit the list here: ${listLink}`;
+            output = queryId;
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
@@ -188,9 +187,9 @@ async function handleUserInputData(userMessage) {
   }
 }
 
-// Update getStoredQuery function
+// Add this function to retrieve the query
 function getStoredQuery(id) {
-  return queryStore[id] || null;
+  return queryStore[id];
 }
 
 module.exports = { handleUserInputData, getStoredQuery };
