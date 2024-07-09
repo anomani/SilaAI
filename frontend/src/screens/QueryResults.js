@@ -11,16 +11,16 @@ const QueryResults = ({ route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [conversationMessage, setConversationMessage] = useState('');
   const [search, setSearch] = useState('');
-  const { query } = route.params;
+  const { id } = route.params; // Change this line
 
   useEffect(() => {
     fetchQueryResults();
-  }, [query]);
+  }, [id]); // Change this line
 
   const fetchQueryResults = async () => {
     setLoading(true);
     try {
-      const data = await getCustomList(query);
+      const data = await getCustomList(id); // Change this line
       setClients(data);
     } catch (error) {
       console.error('Error fetching query results:', error);

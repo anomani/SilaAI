@@ -41,9 +41,9 @@ const ChatScreen = () => {
     }
   };
 
-  const handleLinkPress = (query) => {
-    query = query.slice(0, -2);
-    navigation.navigate('QueryResults', { query });
+  const handleLinkPress = (id) => {
+    console.log(id);
+    navigation.navigate('QueryResults', { id });
   };
 
   const handlePromptClick = (prompt) => {
@@ -53,21 +53,21 @@ const ChatScreen = () => {
 
   const renderItem = ({ item }) => (
     <View style={[styles.messageContainer, item.sender === 'user' ? styles.userMessage : styles.botMessage]}>
-      {item.sender === 'bot' ? (
+      {item.sender === 'bot' && item.text.includes('Custom list') ? (
         <Text style={styles.messageText}>
-          {item.text.includes('You can view and edit the list') ? (
-            <>
-              You can view and edit the list{' '}
-              <Text
-                style={styles.link}
-                onPress={() => handleLinkPress(item.text.match(/query=(.*)(?=\.?$)/)[1])}
-              >
-                here
-              </Text>
-            </>
-          ) : (
-            item.text
-          )}
+          {item.text.split('[here]')[0]}
+          <Text
+            style={styles.link}
+            onPress={() => {
+              const match = item.text.match(/id=([^)]+)/);
+              if (match) {
+                handleLinkPress(match[1]);
+              }
+            }}
+          >
+            here
+          </Text>
+          .
         </Text>
       ) : (
         <Text style={styles.messageText}>{item.text}</Text>

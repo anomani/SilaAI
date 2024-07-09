@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -237,10 +237,10 @@ export const savePushToken = async (phoneNumber, pushToken) => {
   }
 };
 
-export const getCustomList = async (query) => {
+export const getCustomList = async (id) => {
   try {
-    console.log(query)
-    const response = await fetch(`${API_URL}/chat/custom-list?query=${query}`);
+    console.log(id)
+    const response = await fetch(`${API_URL}/chat/custom-list?id=${id}`);
     if (!response.ok) {
       throw new Error('Failed to fetch custom list');
     }
