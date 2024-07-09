@@ -143,8 +143,6 @@ async function sendNotificationToUser(clientName, message, clientId) {
     data: { clientName, message, clientId },  // Add clientId to the data
   };
 
-  console.log(notification)
-
   try {
     let ticketChunk = await expo.sendPushNotificationsAsync([notification]);
     console.log(ticketChunk);

@@ -85,14 +85,21 @@ const AppContent: React.FC = () => {
     });
 
     notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log(notification);
+      console.log('Notification received:', notification);
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log(response);
-      const { clientId } = response.notification.request.content.data;
-      if (clientId) {
-        navigation.navigate('ClientMessages', { clientId });
+      console.log('Notification response:', response);
+      const data = response.notification.request.content.data;
+      console.log('Notification data:', data);
+      
+      if (data && typeof data === 'object' && 'clientId' in data) {
+        const clientId = data.clientId;
+        const clientName = data.clientName || 'Unknown Client';
+        console.log('Navigating to ClientMessages with:', { clientId, clientName });
+        navigation.navigate('ClientMessages', { clientId: Number(clientId), clientName });
+      } else {
+        console.warn('Invalid or missing clientId in notification data:', data);
       }
     });
 

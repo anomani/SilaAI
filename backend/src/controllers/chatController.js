@@ -4,6 +4,7 @@ const { getMessagesByClientId, getAllMessages, saveMessage,setMessagesRead } = r
 const { sendMessage } = require('../config/twilio');
 const { getCustomList } = require('../model/customLists');
 const { getClientById } = require('../model/clients');
+const { getStoredQuery } = require('../ai/clientData');
 
 const handleChatRequest = async (req, res) => {
   try {
@@ -105,9 +106,13 @@ const savePushTokenController = async (req, res) => {
 
 const getCustomListController = async (req, res) => {
   try {
-    const { query } = req.query;
+    const { id } = req.query;
+    if (!id) {
+      return res.status(400).json({ error: 'Query ID is required' });
+    }
+    const query = getStoredQuery(id);
     if (!query) {
-      return res.status(400).json({ error: 'Query parameter is required' });
+      return res.status(404).json({ error: 'Query not found' });
     }
     const customList = await getCustomList(query);
     res.json(customList);

@@ -6,6 +6,11 @@ const {sendMessage, sendMessages} = require('../config/twilio');
 const fs = require('fs');
 const path = require('path');
 const { createCustomList, getCustomList } = require('../model/customLists');
+const { analyzeNames, getMuslimClients } = require('./tools/analyzeNames');
+const { v4: uuidv4 } = require('uuid'); // Add this import at the top
+
+// Add this object to store queries
+const queryStore = {};
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -51,6 +56,18 @@ const tools = [
         }
       },
       required: ["name", "query"]
+    }
+  }
+},
+{
+  type: "function",
+  function: {
+    name: "getMuslimClients",
+    description: "Gets a SQL query to fetch clients with likely Muslim names",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: []
     }
   }
 }
@@ -106,6 +123,7 @@ async function handleUserInputData(userMessage) {
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
         if (assistantMessage) {
+          console.log("assistantMessage", assistantMessage.content[0].text.value);
           return assistantMessage.content[0].text.value;
         }
       } else if (runStatus.status === "requires_action") {
@@ -115,7 +133,14 @@ async function handleUserInputData(userMessage) {
 
         for (const action of requiredActions.tool_calls) {
           const funcName = action.function.name;
-          const args = JSON.parse(action.function.arguments);
+          let args;
+          try {
+            args = JSON.parse(action.function.arguments);
+          } catch (parseError) {
+            console.error('Error parsing function arguments:', parseError);
+            console.log('Raw arguments:', action.function.arguments);
+            throw new Error('Invalid function arguments');
+          }
 
           let output;
           if (funcName === "getInfo") {
@@ -124,11 +149,20 @@ async function handleUserInputData(userMessage) {
           } else if (funcName === "sendMessages") {
             output = await sendMessages(args.clients, args.message);
           } else if (funcName === "createCustomList") {
-            console.log("createCustomList", args.query)
+            console.log("createCustomList", args.name, args.query);
             const list = await createCustomList(args.name, args.query);
-            const encodedQuery = encodeURIComponent(args.query);
-            const listLink = `/custom-list?query=${encodedQuery}`;
+            const queryId = uuidv4();
+            queryStore[queryId] = args.query;
+            const listLink = `/custom-list?id=${queryId}`;
+            console.log(listLink);
             output = `Custom list "${args.name}" has been created. You can view and edit the list here: ${listLink}`;
+          } else if (funcName === "getMuslimClients") {
+            const query = await getMuslimClients();
+            const queryId = uuidv4();
+            queryStore[queryId] = query;
+            const listLink = `/custom-list?id=${queryId}`;
+            console.log(listLink);
+            output = `Custom list "Muslim Clients" has been created. You can view and edit the list here: ${listLink}`;
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
@@ -148,9 +182,15 @@ async function handleUserInputData(userMessage) {
       }
     }
   } catch (error) {
-    console.error(error);
-    throw new Error('Error processing request');
+    console.error('Detailed error in handleUserInputData:', error);
+    console.log('User message:', userMessage);
+    throw new Error('Error processing request: ' + error.message);
   }
 }
 
-module.exports = { handleUserInputData };
+// Add this function to retrieve the query
+function getStoredQuery(id) {
+  return queryStore[id];
+}
+
+module.exports = { handleUserInputData, getStoredQuery };

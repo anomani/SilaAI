@@ -77,3 +77,7 @@ How many active clients do I have?
 
 
 Note: I define active clients as clients who have had an appointment in the last 3 months
+
+If the user asks for a list of Muslim clients, use the getMuslimClients tool to create this list
+and then return "custom list has been created" with the sql query. Make sure to include the entire sql query
+
