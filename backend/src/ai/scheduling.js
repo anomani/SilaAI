@@ -168,7 +168,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
   let instructionsPath;
   if (client.outreach_date) {
     console.log("Campaign")
-    instructionsPath = path.join(__dirname, 'campaigninstructions.txt');
+    instructionsPath = path.join(__dirname, 'campaignInstructions.txt');
   } else {
     instructionsPath = path.join(__dirname, 'assistantInstructions.txt');
   }
