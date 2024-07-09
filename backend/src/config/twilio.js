@@ -105,7 +105,7 @@ async function handleIncomingMessage(req, res) {
     const responseMessage = await handleUserInput(Body, Author);
     if (responseMessage === "user" || responseMessage === "User")  {
       await toggleLastMessageReadStatus(clientId);
-      await sendNotificationToUser(client.firstname, Body);
+      await sendNotificationToUser(client.firstname, Body, clientId);  // Pass clientId here
     } else {
       await sendMessage(Author, responseMessage);
     }
@@ -119,7 +119,7 @@ async function handleIncomingMessage(req, res) {
 
 
 
-async function sendNotificationToUser(clientName, message) {
+async function sendNotificationToUser(clientName, message, clientId) {
   const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
   const barber = await getUserByPhoneNumber(barberPhoneNumber);
 
@@ -140,7 +140,7 @@ async function sendNotificationToUser(clientName, message) {
     sound: 'default',
     title: 'New Client Message',
     body: `${clientName}: ${message}`,
-    data: { clientName, message },
+    data: { clientName, message, clientId },  // Add clientId to the data
   };
 
   console.log(notification)
