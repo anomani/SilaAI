@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -72,7 +72,8 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
   return token;
 }
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const navigation = useNavigation();
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
@@ -89,6 +90,10 @@ const App: React.FC = () => {
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       console.log(response);
+      const { clientId } = response.notification.request.content.data;
+      if (clientId) {
+        navigation.navigate('ClientMessages', { clientId });
+      }
     });
 
     return () => {
@@ -99,26 +104,32 @@ const App: React.FC = () => {
         Notifications.removeNotificationSubscription(responseListener.current);
       }
     };
-  }, []);
+  }, [navigation]);
 
+  return (
+    <Stack.Navigator initialRouteName="Homepage" screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Homepage" component={Homepage} />
+      <Stack.Screen name="ClientList" component={ClientListScreen} />
+      <Stack.Screen name="ScheduleScreen" component={ScheduleScreen} />
+      <Stack.Screen name="Calendar" component={CalendarScreen} />
+      <Stack.Screen name="AddAppointment" component={AddAppointmentScreen} />
+      <Stack.Screen name="ClientDetails" component={ClientDetailsScreen} />
+      <Stack.Screen name="AppointmentDetails" component={AppointmentDetailsScreen} />
+      <Stack.Screen name="AddClient" component={AddClientScreen} />
+      <Stack.Screen name="QueryResults" component={QueryResults} />
+      <Stack.Screen name="Chat" component={ChatScreen} />
+      <Stack.Screen name="EditClient" component={EditClientScreen} />
+      <Stack.Screen name="ChatDashboard" component={ChatDashboard} />
+      <Stack.Screen name="ClientMessages" component={ClientMessagesScreen} />
+    </Stack.Navigator>
+  );
+};
+
+const App: React.FC = () => {
   return (
     <NavigationContainer>
       <ChatProvider>
-        <Stack.Navigator initialRouteName="Homepage" screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Homepage" component={Homepage} />
-          <Stack.Screen name="ClientList" component={ClientListScreen} />
-          <Stack.Screen name="ScheduleScreen" component={ScheduleScreen} />
-          <Stack.Screen name="Calendar" component={CalendarScreen} />
-          <Stack.Screen name="AddAppointment" component={AddAppointmentScreen} />
-          <Stack.Screen name="ClientDetails" component={ClientDetailsScreen} />
-          <Stack.Screen name="AppointmentDetails" component={AppointmentDetailsScreen} />
-          <Stack.Screen name="AddClient" component={AddClientScreen} />
-          <Stack.Screen name="QueryResults" component={QueryResults} />
-          <Stack.Screen name="Chat" component={ChatScreen} />
-          <Stack.Screen name="EditClient" component={EditClientScreen} />
-          <Stack.Screen name="ChatDashboard" component={ChatDashboard} />
-          <Stack.Screen name="ClientMessages" component={ClientMessagesScreen} />
-        </Stack.Navigator>
+        <AppContent />
       </ChatProvider>
     </NavigationContainer>
   );
