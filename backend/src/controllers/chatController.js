@@ -180,14 +180,10 @@ const checkJobStatusController = async (req, res) => {
 const startMuslimClientsJobController = async (req, res) => {
   try {
     const jobId = await getMuslimClients();
-    res.json({ jobId });
+    res.json({ jobId, message: "Job started successfully. Use the job ID to check status." });
   } catch (error) {
     console.error('Error starting Muslim clients job:', error);
-    if (error.message.includes('MaxRetriesPerRequestError')) {
-      res.status(503).json({ error: 'Service temporarily unavailable. Please try again later.' });
-    } else {
-      res.status(500).json({ error: 'Error starting Muslim clients job' });
-    }
+    res.status(500).json({ error: 'Error starting Muslim clients job' });
   }
 };
 
