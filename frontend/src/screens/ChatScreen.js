@@ -79,7 +79,7 @@ const ChatScreen = () => {
   };
 
   const handleLinkPress = (id) => {
-    console.log(id)
+    console.log('Navigating with id:', id); // Add this line for debugging
     navigation.navigate('QueryResults', { id });
   };
 
@@ -90,13 +90,19 @@ const ChatScreen = () => {
 
   const renderItem = ({ item }) => (
     <View style={[styles.messageContainer, item.sender === 'user' ? styles.userMessage : styles.botMessage]}>
-      {item.sender === 'bot' && item.text.includes('Job completed.') ? (
+      {item.sender === 'bot' && (item.text.includes('Job completed.') || item.text.includes('Custom list')) ? (
         <Text style={styles.messageText}>
-          Job Finished. You can view and edit the list
+          {item.text.includes('Job completed.') ? 'Job Finished. ' : ''}
+          You can view and edit the list
           <Text
             style={styles.link}
             onPress={() => {
-              const id = item.text.split('custom-list?id=')[1];
+              let id;
+              if (item.text.includes('custom-list?id=')) {
+                id = item.text.split('custom-list?id=')[1];
+              } else {
+                id = item.text.split('edit the list here: ')[1];
+              }
               handleLinkPress(id);
             }}
           >
