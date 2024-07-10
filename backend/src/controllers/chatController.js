@@ -1,10 +1,15 @@
 const { handleUserInput } = require('../ai/scheduling');
-const {handleUserInputData} = require('../ai/clientData');
-const { getMessagesByClientId, getAllMessages, saveMessage,setMessagesRead } = require('../model/messages');
+const { handleUserInputData, getStoredQuery } = require('../ai/clientData');
+const { getMessagesByClientId, getAllMessages, saveMessage, setMessagesRead } = require('../model/messages');
 const { sendMessage } = require('../config/twilio');
 const { getCustomList } = require('../model/customLists');
 const { getClientById } = require('../model/clients');
-const { getStoredQuery } = require('../ai/clientData');
+const { analyzeNamesQueue } = require('../ai/tools/analyzeNames');
+const { getMuslimClients } = require('../ai/tools/analyzeNames');
+const { v4: uuidv4 } = require('uuid');
+
+// Add this object to store queries
+const queryStore = {};
 
 const handleChatRequest = async (req, res) => {
   try {
@@ -110,8 +115,7 @@ const getCustomListController = async (req, res) => {
     if (!id) {
       return res.status(400).json({ error: 'Query ID is required' });
     }
-    const query = getStoredQuery(id);
-    console.log(query);
+    const query = queryStore[id] || getStoredQuery(id);
     if (!query) {
       return res.status(404).json({ error: 'Query not found' });
     }
@@ -141,5 +145,50 @@ const sendMessagesToSelectedClients = async (req, res) => {
     res.status(500).json({ error: 'Error sending messages' });
   }
 }
-module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController, setMessagesReadController, getCustomListController, sendMessagesToSelectedClients };
 
+const checkJobStatusController = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await analyzeNamesQueue.getJob(jobId);
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    
+    const state = await job.getState();
+    
+    if (state === 'completed') {
+      // Retrieve the job result
+      const result = job.returnvalue;
+      
+      const queryId = uuidv4();
+      queryStore[queryId] = result;
+      
+      res.json({ status: 'completed', id: queryId });
+    } else if (state === 'failed') {
+      const errorMessage = job.failedReason || 'Job failed';
+      res.json({ status: 'failed', error: errorMessage });
+    } else {
+      res.json({ status: state });
+    }
+  } catch (error) {
+    console.error('Error checking job status:', error);
+    res.status(500).json({ error: 'Error checking job status' });
+  }
+}
+
+const startMuslimClientsJobController = async (req, res) => {
+  try {
+    const jobId = await getMuslimClients();
+    res.json({ jobId });
+  } catch (error) {
+    console.error('Error starting Muslim clients job:', error);
+    if (error.message.includes('MaxRetriesPerRequestError')) {
+      res.status(503).json({ error: 'Service temporarily unavailable. Please try again later.' });
+    } else {
+      res.status(500).json({ error: 'Error starting Muslim clients job' });
+    }
+  }
+};
+
+module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController, setMessagesReadController, getCustomListController, sendMessagesToSelectedClients, checkJobStatusController, startMuslimClientsJobController };
