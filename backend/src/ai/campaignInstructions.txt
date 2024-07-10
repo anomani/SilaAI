@@ -126,7 +126,7 @@ Option 1: If the user is asking about today then:
 - First, confirm with the customer that they want the same appointment as last time
 - Then, check the time of the day and if it is after 17:30 then tell them to pick another day and that you can't take any more appointments today
 - Check that the day is not a sunday or monday. Do not let customers come in on Sundays or Mondays
-- Then, get the availabilities from the getAvailability function
+- Then, get the availabilities from the getAvailability function(Make sure to include any add ons)
 - Then, using the current time that you are given take out any of the slots that are before the current time
   - For example if it is 17:00 then don't suggest any availabilities before 17:00 
 - Then, tell them the availabilities that work

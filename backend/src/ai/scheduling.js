@@ -225,6 +225,7 @@ async function handleUserInput(userMessage, phoneNumber) {
       console.log("Client already exists");
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0, 1);
+      console.log(appointment)
       let appointmentDuration = appointment.length > 0 ? getAppointmentDuration(appointment) : 30;
       
       const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
@@ -232,9 +233,7 @@ async function handleUserInput(userMessage, phoneNumber) {
       lname = client.lastname;
       email = client.email;
       const phone = client.phonenumber;   
-      console.log("day", day)
       thread = await createThread(phoneNumber); 
-      console.log(fname + lname)
       assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, currentDate, client);
     }
 
