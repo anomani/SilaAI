@@ -1,3 +1,4 @@
+const Bull = require('bull');
 const { OpenAI } = require('openai');
 const { getInfo } = require('./getCustomers');
 const dotenv = require('dotenv');
@@ -6,6 +7,9 @@ dotenv.config({ path: '../../../.env' });
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Create a new Bull queue
+const analyzeNamesQueue = new Bull('analyzeNames');
 
 async function analyzeNames(names) {
   const chunkSize = 1000; // Increased chunk size
@@ -45,8 +49,18 @@ async function getMuslimClients() {
 
   const names = allClients.map(client => `${client.firstname} ${client.lastname}`);
 
+  // Add job to the queue instead of running immediately
+  const job = await analyzeNamesQueue.add({ names });
+
+  return job.id; // Return the job ID
+}
+
+// Process jobs in the queue
+analyzeNamesQueue.process(async (job) => {
+  const { names } = job.data;
   const analysisResult = await analyzeNames(names);
 
+  const allClients = await getInfo("SELECT id, firstname, lastname FROM Client");
   const muslimClientIds = allClients.filter((client) => {
     const fullName = `${client.firstname} ${client.lastname}`;
     return analysisResult[fullName];
@@ -56,10 +70,8 @@ async function getMuslimClients() {
     SELECT * FROM Client
     WHERE id IN (${muslimClientIds.join(', ')})
   `;
-  console.log(query);
-  return query;
-}
 
+  return query; // This will be stored as the job result
+});
 
-module.exports = { analyzeNames, getMuslimClients };
-
+module.exports = { analyzeNames, getMuslimClients, analyzeNamesQueue };

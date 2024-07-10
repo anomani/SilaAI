@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -265,6 +265,26 @@ export const updateClientOutreachDate = async (id, outreachDate) => {
     await retryRequest(() => throttledRequest(() => api.put(`/clients/outreach-date/${id}`, { outreachDate })));
   } catch (error) {
     console.error('Error updating client outreach date:', error);
+    throw error;
+  }
+};
+
+export const startMuslimClientsJob = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.post('/chat/start-muslim-clients-job')));
+    return response.data.jobId;
+  } catch (error) {
+    console.error('Error starting Muslim clients job:', error);
+    throw error;
+  }
+};
+
+export const checkJobStatus = async (jobId) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/chat/job-status/${jobId}`)));
+    return response.data;
+  } catch (error) {
+    console.error('Error checking job status:', error);
     throw error;
   }
 };

@@ -6,8 +6,8 @@ const {sendMessage, sendMessages} = require('../config/twilio');
 const fs = require('fs');
 const path = require('path');
 const { createCustomList, getCustomList } = require('../model/customLists');
-const { analyzeNames, getMuslimClients } = require('./tools/analyzeNames');
-const { v4: uuidv4 } = require('uuid'); // Add this import at the top
+const { analyzeNames, getMuslimClients, analyzeNamesQueue } = require('./tools/analyzeNames');
+const { v4: uuidv4 } = require('uuid');
 
 // Add this object to store queries
 const queryStore = {};
@@ -63,11 +63,28 @@ const tools = [
   type: "function",
   function: {
     name: "getMuslimClients",
-    description: "Gets a SQL query and parameters to fetch clients with likely Muslim names",
+    description: "Starts a background job to analyze Muslim names and returns a job ID",
     parameters: {
       type: "object",
       properties: {},
       required: []
+    }
+  }
+},
+{
+  type: "function",
+  function: {
+    name: "checkJobStatus",
+    description: "Checks the status of a background job",
+    parameters: {
+      type: "object",
+      properties: {
+        jobId: {
+          type: "string",
+          description: "The ID of the job to check"
+        }
+      },
+      required: ["jobId"]
     }
   }
 }
@@ -156,12 +173,24 @@ async function handleUserInputData(userMessage) {
             console.log(listLink);
             output = queryId;
           } else if (funcName === "getMuslimClients") {
-            const query = await getMuslimClients();
-            const queryId = uuidv4();
-            queryStore[queryId] = query;
-            const listLink = `/custom-list?id=${queryId}`;
-            console.log(listLink);
-            output = queryId;
+            const jobId = await getMuslimClients();
+            output = `Job started with ID: ${jobId}. You can check the status using the checkJobStatus function.`;
+          } else if (funcName === "checkJobStatus") {
+            const job = await analyzeNamesQueue.getJob(args.jobId);
+            if (!job) {
+              output = `Job with ID ${args.jobId} not found`;
+            } else {
+              const state = await job.getState();
+              if (state === 'completed') {
+                const result = await job.getResult();
+                const queryId = uuidv4();
+                queryStore[queryId] = result;
+                const listLink = `/custom-list?id=${queryId}`;
+                output = `Job completed. You can view the results at: ${listLink}`;
+              } else {
+                output = `Job status: ${state}`;
+              }
+            }
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
