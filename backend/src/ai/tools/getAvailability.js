@@ -24,7 +24,6 @@ async function getAvailability(day, duration, group) {
         if (dayOfWeek === 0 || dayOfWeek === 1) {
             return `I don't take appointments on ${dayOfWeek === 0 ? 'Sunday' : 'Monday'}`;
         }
-
         const groupAvailability = getGroupAvailability(group, dayOfWeek);
         if (!groupAvailability) {
             return "No availability for this group on the selected day";
@@ -33,10 +32,13 @@ async function getAvailability(day, duration, group) {
         const appointments = await getAppointmentsByDay(day);
         const availableSlots = [];
 
+        const now = new Date();
+        const isToday = now.toDateString() === date.toDateString();
+
         for (const slot of groupAvailability) {
             const startOfSlot = new Date(`${day}T${slot.start}`);
             const endOfSlot = new Date(`${day}T${slot.end}`);
-            let currentTime = startOfSlot;
+            let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
 
             for (let i = 0; i <= appointments.length; i++) {
                 const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
