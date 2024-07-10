@@ -44,34 +44,30 @@ async function analyzeNames(names) {
 }
 
 async function getMuslimClients() {
-  const allClientsQuery = "SELECT id, firstname, lastname FROM Client";
-  const allClients = await getInfo(allClientsQuery);
-
-  const names = allClients.map(client => `${client.firstname} ${client.lastname}`);
-
-  // Add job to the queue instead of running immediately
-  const job = await analyzeNamesQueue.add({ names });
-
-  return job.id; // Return the job ID
+  const job = await analyzeNamesQueue.add({ type: 'getMuslimClients' });
+  return job.id;
 }
 
-// Process jobs in the queue
 analyzeNamesQueue.process(async (job) => {
-  const { names } = job.data;
-  const analysisResult = await analyzeNames(names);
+  if (job.data.type === 'getMuslimClients') {
+    const allClientsQuery = "SELECT id, firstname, lastname FROM Client";
+    const allClients = await getInfo(allClientsQuery);
+    const names = allClients.map(client => `${client.firstname} ${client.lastname}`);
+    
+    const analysisResult = await analyzeNames(names);
 
-  const allClients = await getInfo("SELECT id, firstname, lastname FROM Client");
-  const muslimClientIds = allClients.filter((client) => {
-    const fullName = `${client.firstname} ${client.lastname}`;
-    return analysisResult[fullName];
-  }).map(client => client.id);
+    const muslimClientIds = allClients.filter((client) => {
+      const fullName = `${client.firstname} ${client.lastname}`;
+      return analysisResult[fullName];
+    }).map(client => client.id);
 
-  const query = `
-    SELECT * FROM Client
-    WHERE id IN (${muslimClientIds.join(', ')})
-  `;
+    const query = `
+      SELECT * FROM Client
+      WHERE id IN (${muslimClientIds.join(', ')})
+    `;
 
-  return query; // This will be stored as the job result
+    return query;
+  }
 });
 
 module.exports = { analyzeNames, getMuslimClients, analyzeNamesQueue };

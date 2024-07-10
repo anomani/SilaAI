@@ -23,16 +23,23 @@ const ChatScreen = () => {
     let intervalId;
     if (jobId) {
       intervalId = setInterval(async () => {
-        const status = await checkJobStatus(jobId);
-        setJobStatus(status);
-        if (status.status === 'completed') {
-          clearInterval(intervalId);
-          setJobId(null);
-          if (status.id) {
-            setMessages(prevMessages => [...prevMessages, { text: `Job completed. You can view the results at: custom-list?id=${status.id}`, sender: 'bot' }]);
-          } else {
-            setMessages(prevMessages => [...prevMessages, { text: `Job completed, but no results ID was provided.`, sender: 'bot' }]);
+        try {
+          const status = await checkJobStatus(jobId);
+          if (status.status === 'completed') {
+            clearInterval(intervalId);
+            setJobId(null);
+            if (status.id) {
+              setMessages(prevMessages => [...prevMessages, { text: `Job completed. You can view the results at: custom-list?id=${status.id}`, sender: 'bot' }]);
+            } else {
+              setMessages(prevMessages => [...prevMessages, { text: `Job completed, but no results ID was provided.`, sender: 'bot' }]);
+            }
+          } else if (status.status === 'failed') {
+            clearInterval(intervalId);
+            setJobId(null);
+            setMessages(prevMessages => [...prevMessages, { text: `Job failed: ${status.error}`, sender: 'bot' }]);
           }
+        } catch (error) {
+          console.error('Error checking job status:', error);
         }
       }, 5000); // Check every 5 seconds
     }
@@ -56,9 +63,10 @@ const ChatScreen = () => {
 
     try {
       if (text.toLowerCase().includes('create a list of my muslim clients')) {
-        const newJobId = await startMuslimClientsJob();
-        setJobId(newJobId);
-        setMessages([...newMessages, { text: `Job started with ID: ${newJobId}. I'll notify you when it's complete.`, sender: 'bot' }]);
+        const response = await startMuslimClientsJob();
+        const jobId = response.jobId;
+        setJobId(jobId);
+        setMessages([...newMessages, { text: `Job started with ID: ${jobId}. I'll notify you when it's complete.`, sender: 'bot' }]);
       } else {
         const response = await handleUserInput(text);
         const responseMessage = typeof response === 'string' ? response : response.message;
