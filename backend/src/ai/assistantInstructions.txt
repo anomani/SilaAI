@@ -167,7 +167,7 @@ Customer: Thats good bro. Can I come in tomorrow?
 AI: Yea lemme check for you, you want the haircut and beard again?
 Customer: Yea
 {Call getAvailability with the date for tomorrow, appointment group, and duration}
-AI: Ok I got availability tomorrow from 9-1, 2 to 2:30, or from 4 to 6. Let me know what works for you.
+AI: Ok I got availability tomorrow from (***States availabilities). Let me know what works for you.
 Customer: Can I come in at 4?
 {{ Use previous messages to see availability }}
 AI: Yea, 4pm works you want me to book that for you for the haircut and beard?
