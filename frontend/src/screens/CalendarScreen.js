@@ -23,7 +23,6 @@ const CalendarScreen = ({ navigation }) => {
 
       const response = await getAppointmentsByDay(formattedDate);
       const adjustedAppointments = await Promise.all(response.map(async (appointment) => {
-        console.log('Fetching client for appointment:', appointment); // Add this line
         const client = await getClientById(appointment.clientid); // Use 'clientid' instead of 'clientId'
         return {
           ...appointment,
@@ -93,11 +92,17 @@ const CalendarScreen = ({ navigation }) => {
           <Ionicons name="refresh" size={24} color="#007AFF" />
         </TouchableOpacity>
       </View>
-      <FlatList
-        data={appointments} 
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-      />
+      {appointments.length > 0 ? (
+        <FlatList
+          data={appointments} 
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id}
+        />
+      ) : (
+        <View style={styles.noAppointmentsContainer}>
+          <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+        </View>
+      )}
       <View style={styles.navigation}>
         <TouchableOpacity style={styles.navButton} onPress={() => changeDate(-1)}>
           <Text style={styles.navButtonText}>Previous Day</Text>
@@ -166,7 +171,17 @@ const styles = StyleSheet.create({
   footerItem: { alignItems: 'center' },
   footerText: { color: '#fff', fontSize: 12, marginTop: 4 },
   addButton: { position: 'absolute', top: 10, right: 10 },
-  refreshButton: { position: 'absolute', top: 10, right: 60 }
+  refreshButton: { position: 'absolute', top: 10, right: 60 },
+  noAppointmentsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noAppointmentsText: {
+    fontSize: 18,
+    color: '#aaa',
+    textAlign: 'center',
+  },
 });
 
 export default CalendarScreen;

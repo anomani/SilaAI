@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getMessagesByClientId, sendMessage, setMessagesRead } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import twilioAvatar from '../../assets/uzi.png';
+import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
 import { getClientById } from '../services/api';
 
@@ -22,12 +22,15 @@ const ClientMessagesScreen = ({ route }) => {
   const fetchMessages = async (clientid) => {
     try {
       const data = await getMessagesByClientId(clientid);
-      setMessages(data);
+      // Sort messages by date, oldest first
+      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setMessages(sortedMessages);
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
   };
 
+  
   const handleSendMessage = async () => {
     if (newMessage.trim() === '') return;
     try {
@@ -57,6 +60,55 @@ const ClientMessagesScreen = ({ route }) => {
     setShowScrollButton(offsetY < contentHeight - scrollViewHeight - 100);
   };
 
+  const formatTimestamp = (dateString) => {
+    const [datePart, timePart] = dateString.split(', ');
+    const [month, day, year] = datePart.split('/');
+    const [time, period] = timePart.split(' ');
+    const [hours, minutes] = time.split(':');
+
+    let adjustedHours = parseInt(hours, 10) - 4;
+    let adjustedPeriod = period;
+
+    if (adjustedHours < 0) {
+      adjustedHours += 12;
+      adjustedPeriod = period === 'AM' ? 'PM' : 'AM';
+    } else if (adjustedHours === 0) {
+      adjustedHours = 12;
+    } else if (adjustedHours > 12) {
+      adjustedHours -= 12;
+      adjustedPeriod = 'PM';
+    }
+
+    return `${adjustedHours}:${minutes} ${adjustedPeriod}`;
+  };
+
+  const formatDate = (dateString) => {
+    const [datePart, timePart] = dateString.split(', ');
+    const [month, day, year] = datePart.split('/');
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  const groupMessagesByDate = (messages) => {
+    const grouped = {};
+    messages.forEach(message => {
+      const date = message.date.split(', ')[0];
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+      grouped[date].push(message);
+    });
+    return Object.entries(grouped).map(([date, messages]) => ({ date, messages }));
+  };
+
+  const renderDateSeparator = (date) => (
+    <View style={styles.dateSeparator}>
+      <View style={styles.dateLine} />
+      <Text style={styles.dateText}>{formatDate(date)}</Text>
+      <View style={styles.dateLine} />
+    </View>
+  );
+
   const renderMessage = (message) => {
     const client = getClientById(clientid);
     const isAssistant = message.fromtext === '+18446480598';
@@ -64,7 +116,10 @@ const ClientMessagesScreen = ({ route }) => {
     const senderName = isAssistant ? 'Assistant' : clientName || 'Client';
 
     return (
-      <View style={[styles.messageContainer, isAssistant ? styles.assistantMessage : styles.clientMessage]}>
+      <View 
+        key={`${message.date}-${message.fromtext}`}
+        style={[styles.messageContainer, isAssistant ? styles.assistantMessage : styles.clientMessage]}
+      >
         {!isAssistant && <Image source={avatar} style={styles.avatar} />}
         <View style={styles.messageContent}>
           <Text style={styles.messageSender}>{senderName}</Text>
@@ -72,6 +127,7 @@ const ClientMessagesScreen = ({ route }) => {
             <Text style={[styles.messageText, isAssistant ? styles.assistantText : styles.clientText]}>
               {message.body}
             </Text>
+            <Text style={styles.timestamp}>{formatTimestamp(message.date)}</Text>
           </View>
         </View>
         {isAssistant && <Image source={avatar} style={styles.avatar} />}
@@ -79,17 +135,29 @@ const ClientMessagesScreen = ({ route }) => {
     );
   };
 
+  const renderItem = ({ item }) => (
+    <View key={item.date}>
+      {renderDateSeparator(item.date)}
+      {item.messages.map(message => renderMessage(message))}
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -200}
+    >
       <FlatList
         ref={flatListRef}
-        data={messages}
-        renderItem={({ item }) => renderMessage(item)}
-        keyExtractor={(item) => item.id.toString()}
+        data={groupMessagesByDate(messages)}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.date}
         onContentSizeChange={scrollToBottom}
         onLayout={scrollToBottom}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        style={styles.messageList}
       />
       {showScrollButton && (
         <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
@@ -109,7 +177,7 @@ const ClientMessagesScreen = ({ route }) => {
           <Icon name="send" size={20} color="#195de6" />
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -117,6 +185,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#111318',
+  },
+  messageList: {
+    flex: 1,
   },
   messageContainer: {
     flexDirection: 'row',
@@ -161,6 +232,12 @@ const styles = StyleSheet.create({
   },
   clientText: {
     color: 'white',
+  },
+  timestamp: {
+    fontSize: 10,
+    color: '#9da6b8',
+    alignSelf: 'flex-end',
+    marginTop: 4,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -207,6 +284,26 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 24,
   },
+  dateSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+    paddingHorizontal: 16,
+  },
+  dateLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#9da6b8',
+  },
+  dateText: {
+    color: '#9da6b8',
+    fontSize: 12,
+    marginHorizontal: 10,
+  },
 });
 
 export default ClientMessagesScreen;
+
+
+
+

@@ -94,10 +94,9 @@ const AppContent: React.FC = () => {
       console.log('Notification data:', data);
       
       if (data && typeof data === 'object' && 'clientId' in data) {
-        const clientId = data.clientId;
-        const clientName = data.clientName || 'Unknown Client';
+        const { clientId, clientName } = data;
         console.log('Navigating to ClientMessages with:', { clientId, clientName });
-        navigation.navigate('ClientMessages', { clientId: Number(clientId), clientName });
+        navigation.navigate('ClientMessages', { clientid: clientId, clientName });
       } else {
         console.warn('Invalid or missing clientId in notification data:', data);
       }
@@ -127,7 +126,11 @@ const AppContent: React.FC = () => {
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="EditClient" component={EditClientScreen} />
       <Stack.Screen name="ChatDashboard" component={ChatDashboard} />
-      <Stack.Screen name="ClientMessages" component={ClientMessagesScreen} />
+      <Stack.Screen 
+        name="ClientMessages" 
+        component={ClientMessagesScreen} 
+        initialParams={{ clientid: 0, clientName: '' }}
+      />
     </Stack.Navigator>
   );
 };

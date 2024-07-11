@@ -144,6 +144,7 @@ async function sendNotificationToUser(clientName, message, clientId) {
   };
 
   try {
+    console.log(notification)
     let ticketChunk = await expo.sendPushNotificationsAsync([notification]);
     console.log(ticketChunk);
   } catch (error) {

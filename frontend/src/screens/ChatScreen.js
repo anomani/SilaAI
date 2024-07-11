@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { handleUserInput, startMuslimClientsJob, checkJobStatus } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -134,19 +134,25 @@ const ChatScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
-      {showIntro && messages.length === 0 && renderIntro()}
-      <FlatList
-        data={messages}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => index.toString()}
-        contentContainerStyle={styles.chatContainer}
-      />
-      {jobStatus && jobStatus.status !== 'completed' && (
-        <View style={styles.jobStatusContainer}>
-          <Text style={styles.jobStatusText}>Job Status: {jobStatus.status}</Text>
-        </View>
-      )}
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -200}
+    >
+      <View style={styles.chatListContainer}>
+        {showIntro && messages.length === 0 && renderIntro()}
+        <FlatList
+          data={messages}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => index.toString()}
+          contentContainerStyle={styles.chatContainer}
+        />
+        {jobStatus && jobStatus.status !== 'completed' && (
+          <View style={styles.jobStatusContainer}>
+            <Text style={styles.jobStatusText}>Job Status: {jobStatus.status}</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -159,7 +165,7 @@ const ChatScreen = () => {
           <Ionicons name="send" size={24} color="#007AFF" />
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -168,6 +174,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1c1c1e',
     paddingTop: 50, // Add paddingTop
+  },
+  chatListContainer: {
+    flex: 1,
   },
   chatContainer: {
     padding: 10,
