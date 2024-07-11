@@ -237,9 +237,10 @@ const styles = StyleSheet.create({
   },
   centeredView: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start', // Change this from 'center' to 'flex-start'
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingTop: 140, // Add this to give some space from the top
   },
   modalView: {
     margin: 20,

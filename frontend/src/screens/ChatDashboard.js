@@ -31,9 +31,33 @@ const ChatDashboard = ({ navigation }) => {
     setClientNames(names);
   };
 
-  const filteredClients = Object.keys(groupedMessages).filter(clientid =>
-    clientNames[clientid]?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const parseDate = (dateString) => {
+    const [datePart, timePart] = dateString.split(', ');
+    const [month, day, year] = datePart.split('/');
+    const [time, period] = timePart.split(' ');
+    const [hours, minutes, seconds] = time.split(':');
+    
+    let adjustedHours = parseInt(hours, 10);
+    if (period === 'PM' && adjustedHours !== 12) {
+      adjustedHours += 12;
+    } else if (period === 'AM' && adjustedHours === 12) {
+      adjustedHours = 0;
+    }
+
+    return new Date(year, month - 1, day, adjustedHours, minutes, seconds);
+  };
+
+  const filteredClients = Object.keys(groupedMessages)
+    .filter(clientid =>
+      clientNames[clientid]?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      const lastMessageA = groupedMessages[a][groupedMessages[a].length - 1];
+      const lastMessageB = groupedMessages[b][groupedMessages[b].length - 1];
+      const dateA = parseDate(lastMessageA.date);
+      const dateB = parseDate(lastMessageB.date);
+      return dateB - dateA;
+    });
 
   const renderClient = ({ item: clientid }) => {
     const messages = groupedMessages[clientid];
@@ -105,7 +129,7 @@ const ChatDashboard = ({ navigation }) => {
         data={filteredClients}
         renderItem={renderClient}
         keyExtractor={(item) => item}
-        style={styles.flatList} // Add this style
+        style={styles.flatList}
       />
       <Footer navigation={navigation} /> 
     </View>
@@ -116,7 +140,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#111318',
-    marginTop: 50, // Add this line
+    marginTop: 50,
   },
   header: {
     flexDirection: 'row',
