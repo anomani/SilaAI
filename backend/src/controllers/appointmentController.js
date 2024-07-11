@@ -4,15 +4,13 @@ const dbUtils = require('../model/dbUtils');
 
 async function createNewAppointment(req, res) {
   try {
+    const { appointmentType, date, startTime, endTime, clientId, details, price } = req.body;
 
-    const { appointmentType, date, startTime, endTime, clientId, details } = req.body;
-
-    if (!appointmentType || !date || !startTime || !endTime || !clientId) {
+    if (!appointmentType || !date || !startTime || !endTime || !clientId || !price) {
       return res.status(400).send('Missing required fields');
     }
 
-
-    const result = await createAppointment(appointmentType, date, startTime, endTime, clientId, details);
+    const result = await createAppointment(appointmentType, date, startTime, endTime, clientId, details, price);
 
     res.status(201).json(result);
   } catch (error) {
@@ -25,7 +23,6 @@ async function createNewAppointment(req, res) {
     }
   }
 }
-
 
 async function getAppointmentsByDate(req, res) {
     try {

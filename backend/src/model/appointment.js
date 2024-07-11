@@ -1,13 +1,13 @@
 const dbUtils = require('./dbUtils');
 
-async function createAppointment(appointmentType, date, startTime, endTime, clientId, details) {
+async function createAppointment(appointmentType, date, startTime, endTime, clientId, details, price) {
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO Appointment (appointmentType, date, startTime, endTime, clientId, details)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO Appointment (appointmentType, date, startTime, endTime, clientId, details, price)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
     `;
-    const values = [appointmentType, date, startTime, endTime, clientId, details];
+    const values = [appointmentType, date, startTime, endTime, clientId, details, price];
     try {
         const res = await db.query(sql, values);
         console.log('Appointment Created with ID:', res.rows[0].id);
@@ -41,10 +41,10 @@ async function updateAppointment(appointmentId, updateData) {
     const db = dbUtils.getDB();
     const sql = `
         UPDATE Appointment
-        SET appointmentType = $1, date = $2, startTime = $3, endTime = $4, clientId = $5, details = $6
-        WHERE id = $7
+        SET appointmentType = $1, date = $2, startTime = $3, endTime = $4, clientId = $5, details = $6, price = $7
+        WHERE id = $8
     `;
-    const params = [updateData.appointmentType, updateData.date, updateData.startTime, updateData.endTime, updateData.clientId, updateData.details, appointmentId];
+    const params = [updateData.appointmentType, updateData.date, updateData.startTime, updateData.endTime, updateData.clientId, updateData.details, updateData.price, appointmentId];
     try {
         const res = await db.query(sql, params);
         console.log(`Appointment Updated: ${res.rowCount} changes made`);

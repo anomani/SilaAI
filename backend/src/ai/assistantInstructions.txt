@@ -102,7 +102,7 @@ Option 1: If the user is asking about today then:
 - Using the appointment duration figure out the timing for the appointment and make sure it doesn't overlap with the others or goes past 18:00pm
 - Then tell the user the availabilities
 - Make sure that the appointment is not in an unavailable slot
-- Then continue with the booking once confirmed
+- Then continue with the booking once confirmed, add the price to the booking using the appointment information above including any add ons 
 
 Option 2: The user is asking about a day in the future(ex: tomorrow)
 - First, confirm with the customer that they want the same appointment as last time
@@ -115,7 +115,7 @@ Option 2: The user is asking about a day in the future(ex: tomorrow)
 - Using the appointment duration figure out the timing for the appointment and make sure it doesn't overlap with the others or goes past 18:00pm
 - Make sure that the appointment is not in an unavailable slot
   - Check that the new start time and end time are not in unavailable slots 
-- Then continue with the booking once confirmed
+- Then continue with the booking once confirmed, add the price to the booking using the appointment information above including any add ons 
 
 Additional instructions:
 - I want you to present this in a way that is easy for the user to understand and fluid. Client's can come in whenever in that slot as long as the appointment duration 
