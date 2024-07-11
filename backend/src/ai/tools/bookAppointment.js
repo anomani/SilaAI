@@ -14,7 +14,7 @@ appointmentType, date, startTime, endTime, clientId, details
 */
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group) {
+async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price) {
     console.log("Date:", date);
     console.log("Start Time:", startTime);
     console.log("First Name:", fname);
@@ -53,13 +53,13 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
         if(client.id != '') {
             console.log("Client already exists");
             const clientId = client.id;
-            await createAppointment(appointmentType, date, startTime, endTime, clientId, "");
+            await createAppointment(appointmentType, date, startTime, endTime, clientId, "", price);
             return "Appointment booked successfully";
         } else {
             console.log("Client does not exist");
             await createClient(fname, lname, phone, email, "");
             const client = await getClientByPhoneNumber(phone);
-            await createAppointment(appointmentType, date, startTime, endTime, client.id, "");
+            await createAppointment(appointmentType, date, startTime, endTime, client.id, "", price);
             return "Appointment booked successfully";
         }
     } catch (error) {

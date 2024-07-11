@@ -3,24 +3,26 @@ import { View, Text, FlatList, StyleSheet, Image, ActivityIndicator, TouchableOp
 import { getCustomList, sendMessagesToSelectedClients, updateClientOutreachDate } from '../services/api';
 import Checkbox from 'expo-checkbox';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 const QueryResults = ({ route }) => {
+  const navigation = useNavigation();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedClients, setSelectedClients] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [conversationMessage, setConversationMessage] = useState('');
   const [search, setSearch] = useState('');
-  const { id } = route.params; // Change this line
+  const { id } = route.params;
 
   useEffect(() => {
     fetchQueryResults();
-  }, [id]); // Change this line
+  }, [id]);
 
   const fetchQueryResults = async () => {
     setLoading(true);
     try {
-      const data = await getCustomList(id); // Change this line
+      const data = await getCustomList(id);
       setClients(data);
     } catch (error) {
       console.error('Error fetching query results:', error);
@@ -83,6 +85,10 @@ const QueryResults = ({ route }) => {
     `${client.firstname} ${client.lastname}`.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleClientPress = (client) => {
+    navigation.navigate('ClientDetails', { client });
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -116,19 +122,21 @@ const QueryResults = ({ route }) => {
               data={filteredClients}
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
-                <View style={styles.clientItem}>
-                  <Checkbox
-                    value={selectedClients.includes(item.id)}
-                    onValueChange={() => toggleClientSelection(item.id)}
-                    style={styles.checkbox}
-                    color={selectedClients.includes(item.id) ? '#007bff' : undefined}
-                  />
-                  <Image source={{ uri: item.ProfileImage }} style={styles.profileImage} />
-                  <View style={styles.clientInfo}>
-                    <Text style={styles.clientName}>{item.firstname} {item.lastname}</Text>
-                    <Text style={styles.clientPhone}>{item.phonenumber}</Text>
+                <TouchableOpacity onPress={() => handleClientPress(item)}>
+                  <View style={styles.clientItem}>
+                    <Checkbox
+                      value={selectedClients.includes(item.id)}
+                      onValueChange={() => toggleClientSelection(item.id)}
+                      style={styles.checkbox}
+                      color={selectedClients.includes(item.id) ? '#007bff' : undefined}
+                    />
+                    <Image source={{ uri: item.ProfileImage }} style={styles.profileImage} />
+                    <View style={styles.clientInfo}>
+                      <Text style={styles.clientName}>{item.firstname} {item.lastname}</Text>
+                      <Text style={styles.clientPhone}>{item.phonenumber}</Text>
+                    </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               )}
             />
             <TouchableOpacity style={styles.initiateButton} onPress={handleInitiateConversation}>
@@ -237,10 +245,10 @@ const styles = StyleSheet.create({
   },
   centeredView: {
     flex: 1,
-    justifyContent: 'flex-start', // Change this from 'center' to 'flex-start'
+    justifyContent: 'flex-start',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingTop: 140, // Add this to give some space from the top
+    paddingTop: 140,
   },
   modalView: {
     margin: 20,

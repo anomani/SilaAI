@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getMessagesByClientId, sendMessage, setMessagesRead } from '../services/api';
@@ -17,6 +17,8 @@ const ClientMessagesScreen = ({ route }) => {
 
   useEffect(() => {
     fetchMessages(clientid);
+    // Add this new effect to scroll to bottom when the screen loads
+    scrollToBottom();
   }, [clientid]);
 
   const fetchMessages = async (clientid) => {
@@ -47,7 +49,10 @@ const ClientMessagesScreen = ({ route }) => {
 
   const scrollToBottom = () => {
     if (flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: true });
+      // Use setTimeout to ensure the FlatList has rendered
+      setTimeout(() => {
+        flatListRef.current.scrollToEnd({ animated: false });
+      }, 100);
     }
   };
 
@@ -109,7 +114,7 @@ const ClientMessagesScreen = ({ route }) => {
     </View>
   );
 
-  const renderMessage = (message) => {
+  const renderMessage = useCallback((message) => {
     const client = getClientById(clientid);
     const isAssistant = message.fromtext === '+18446480598';
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
@@ -133,14 +138,14 @@ const ClientMessagesScreen = ({ route }) => {
         {isAssistant && <Image source={avatar} style={styles.avatar} />}
       </View>
     );
-  };
+  }, [clientid, clientName]);
 
-  const renderItem = ({ item }) => (
+  const renderItem = useCallback(({ item }) => (
     <View key={item.date}>
       {renderDateSeparator(item.date)}
       {item.messages.map(message => renderMessage(message))}
     </View>
-  );
+  ), [renderMessage]);
 
   return (
     <KeyboardAvoidingView 
@@ -152,7 +157,11 @@ const ClientMessagesScreen = ({ route }) => {
         ref={flatListRef}
         data={groupMessagesByDate(messages)}
         renderItem={renderItem}
-        keyExtractor={(item) => item.date}
+        keyExtractor={useCallback((item) => item.date, [])}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        removeClippedSubviews={true}
         onContentSizeChange={scrollToBottom}
         onLayout={scrollToBottom}
         onScroll={handleScroll}
@@ -302,8 +311,5 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ClientMessagesScreen;
-
-
-
+export default React.memo(ClientMessagesScreen);
 
