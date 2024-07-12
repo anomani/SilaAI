@@ -20,13 +20,14 @@ Appointment (
     endTime TEXT,
     appointmentType TEXT,
     details TEXT,
-    FOREIGN KEY(clientId) REFERENCES Client(id)
+    FOREIGN KEY(clientId) REFERENCES Client(id),
+    price NUMERIC(10,2)
 );
 
 The date of the appointment is in the format of YYYY-MM-DD. The startTime are in the format of HH:MM. Since date is a text you need to typecast it 
 As date. For example if the user asks how many clients have not shown up in more than 6 months then use the following Query. Make sure that in your query 
 you are not getting customers who don't have any appointments. For example, you would use the following query to get the number of clients who have not 
-shown up in more than 6 months
+shown up in more than 6 months. 
 
 SELECT DISTINCT c.*
 FROM Client c
