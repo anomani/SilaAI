@@ -15,7 +15,7 @@ appointmentType, date, startTime, endTime, clientId, details
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price) {
-    console.log("Date:", date);
+    console.log("Datea:", date);
     console.log("Start Time:", startTime);
     console.log("First Name:", fname);
     console.log("Last Name:", lname);
