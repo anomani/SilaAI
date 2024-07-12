@@ -23,6 +23,7 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     console.log("Email:", email);
     console.log("Appointment Type:", appointmentType);
     console.log("Appointment Duration:", appointmentDuration);
+    console.log("Price:", price);
     const availability = await getAvailability(date, appointmentDuration, group);
     const endTime = addMinutes(startTime, appointmentDuration);
     console.log("End time: ", endTime);
