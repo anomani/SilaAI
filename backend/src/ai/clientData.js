@@ -90,12 +90,12 @@ const tools = [
 }
 ];
 
-async function createAssistant() {
+async function createAssistant(date) {
   const instructionsPath = path.join(__dirname, 'dataInstructions.txt');
   const assistantInstructions = fs.readFileSync(instructionsPath, 'utf8');
   if (!assistant) {
     assistant = await openai.beta.assistants.create({
-      instructions: assistantInstructions,
+      instructions: assistantInstructions + `\nDate: ${date}`,
       name: "Client Data",
       model: "gpt-4o",
       tools: tools,
@@ -117,7 +117,7 @@ async function createThread() {
 async function handleUserInputData(userMessage) {
   try {
     const date = new Date();
-    const assistant = await createAssistant();
+    const assistant = await createAssistant(date);
     const thread = await createThread();
 
     const message = await openai.beta.threads.messages.create(thread.id, {
