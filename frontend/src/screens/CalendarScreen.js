@@ -64,6 +64,13 @@ const CalendarScreen = ({ navigation }) => {
     setDate(new Date());
   };
 
+  const calculateDailyTotal = () => {
+    if (!appointments || appointments.length === 0) {
+      return '0.00';
+    }
+    return appointments.reduce((total, appointment) => total + (Number(appointment.price) || 0), 0).toFixed(2);
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.item} 
@@ -103,6 +110,9 @@ const CalendarScreen = ({ navigation }) => {
           <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
         </View>
       )}
+      <View style={styles.totalContainer}>
+        <Text style={styles.totalText}>Daily Total: ${calculateDailyTotal()}</Text>
+      </View>
       <View style={styles.navigation}>
         <TouchableOpacity style={styles.navButton} onPress={() => changeDate(-1)}>
           <Text style={styles.navButtonText}>Previous Day</Text>
@@ -182,6 +192,17 @@ const styles = StyleSheet.create({
     color: '#aaa',
     textAlign: 'center',
   },
+  totalContainer: {
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  totalText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007AFF',
+  },
 });
 
 export default CalendarScreen;
+
+

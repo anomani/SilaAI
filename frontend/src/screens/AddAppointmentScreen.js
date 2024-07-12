@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
 import { addAppointment, searchClients } from '../services/api';
@@ -19,6 +20,7 @@ const AddAppointmentScreen = ({ navigation }) => {
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
+  const [showAppointmentTypePicker, setShowAppointmentTypePicker] = useState(false);
 
   const handleInputChange = async (field, value) => {
     setAppointment({ ...appointment, [field]: value });
@@ -82,6 +84,44 @@ const AddAppointmentScreen = ({ navigation }) => {
     }
   };
 
+  const handleAppointmentTypeChange = (itemValue) => {
+    handleInputChange('appointmentType', itemValue);
+    setShowAppointmentTypePicker(false);
+  };
+
+  const handleDatePress = () => {
+    if (Platform.OS === 'ios') {
+      setShowDatePicker(true);
+    } else {
+      showAndroidDatePicker();
+    }
+  };
+
+  const showAndroidDatePicker = async () => {
+    try {
+      const { action, year, month, day } = await DateTimePicker.open({
+        value: appointment.date,
+        mode: 'date',
+      });
+      if (action !== DateTimePicker.dismissedAction) {
+        const selectedDate = new Date(year, month, day);
+        handleDateChange(null, selectedDate);
+      }
+    } catch (error) {
+      console.warn('Error opening date picker', error);
+    }
+  };
+
+  const appointmentTypes = [
+    { label: 'Adult Cut', value: 'adultCut' },
+    { label: 'High-School Cut', value: 'highSchoolCut' },
+    { label: 'Kids Cut', value: 'kidsCut' },
+    { label: 'Lineup + Taper', value: 'lineupTaper' },
+    { label: 'Beard Grooming Only', value: 'beardGroomingOnly' },
+    { label: 'Adult - (Full Service)', value: 'adultFullService' },
+    { label: 'OFF DAY/EMERGENCY - (Full Service)', value: 'offDayEmergency' },
+  ];
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Client Name</Text>
@@ -109,17 +149,18 @@ const AddAppointmentScreen = ({ navigation }) => {
         listStyle={styles.listStyle}
       />
       <Text style={styles.label}>Date</Text>
-      <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-        <Text style={styles.input}>
+      <TouchableOpacity onPress={handleDatePress}>
+        <Text style={[styles.input, styles.inputText]}>
           {appointment.date.toLocaleDateString('en-US')}
         </Text>
       </TouchableOpacity>
-      {showDatePicker && (
+      {Platform.OS === 'ios' && showDatePicker && (
         <DateTimePicker
           value={appointment.date}
           mode="date"
-          display="default"
+          display="spinner"
           onChange={handleDateChange}
+          themeVariant="dark"
         />
       )}
       <Text style={styles.label}>Starts at</Text>
@@ -149,13 +190,28 @@ const AddAppointmentScreen = ({ navigation }) => {
         />
       )}
       <Text style={styles.label}>Appointment Type</Text>
-      <TextInput
+      <TouchableOpacity 
         style={styles.input}
-        value={appointment.appointmentType}
-        onChangeText={(value) => handleInputChange('appointmentType', value)}
-        placeholder="Appointment Type"
-        placeholderTextColor="#888"
-      />
+        onPress={() => setShowAppointmentTypePicker(true)}
+      >
+        <Text style={[styles.inputText, { color: '#fff' }]}>
+          {appointmentTypes.find(type => type.value === appointment.appointmentType)?.label || 'Select Appointment Type'}
+        </Text>
+      </TouchableOpacity>
+      {showAppointmentTypePicker && (
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={appointment.appointmentType}
+            style={styles.picker}
+            onValueChange={handleAppointmentTypeChange}
+            dropdownIconColor="#fff"
+          >
+            {appointmentTypes.map((type) => (
+              <Picker.Item key={type.value} label={type.label} value={type.value} color="#fff" />
+            ))}
+          </Picker>
+        </View>
+      )}
       <Text style={styles.label}>Add details</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -211,8 +267,21 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     backgroundColor: '#fff',
     padding: 5
-  }
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#444',
+    borderRadius: 8,
+    backgroundColor: '#2c2c2e',
+    marginVertical: 8,
+  },
+  picker: {
+    color: '#fff',
+  },
+  inputText: {
+    color: '#fff',
+    fontSize: 16,
+  },
 });
 
 export default AddAppointmentScreen;
-
