@@ -77,6 +77,9 @@ async function handleWebhook(req, res) {
             console.error('Error processing webhook:', error);
             res.status(500).send('Error processing webhook');
         }
+    } else if (req.body.action === 'canceled') {
+        console.log("Received canceled action:", req.body.action);
+        res.status(200).send('Appointment canceled');
     } else {
         console.log("Received non-scheduled action:", req.body.action);
         res.status(200).send('Webhook received');
