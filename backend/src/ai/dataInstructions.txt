@@ -92,4 +92,4 @@ Use the date when you need it for queries like
 
 - how much revenue have i made this month so far
     - Use the date in order to only calculate the appointments before the current date in the current month
-- how many appointments have i done this month so far 
+- how many appointments have I done this month so far 

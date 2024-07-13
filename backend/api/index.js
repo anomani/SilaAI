@@ -2,7 +2,7 @@ const app = require('../src/app');
 const port = process.env.PORT || 3000;
 
 const bodyParser = require('body-parser');
-app.get("/", (req, res) => res.send("Express on Vercel"));
+app.get("/", (req, res) => res.send("Uzi Barber App"));
 
 app.use(bodyParser.json());
 app.listen(port, () => {

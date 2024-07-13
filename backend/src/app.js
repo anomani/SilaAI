@@ -8,6 +8,7 @@ const chatRoutes = require('./routes/chatRoutes');  // Import chat routes
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const clientRoutes = require('./routes/clientRoutes');
 const tokenRoutes = require('./routes/tokenRoutes');
+const webhookRoutes = require('./routes/webhookRoutes');
 
 const app = express();
 
@@ -21,5 +22,6 @@ app.use('/api/chat', chatRoutes);
 app.use('/api', appointmentRoutes);
 app.use('/api', clientRoutes);
 app.use('/api', tokenRoutes);
+app.use('/webhook', webhookRoutes);
 
 module.exports = app;
