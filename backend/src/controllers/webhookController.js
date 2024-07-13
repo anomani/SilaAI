@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
-    // console.log("Received webhook:", req.body);
+    console.log("Received webhook:", req.body);
 
     // Verify the webhook signature
     const signature = req.headers['x-acuity-signature'];
@@ -20,6 +20,7 @@ async function handleWebhook(req, res) {
     // }
 
     if (req.body.action === 'scheduled') {
+        console.log("Hello")
         try {
             const appointmentId = req.body.id;
             console.log("Fetching details for appointment ID:", appointmentId);
@@ -55,19 +56,6 @@ async function handleWebhook(req, res) {
                 endTimeHour += 12;
             }
             const endTimeMilitary = `${endTimeHour.toString().padStart(2, '0')}:${endTimeParts[1].substring(0, 2)}`;
-            console.log("Appointment Type:", appointmentDetails.type);
-            console.log("Appointment Date:", appointmentDate.toISOString().split('T')[0]);
-            console.log("Start Time (Military):", startTimeMilitary);
-            console.log("End Time (Military):", endTimeMilitary);
-            console.log("Client ID:", client.id);
-            console.log("Additional Info:", JSON.stringify({
-                email: appointmentDetails.email,
-                phone: appointmentDetails.phone,
-                dateCreated: appointmentDetails.dateCreated,
-                datetimeCreated: appointmentDetails.datetimeCreated
-            }));
-            console.log("Appointment Price:", appointmentDetails.price);
-
             await createAppointment(
                 appointmentDetails.type,
                 appointmentDate.toISOString().split('T')[0],
