@@ -57,7 +57,7 @@ async function handleWebhook(req, res) {
             }
             const endTimeMilitary = `${endTimeHour.toString().padStart(2, '0')}:${endTimeParts[1].substring(0, 2)}`;
             await createAppointment(
-                appointmentDetails.id,
+                appointmentDetails.type,
                 appointmentDate.toISOString().split('T')[0],
                 startTimeMilitary,
                 endTimeMilitary,
@@ -92,13 +92,24 @@ async function handleWebhook(req, res) {
 
             // Parse the date and time
             const appointmentDate = new Date(appointmentDetails.date);
-            const startTime = appointmentDetails.time.substring(0, 5); // Extract HH:MM from time string
+            
+            // Convert start time to military format (HH:MM)
+            const startTimeParts = appointmentDetails.time.split(':');
+            let startTimeHour = parseInt(startTimeParts[0]);
+            if (appointmentDetails.time.includes('pm') && startTimeHour !== 12) {
+                startTimeHour += 12;
+            }
+            const startTimeMilitary = `${startTimeHour.toString().padStart(2, '0')}:${startTimeParts[1].substring(0, 2)}`;
 
+            console.log("Client ID:", client.id);
+            console.log("Appointment Date:", appointmentDate.toISOString().split('T')[0]);
+            console.log("Start Time:", startTimeMilitary);
+            
             // Find the appointment in our database
             const appointmentToDelete = await findAppointmentByClientAndTime(
                 client.id,
                 appointmentDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-                startTime
+                startTimeMilitary
             );
 
             if (!appointmentToDelete) {
