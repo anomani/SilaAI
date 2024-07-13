@@ -6,136 +6,120 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
-    // console.log("Received webhook:", req.body);
+    try {
+        verifyWebhookSignature(req);
+        
+        const { action, id: appointmentId } = req.body;
+        const appointmentDetails = await fetchAppointmentDetails(appointmentId);
 
-    // Verify the webhook signature
+        switch (action) {
+            case 'scheduled':
+                await handleScheduledAppointment(appointmentDetails);
+                break;
+            case 'canceled':
+                await handleCanceledAppointment(appointmentDetails);
+                break;
+            case 'rescheduled':
+                await handleRescheduledAppointment(appointmentDetails);
+                break;
+            default:
+                console.log(`Received unhandled action: ${action}`);
+        }
+
+        res.status(200).send('Webhook processed successfully');
+    } catch (error) {
+        console.error('Error processing webhook:', error);
+        res.status(500).send('Error processing webhook');
+    }
+}
+
+function verifyWebhookSignature(req) {
     const signature = req.headers['x-acuity-signature'];
     const body = JSON.stringify(req.body);
     const hasher = crypto.createHmac('sha256', process.env.ACUITY_API_KEY);
     hasher.update(body);
     const hash = hasher.digest('base64');
 
-    // if (hash !== signature) {
-    //     return res.status(401).send('Invalid signature');
-    // }
-
-    if (req.body.action === 'scheduled') {
-        console.log("Hello")
-        try {
-            const appointmentId = req.body.id;
-            console.log("Fetching details for appointment ID:", appointmentId);
-            const appointmentDetails = await fetchAppointmentDetails(appointmentId);
-            // console.log("Appointment details:", appointmentDetails);
-
-            // Get client by phone number or create a new client
-            let client = await getClientByPhoneNumber(appointmentDetails.phone);
-            if (!client.id) {
-                const clientId = await createClient(
-                    appointmentDetails.firstName,
-                    appointmentDetails.lastName,
-                    appointmentDetails.phone,
-                    appointmentDetails.email,
-                    ''  // notes field is empty for now
-                );
-                client = { id: clientId };
-            }
-
-            const appointmentDate = new Date(appointmentDetails.date);
-
-            // Convert start and end times to military format (HH:MM)
-            const startTimeParts = appointmentDetails.time.split(':');
-            let startTimeHour = parseInt(startTimeParts[0]);
-            if (appointmentDetails.time.includes('pm') && startTimeHour !== 12) {
-                startTimeHour += 12;
-            }
-            const startTimeMilitary = `${startTimeHour.toString().padStart(2, '0')}:${startTimeParts[1].substring(0, 2)}`;
-
-            const endTimeParts = appointmentDetails.endTime.split(':');
-            let endTimeHour = parseInt(endTimeParts[0]);
-            if (appointmentDetails.endTime.includes('pm') && endTimeHour !== 12) {
-                endTimeHour += 12;
-            }
-            const endTimeMilitary = `${endTimeHour.toString().padStart(2, '0')}:${endTimeParts[1].substring(0, 2)}`;
-            await createAppointment(
-                appointmentDetails.type,
-                appointmentDate.toISOString().split('T')[0],
-                startTimeMilitary,
-                endTimeMilitary,
-                client.id,
-                JSON.stringify({
-                    email: appointmentDetails.email,
-                    phone: appointmentDetails.phone,
-                    dateCreated: appointmentDetails.dateCreated,
-                    datetimeCreated: appointmentDetails.datetimeCreated
-                }),
-                appointmentDetails.price
-            );
-
-            console.log("Appointment created successfully");
-            res.status(200).send('Appointment added successfully');
-        } catch (error) {
-            console.error('Error processing webhook:', error);
-            res.status(500).send('Error processing webhook');
-        }
-    } else if (req.body.action === 'canceled') {
-        try {
-            const appointmentId = req.body.id;
-            console.log("Canceling appointment ID from Acuity:", appointmentId);
-            const appointmentDetails = await fetchAppointmentDetails(appointmentId);
-            console.log("Appointment details:", appointmentDetails);
-
-            // Find the client
-            const client = await getClientByPhoneNumber(appointmentDetails.phone);
-            if (!client) {
-                throw new Error('Client not found');
-            }
-
-            // Parse the date and time
-            const appointmentDate = new Date(appointmentDetails.date);
-            
-            // Convert start time to military format (HH:MM)
-            const startTimeParts = appointmentDetails.time.split(':');
-            let startTimeHour = parseInt(startTimeParts[0]);
-            if (appointmentDetails.time.includes('pm') && startTimeHour !== 12) {
-                startTimeHour += 12;
-            }
-            const startTimeMilitary = `${startTimeHour.toString().padStart(2, '0')}:${startTimeParts[1].substring(0, 2)}`;
-
-            console.log("Client ID:", client.id);
-            console.log("Appointment Date:", appointmentDate.toISOString().split('T')[0]);
-            console.log("Start Time:", startTimeMilitary);
-
-            // Find the appointment in our database
-            const appointmentToDelete = await findAppointmentByClientAndTime(
-                client.id,
-                appointmentDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
-                startTimeMilitary
-            );
-
-            if (!appointmentToDelete) {
-                throw new Error('Appointment not found in our database');
-            }
-
-            // Delete the appointment from our database
-            await deleteAppointment(appointmentToDelete.id);
-
-            console.log("Appointment deleted successfully:", appointmentToDelete);
-            res.status(200).send('Appointment deleted successfully');
-        } catch (error) {
-            console.error('Error processing cancellation webhook:', error);
-            res.status(500).send('Error processing cancellation webhook');
-        }
-    } else if (req.body.action === 'rescheduled'){
-        console.log("Received rescheduled action:", req.body.action);
-        console.log(req.body)
-        const appointmentId = req.body.id;
-        const appointmentDetails = await fetchAppointmentDetails(appointmentId);
-        console.log("Appointment details:", appointmentDetails);
-        res.status(200).send('Webhook received');
-    } else {
-        console.log("Received unhandled action:", req.body.action);
-        res.status(200).send('Webhook received');
+    if (hash !== signature) {
+        throw new Error('Invalid signature');
     }
+}
+
+async function handleScheduledAppointment(appointmentDetails) {
+    const client = await getOrCreateClient(appointmentDetails);
+    const { date, startTime, endTime } = parseAppointmentDateTime(appointmentDetails);
+
+    await createAppointment(
+        appointmentDetails.type,
+        date,
+        startTime,
+        endTime,
+        client.id,
+        JSON.stringify({
+            email: appointmentDetails.email,
+            phone: appointmentDetails.phone,
+            dateCreated: appointmentDetails.dateCreated,
+            datetimeCreated: appointmentDetails.datetimeCreated
+        }),
+        appointmentDetails.price
+    );
+
+    console.log("Appointment created successfully");
+}
+
+async function handleCanceledAppointment(appointmentDetails) {
+    const client = await getClientByPhoneNumber(appointmentDetails.phone);
+    if (!client) {
+        throw new Error('Client not found');
+    }
+
+    const { date, startTime } = parseAppointmentDateTime(appointmentDetails);
+    const appointmentToDelete = await findAppointmentByClientAndTime(client.id, date, startTime);
+
+    if (!appointmentToDelete) {
+        throw new Error('Appointment not found in our database');
+    }
+
+    await deleteAppointment(appointmentToDelete.id);
+    console.log("Appointment deleted successfully:", appointmentToDelete);
+}
+
+async function handleRescheduledAppointment(appointmentDetails) {    
+    // Create the new appointment
+    await handleScheduledAppointment(appointmentDetails);
+    
+    console.log("Appointment rescheduled successfully");
+}
+
+async function getOrCreateClient(appointmentDetails) {
+    let client = await getClientByPhoneNumber(appointmentDetails.phone);
+    if (!client.id) {
+        const clientId = await createClient(
+            appointmentDetails.firstName,
+            appointmentDetails.lastName,
+            appointmentDetails.phone,
+            appointmentDetails.email,
+            ''  // notes field is empty for now
+        );
+        client = { id: clientId };
+    }
+    return client;
+}
+
+function parseAppointmentDateTime(appointmentDetails) {
+    const date = new Date(appointmentDetails.date).toISOString().split('T')[0];
+    const startTime = convertToMilitaryTime(appointmentDetails.time);
+    const endTime = convertToMilitaryTime(appointmentDetails.endTime);
+    return { date, startTime, endTime };
+}
+
+function convertToMilitaryTime(time) {
+    const [hours, minutes] = time.split(':');
+    let hour = parseInt(hours);
+    if (time.includes('pm') && hour !== 12) {
+        hour += 12;
+    }
+    return `${hour.toString().padStart(2, '0')}:${minutes.substring(0, 2)}`;
 }
 
 async function fetchAppointmentDetails(appointmentId) {
@@ -157,12 +141,4 @@ async function fetchAppointmentDetails(appointmentId) {
     }
 }
 
-
-// async function main() {
-//     const appointmentId = "1295431818";
-//     const appointmentDetails = await fetchAppointmentDetails(appointmentId);
-//     console.log(appointmentDetails);
-// }
-
-// main();
 module.exports = { handleWebhook };
