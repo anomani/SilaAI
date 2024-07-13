@@ -127,6 +127,15 @@ async function handleWebhook(req, res) {
         }
     } else if (req.body.action === 'rescheduled'){
         console.log("Received rescheduled action:", req.body.action);
+        const appointmentId = req.body.id;
+        const appointmentDetails = await fetchAppointmentDetails(appointmentId);
+        console.log("Appointment details:", appointmentDetails);
+        res.status(200).send('Webhook received');
+    } else if (req.body.action === 'changed') {
+        console.log("Received changed action:", req.body.action);
+        const appointmentId = req.body.id;
+        const appointmentDetails = await fetchAppointmentDetails(appointmentId);
+        console.log("Appointment details:", appointmentDetails);
         res.status(200).send('Webhook received');
     } else {
         console.log("Received unhandled action:", req.body.action);
@@ -154,11 +163,11 @@ async function fetchAppointmentDetails(appointmentId) {
 }
 
 
-// async function main() {
-//     const appointmentId = "1295425914";
-//     const appointmentDetails = await fetchAppointmentDetails(appointmentId);
-//     console.log(appointmentDetails);
-// }
+async function main() {
+    const appointmentId = "1295431818";
+    const appointmentDetails = await fetchAppointmentDetails(appointmentId);
+    console.log(appointmentDetails);
+}
 
-// main();
+main();
 module.exports = { handleWebhook };
