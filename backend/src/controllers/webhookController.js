@@ -1,4 +1,5 @@
 const { createAppointment } = require('../model/appointment');
+const { getClientByPhoneNumber, createClient } = require('../model/clients');
 const axios = require('axios');
 const crypto = require('crypto');
 const dotenv = require('dotenv');
@@ -20,37 +21,55 @@ async function handleWebhook(req, res) {
     }
 
     if (req.body.action === 'scheduled') {
+        
         try {
             const appointmentId = req.body.id;
             const appointmentDetails = await fetchAppointmentDetails(appointmentId);
-            console.log(appointmentDetails);
-            // Map Acuity data to your database schema
-            // const {
-            //     appointmentTypeID,
-            //     date,
-            //     time,
-            //     endTime,
-            //     firstName,
-            //     lastName,
-            //     email,
-            //     phone,
-            //     price,
-            //     notes
-            // } = appointmentDetails;
 
-            // // Combine firstName and lastName for clientId
-            // const clientId = `${firstName.toLowerCase()}_${lastName.toLowerCase()}`;
+            // Get client by phone number or create a new client
+            let client = await getClientByPhoneNumber(appointmentDetails.phone);
+            if (!client.id) {
+                const clientId = await createClient(
+                    appointmentDetails.firstName,
+                    appointmentDetails.lastName,
+                    appointmentDetails.phone,
+                    appointmentDetails.email,
+                    ''  // notes field is empty for now
+                );
+                client = { id: clientId };
+            }
 
-            // // Create appointment in your database
-            // await createAppointment(
-            //     appointmentTypeID,
-            //     date,
-            //     time,
-            //     endTime,
-            //     clientId,
-            //     JSON.stringify({ email, phone, notes }),
-            //     price
-            // );
+            const appointmentDate = new Date(appointmentDetails.date);
+            const startTime = new Date(`${appointmentDetails.date} ${appointmentDetails.time}`);
+            const endTime = new Date(`${appointmentDetails.date} ${appointmentDetails.endTime}`);
+            
+            console.log('Appointment ID:', appointmentDetails.id);
+            console.log('Appointment Date:', appointmentDate.toISOString().split('T')[0]);
+            console.log('Start Time:', startTime.toTimeString().split(' ')[0]);
+            console.log('End Time:', endTime.toTimeString().split(' ')[0]);
+            console.log('Client ID:', client.id);
+            console.log('Additional Info:', JSON.stringify({
+                email: appointmentDetails.email,
+                phone: appointmentDetails.phone,
+                dateCreated: appointmentDetails.dateCreated,
+                datetimeCreated: appointmentDetails.datetimeCreated
+            }));
+            console.log('Price:', appointmentDetails.price);
+
+            await createAppointment(
+                appointmentDetails.id,  // Using Acuity's appointmentId as appointmentType
+                appointmentDate.toISOString().split('T')[0],  // date in YYYY-MM-DD format
+                startTime.toTimeString().split(' ')[0],  // time in HH:MM:SS format
+                endTime.toTimeString().split(' ')[0],  // time in HH:MM:SS format
+                client.id,
+                JSON.stringify({
+                    email: appointmentDetails.email,
+                    phone: appointmentDetails.phone,
+                    dateCreated: appointmentDetails.dateCreated,
+                    datetimeCreated: appointmentDetails.datetimeCreated
+                }),
+                appointmentDetails.price  // Use the price from appointmentDetails
+            );
 
             res.status(200).send('Appointment added successfully');
         } catch (error) {
@@ -81,4 +100,12 @@ async function fetchAppointmentDetails(appointmentId) {
     }
 }
 
+
+// async function main() {
+//     const appointmentId = "1295410240";
+//     const appointmentDetails = await fetchAppointmentDetails(appointmentId);
+//     console.log(appointmentDetails);
+// }
+
+// main();
 module.exports = { handleWebhook };
