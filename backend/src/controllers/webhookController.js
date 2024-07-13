@@ -6,7 +6,8 @@ dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
     console.log("hello")
-    console.log(req)
+    console.log("Body:", req.body)
+    console.log("Headers:", req.headers)
     // Verify the webhook signature
     const signature = req.headers['x-acuity-signature'];
     const body = JSON.stringify(req.body);
@@ -17,7 +18,7 @@ async function handleWebhook(req, res) {
     if (hash !== signature) {
         return res.status(401).send('Invalid signature');
     }
-    
+
     if (req.body.action === 'scheduled') {
         try {
             const appointmentId = req.body.id;
