@@ -6,9 +6,8 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
-    console.log("hello")
-    console.log("Body:", req.body)
-    console.log("action:", req.body.action)
+    console.log("Received webhook:", req.body);
+
     // Verify the webhook signature
     const signature = req.headers['x-acuity-signature'];
     const body = JSON.stringify(req.body);
@@ -21,10 +20,11 @@ async function handleWebhook(req, res) {
     // }
 
     if (req.body.action === 'scheduled') {
-        console.log("scheduled")
         try {
             const appointmentId = req.body.id;
+            console.log("Fetching details for appointment ID:", appointmentId);
             const appointmentDetails = await fetchAppointmentDetails(appointmentId);
+            console.log("Appointment details:", appointmentDetails);
 
             // Get client by phone number or create a new client
             let client = await getClientByPhoneNumber(appointmentDetails.phone);
@@ -42,25 +42,16 @@ async function handleWebhook(req, res) {
             const appointmentDate = new Date(appointmentDetails.date);
             const startTime = new Date(`${appointmentDetails.date} ${appointmentDetails.time}`);
             const endTime = new Date(`${appointmentDetails.date} ${appointmentDetails.endTime}`);
-            
-            console.log('Appointment ID:', appointmentDetails.id);
-            console.log('Appointment Date:', appointmentDate.toISOString().split('T')[0]);
-            console.log('Start Time:', startTime.toTimeString().split(' ')[0]);
-            console.log('End Time:', endTime.toTimeString().split(' ')[0]);
-            console.log('Client ID:', client.id);
-            console.log('Additional Info:', JSON.stringify({
-                email: appointmentDetails.email,
-                phone: appointmentDetails.phone,
-                dateCreated: appointmentDetails.dateCreated,
-                datetimeCreated: appointmentDetails.datetimeCreated
-            }));
-            console.log('Price:', appointmentDetails.price);
+
+            // Convert start and end times to military format (HH:MM)
+            const startTimeMilitary = startTime.toTimeString().split(' ')[0].substring(0, 5);
+            const endTimeMilitary = endTime.toTimeString().split(' ')[0].substring(0, 5);
 
             await createAppointment(
-                appointmentDetails.id,  // Using Acuity's appointmentId as appointmentType
-                appointmentDate.toISOString().split('T')[0],  // date in YYYY-MM-DD format
-                startTime.toTimeString().split(' ')[0],  // time in HH:MM:SS format
-                endTime.toTimeString().split(' ')[0],  // time in HH:MM:SS format
+                appointmentDetails.id,
+                appointmentDate.toISOString().split('T')[0],
+                startTimeMilitary,
+                endTimeMilitary,
                 client.id,
                 JSON.stringify({
                     email: appointmentDetails.email,
@@ -68,15 +59,17 @@ async function handleWebhook(req, res) {
                     dateCreated: appointmentDetails.dateCreated,
                     datetimeCreated: appointmentDetails.datetimeCreated
                 }),
-                appointmentDetails.price  // Use the price from appointmentDetails
+                appointmentDetails.price
             );
 
+            console.log("Appointment created successfully");
             res.status(200).send('Appointment added successfully');
         } catch (error) {
             console.error('Error processing webhook:', error);
             res.status(500).send('Error processing webhook');
         }
     } else {
+        console.log("Received non-scheduled action:", req.body.action);
         res.status(200).send('Webhook received');
     }
 }
