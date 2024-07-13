@@ -96,11 +96,29 @@ async function getAllAppointmentsByClientId(clientId) {
     }
 }
 
+async function findAppointmentByClientAndTime(clientId, date, startTime) {
+    const db = dbUtils.getDB();
+    const sql = `
+        SELECT * FROM Appointment
+        WHERE clientId = $1 AND date = $2 AND startTime = $3
+        LIMIT 1
+    `;
+    const values = [clientId, date, startTime];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error finding appointment:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
     updateAppointment,
     deleteAppointment,
     getAppointmentsByDay,
-    getAllAppointmentsByClientId
+    getAllAppointmentsByClientId,
+    findAppointmentByClientAndTime
 };

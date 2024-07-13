@@ -1,4 +1,4 @@
-const { createAppointment } = require('../model/appointment');
+const { createAppointment, deleteAppointment, findAppointmentByClientAndTime } = require('../model/appointment');
 const { getClientByPhoneNumber, createClient } = require('../model/clients');
 const axios = require('axios');
 const crypto = require('crypto');
@@ -57,7 +57,7 @@ async function handleWebhook(req, res) {
             }
             const endTimeMilitary = `${endTimeHour.toString().padStart(2, '0')}:${endTimeParts[1].substring(0, 2)}`;
             await createAppointment(
-                appointmentDetails.type,
+                appointmentDetails.id,
                 appointmentDate.toISOString().split('T')[0],
                 startTimeMilitary,
                 endTimeMilitary,
@@ -78,10 +78,44 @@ async function handleWebhook(req, res) {
             res.status(500).send('Error processing webhook');
         }
     } else if (req.body.action === 'canceled') {
-        console.log("Received canceled action:", req.body.action);
-        res.status(200).send('Appointment canceled');
+        try {
+            const appointmentId = req.body.id;
+            console.log("Canceling appointment ID from Acuity:", appointmentId);
+            const appointmentDetails = await fetchAppointmentDetails(appointmentId);
+            console.log("Appointment details:", appointmentDetails);
+
+            // Find the client
+            const client = await getClientByPhoneNumber(appointmentDetails.phone);
+            if (!client) {
+                throw new Error('Client not found');
+            }
+
+            // Parse the date and time
+            const appointmentDate = new Date(appointmentDetails.date);
+            const startTime = appointmentDetails.time.substring(0, 5); // Extract HH:MM from time string
+
+            // Find the appointment in our database
+            const appointmentToDelete = await findAppointmentByClientAndTime(
+                client.id,
+                appointmentDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+                startTime
+            );
+
+            if (!appointmentToDelete) {
+                throw new Error('Appointment not found in our database');
+            }
+
+            // Delete the appointment from our database
+            await deleteAppointment(appointmentToDelete.id);
+
+            console.log("Appointment deleted successfully:", appointmentToDelete);
+            res.status(200).send('Appointment deleted successfully');
+        } catch (error) {
+            console.error('Error processing cancellation webhook:', error);
+            res.status(500).send('Error processing cancellation webhook');
+        }
     } else {
-        console.log("Received non-scheduled action:", req.body.action);
+        console.log("Received unhandled action:", req.body.action);
         res.status(200).send('Webhook received');
     }
 }
@@ -107,7 +141,7 @@ async function fetchAppointmentDetails(appointmentId) {
 
 
 // async function main() {
-//     const appointmentId = "1295410240";
+//     const appointmentId = "1295425914";
 //     const appointmentDetails = await fetchAppointmentDetails(appointmentId);
 //     console.log(appointmentDetails);
 // }
