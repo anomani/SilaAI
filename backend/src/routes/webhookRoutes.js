@@ -3,6 +3,6 @@ const router = express.Router();
 const appointmentModel = require('../model/appointment');
 const { handleWebhook } = require('../controllers/webhookController');
 
-// router.post('/appointment', handleWebhook);
+router.post('/appointment', handleWebhook);
 
 module.exports = router;

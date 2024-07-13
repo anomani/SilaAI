@@ -1,7 +1,7 @@
 const path = require('path');
 const { readCSV } = require('../services/csvService');
 const { sendMessage } = require('../config/twilio');
-const {getClients, getCSV} = require('../config/headlessBrowser')
+const {getClients, getCSV} = require('../config/clientScraping')
 
 const fs = require('fs');
 
