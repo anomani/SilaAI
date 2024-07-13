@@ -104,7 +104,7 @@ async function handleWebhook(req, res) {
             console.log("Client ID:", client.id);
             console.log("Appointment Date:", appointmentDate.toISOString().split('T')[0]);
             console.log("Start Time:", startTimeMilitary);
-            
+
             // Find the appointment in our database
             const appointmentToDelete = await findAppointmentByClientAndTime(
                 client.id,
@@ -125,6 +125,9 @@ async function handleWebhook(req, res) {
             console.error('Error processing cancellation webhook:', error);
             res.status(500).send('Error processing cancellation webhook');
         }
+    } else if (req.body.action === 'rescheduled'){
+        console.log("Received rescheduled action:", req.body.action);
+        res.status(200).send('Webhook received');
     } else {
         console.log("Received unhandled action:", req.body.action);
         res.status(200).send('Webhook received');
