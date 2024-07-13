@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
-    console.log("Received webhook:", req.body);
+    // console.log("Received webhook:", req.body);
 
     // Verify the webhook signature
     const signature = req.headers['x-acuity-signature'];
@@ -24,7 +24,7 @@ async function handleWebhook(req, res) {
             const appointmentId = req.body.id;
             console.log("Fetching details for appointment ID:", appointmentId);
             const appointmentDetails = await fetchAppointmentDetails(appointmentId);
-            console.log("Appointment details:", appointmentDetails);
+            // console.log("Appointment details:", appointmentDetails);
 
             // Get client by phone number or create a new client
             let client = await getClientByPhoneNumber(appointmentDetails.phone);
@@ -40,15 +40,36 @@ async function handleWebhook(req, res) {
             }
 
             const appointmentDate = new Date(appointmentDetails.date);
-            const startTime = new Date(`${appointmentDetails.date} ${appointmentDetails.time}`);
-            const endTime = new Date(`${appointmentDetails.date} ${appointmentDetails.endTime}`);
 
             // Convert start and end times to military format (HH:MM)
-            const startTimeMilitary = startTime.toTimeString().split(' ')[0].substring(0, 5);
-            const endTimeMilitary = endTime.toTimeString().split(' ')[0].substring(0, 5);
+            const startTimeParts = appointmentDetails.time.split(':');
+            let startTimeHour = parseInt(startTimeParts[0]);
+            if (appointmentDetails.time.includes('pm') && startTimeHour !== 12) {
+                startTimeHour += 12;
+            }
+            const startTimeMilitary = `${startTimeHour.toString().padStart(2, '0')}:${startTimeParts[1].substring(0, 2)}`;
+
+            const endTimeParts = appointmentDetails.endTime.split(':');
+            let endTimeHour = parseInt(endTimeParts[0]);
+            if (appointmentDetails.endTime.includes('pm') && endTimeHour !== 12) {
+                endTimeHour += 12;
+            }
+            const endTimeMilitary = `${endTimeHour.toString().padStart(2, '0')}:${endTimeParts[1].substring(0, 2)}`;
+            console.log("Appointment Type:", appointmentDetails.type);
+            console.log("Appointment Date:", appointmentDate.toISOString().split('T')[0]);
+            console.log("Start Time (Military):", startTimeMilitary);
+            console.log("End Time (Military):", endTimeMilitary);
+            console.log("Client ID:", client.id);
+            console.log("Additional Info:", JSON.stringify({
+                email: appointmentDetails.email,
+                phone: appointmentDetails.phone,
+                dateCreated: appointmentDetails.dateCreated,
+                datetimeCreated: appointmentDetails.datetimeCreated
+            }));
+            console.log("Appointment Price:", appointmentDetails.price);
 
             await createAppointment(
-                appointmentDetails.id,
+                appointmentDetails.type,
                 appointmentDate.toISOString().split('T')[0],
                 startTimeMilitary,
                 endTimeMilitary,
