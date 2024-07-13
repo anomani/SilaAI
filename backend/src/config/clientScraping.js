@@ -158,9 +158,6 @@ async function getCSV() {
     }
 }
 
-async function main() {
-    await getClients();
-}
-main()
+
 
 module.exports = {getClients, getCSV};
