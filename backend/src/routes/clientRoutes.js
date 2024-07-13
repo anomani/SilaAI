@@ -11,6 +11,6 @@ router.get('/clients/:id', clientIDGet);
 router.put('/clients/:id', updateTheClient);
 router.get('/clients/days-since-last-appointment/:id', daysSinceLastAppointment);
 router.put('/clients/outreach-date/:id', updateClientOutreachDateController);
-//yessir
+
 module.exports = router;
 
