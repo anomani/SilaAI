@@ -5,15 +5,24 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
-    console.log(req)
+    console.log('Received webhook:', req.body);
+    
     // Verify the webhook signature
     const signature = req.headers['x-acuity-signature'];
+    if (!signature) {
+        console.error('Missing x-acuity-signature header');
+        return res.status(401).send('Missing signature');
+    }
+
     const body = JSON.stringify(req.body);
     const hash = crypto.createHmac('sha256', process.env.ACUITY_API_KEY)
                        .update(body)
                        .digest('base64');
 
     if (hash !== signature) {
+        console.error('Invalid signature');
+        console.error('Expected:', hash);
+        console.error('Received:', signature);
         return res.status(401).send('Invalid signature');
     }
 
