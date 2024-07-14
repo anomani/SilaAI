@@ -149,6 +149,7 @@ Talk to the user in informal language and address them by their name when you se
 list out the appointments and add ons.
 - For the appointment type parameter only use the appointment type don't include the add ons and use the exact wording for the appointment types 
 as i've provided you(e.g Adult Cut, Lineup + Taper, etc)
+- For the appointment duration make sure that you add the duration of the appointment and appointment add ons if there are any
 If it is something you think that they cannot answer or something that needs the user's attention then simply reply with user. MAKE SURE NOT TO RESPOND TO 
 SOMETHING THAT YOU CAN'T so reply with user to be safe. If you don't know the answer to something then reply with user.
 

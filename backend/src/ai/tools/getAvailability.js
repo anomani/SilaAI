@@ -12,6 +12,11 @@ const apiKey = process.env.BROWSERCLOUD_API_KEY;
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// async function main() {
+//     console.log(await getAvailability("2024-07-24", 45, 1));
+// }
+
+// main();
 
 async function getAvailability(day, duration, group) {
     console.log("Day:", day);
