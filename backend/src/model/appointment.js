@@ -1,13 +1,13 @@
 const dbUtils = require('./dbUtils');
 
-async function createAppointment(appointmentType, date, startTime, endTime, clientId, details, price) {
+async function createAppointment(appointmentType, acuityId, date, startTime, endTime, clientId, details, price) {
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO Appointment (appointmentType, date, startTime, endTime, clientId, details, price)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO Appointment (appointmentType, acuityId, date, startTime, endTime, clientId, details, price)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id
     `;
-    const values = [appointmentType, date, startTime, endTime, clientId, details, price];
+    const values = [appointmentType, acuityId, date, startTime, endTime, clientId, details, price];
     try {
         const res = await db.query(sql, values);
         console.log('Appointment Created with ID:', res.rows[0].id);
@@ -22,7 +22,6 @@ async function createAppointment(appointmentType, date, startTime, endTime, clie
 //     await createAppointment('test', '2005-03-01', '12:00', '13:00', 3367, 'test');
 // }
 // main()
-
 
 async function getAppointmentById(appointmentId) {
     const db = dbUtils.getDB();
@@ -113,6 +112,38 @@ async function findAppointmentByClientAndTime(clientId, date, startTime) {
     }
 }
 
+async function findAndUpdateAppointmentByAcuityId(acuityId, updateData) {
+    const db = dbUtils.getDB();
+    const sql = `
+        UPDATE Appointment
+        SET appointmentType = $1, date = $2, startTime = $3, endTime = $4, clientId = $5, details = $6, price = $7
+        WHERE acuityId = $8
+        RETURNING *
+    `;
+    const params = [
+        updateData.appointmentType,
+        updateData.date,
+        updateData.startTime,
+        updateData.endTime,
+        updateData.clientId,
+        updateData.details,
+        updateData.price,
+        acuityId
+    ];
+    try {
+        const res = await db.query(sql, params);
+        if (res.rows.length === 0) {
+            console.log(`No appointment found with Acuity ID: ${acuityId}`);
+            return null;
+        }
+        console.log(`Appointment Updated: Acuity ID ${acuityId}`);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error updating appointment by Acuity ID:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -120,5 +151,6 @@ module.exports = {
     deleteAppointment,
     getAppointmentsByDay,
     getAllAppointmentsByClientId,
-    findAppointmentByClientAndTime
+    findAppointmentByClientAndTime,
+    findAndUpdateAppointmentByAcuityId
 };

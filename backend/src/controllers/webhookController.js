@@ -1,4 +1,4 @@
-const { createAppointment, deleteAppointment, findAppointmentByClientAndTime } = require('../model/appointment');
+const { createAppointment, deleteAppointment, findAppointmentByClientAndTime, findAndUpdateAppointmentByAcuityId } = require('../model/appointment');
 const { getClientByPhoneNumber, createClient } = require('../model/clients');
 const axios = require('axios');
 const crypto = require('crypto');
@@ -51,6 +51,7 @@ async function handleScheduledAppointment(appointmentDetails) {
 
     await createAppointment(
         appointmentDetails.type,
+        appointmentDetails.id,
         date,
         startTime,
         endTime,
@@ -84,11 +85,32 @@ async function handleCanceledAppointment(appointmentDetails) {
     console.log("Appointment deleted successfully:", appointmentToDelete);
 }
 
-async function handleRescheduledAppointment(appointmentDetails) {    
-    // Create the new appointment
-    await handleScheduledAppointment(appointmentDetails);
+async function handleRescheduledAppointment(appointmentDetails) {
+    const { date, startTime, endTime } = parseAppointmentDateTime(appointmentDetails);
     
-    console.log("Appointment rescheduled successfully");
+    const updatedAppointment = await findAndUpdateAppointmentByAcuityId(
+        appointmentDetails.id,
+        {
+            date,
+            startTime,
+            endTime,
+            appointmentType: appointmentDetails.type,
+            clientId: (await getOrCreateClient(appointmentDetails)).id,
+            details: JSON.stringify({
+                email: appointmentDetails.email,
+                phone: appointmentDetails.phone,
+                dateCreated: appointmentDetails.dateCreated,
+                datetimeCreated: appointmentDetails.datetimeCreated
+            }),
+            price: appointmentDetails.price
+        }
+    );
+    
+    if (updatedAppointment) {
+        console.log("Appointment rescheduled successfully:", updatedAppointment);
+    } else {
+        console.log("Appointment not found for rescheduling. Acuity ID:", appointmentDetails.id);
+    }
 }
 
 async function getOrCreateClient(appointmentDetails) {
@@ -141,4 +163,83 @@ async function fetchAppointmentDetails(appointmentId) {
     }
 }
 
-module.exports = { handleWebhook };
+async function fetchAllAppointments() {
+    const apiUrl = 'https://acuityscheduling.com/api/v1/appointments';
+    const auth = Buffer.from(`${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`).toString('base64');
+    let allAppointments = [];
+    let minDate = null;
+    const batchSize = 100; // Adjust this value as needed
+
+    while (true) {
+        try {
+            const response = await axios.get(apiUrl, {
+                headers: {
+                    'Authorization': `Basic ${auth}`,
+                    'Content-Type': 'application/json'
+                },
+                params: {
+                    max: batchSize,
+                    minDate: minDate,
+                    direction: 'ASC'
+                }
+            });
+
+            const appointments = response.data;
+            allAppointments = allAppointments.concat(appointments);
+            console.log(appointments[appointments.length - 1]);
+            if (appointments.length < batchSize) {
+                // We've reached the end of the appointments
+                break;
+            }
+
+            // Set the minDate for the next batch
+            minDate = appointments[appointments.length - 1].date;
+            console.log(`Fetched ${allAppointments.length} appointments so far...`);
+        } catch (error) {
+            console.error('Error fetching appointments:', error);
+            throw error;
+        }
+    }
+
+    console.log(`Total appointments fetched: ${allAppointments.length}`);
+    return allAppointments;
+}
+
+async function migrateAppointments() {
+    try {
+        const appointments = await fetchAllAppointments();
+        console.log(`Starting migration of ${appointments.length} appointments...`);
+        
+        for (const appointment of appointments) {
+            const { date, startTime, endTime } = parseAppointmentDateTime(appointment);
+            const client = await getOrCreateClient(appointment);
+            
+            await createAppointment(
+                appointment.type,
+                appointment.id,
+                date,
+                startTime,
+                endTime,
+                client.id,
+                JSON.stringify({
+                    email: appointment.email,
+                    phone: appointment.phone,
+                    dateCreated: appointment.dateCreated,
+                    datetimeCreated: appointment.datetimeCreated
+                }),
+                appointment.price
+            );
+        }
+        console.log("All appointments migrated successfully");
+    } catch (error) {
+        console.error("Error migrating appointments:", error);
+    }
+}
+
+// async function main() {
+//     await migrateAppointments();
+// }
+
+// main();
+
+module.exports = { handleWebhook, migrateAppointments };
