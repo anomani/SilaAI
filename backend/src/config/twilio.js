@@ -103,6 +103,7 @@ async function handleIncomingMessage(req, res) {
     }
 
     const responseMessage = await handleUserInput(Body, Author);
+    console.log(responseMessage)
     if (responseMessage === "user" || responseMessage === "User")  {
       await toggleLastMessageReadStatus(clientId);
       await sendNotificationToUser(client.firstname, Body, clientId);  // Pass clientId here
@@ -116,6 +117,7 @@ async function handleIncomingMessage(req, res) {
     res.status(500).send('Error processing message');
   }
 };
+
 
 
 
