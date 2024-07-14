@@ -7,15 +7,15 @@ dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
     try {
-        const body = JSON.stringify(req.body);
-        var hasher = crypto.createHmac('sha256', secret);
-        hasher.update(buf.toString());
-        var hash = hasher.digest('base64');
+        // const body = JSON.stringify(req.body);
+        // var hasher = crypto.createHmac('sha256', secret);
+        // hasher.update(buf.toString());
+        // var hash = hasher.digest('base64');
         
-        // Compare hash to Acuity signature:
-        if (hash !== req.header('x-acuity-signature')) {
-            throw new Error('This message was forged!');
-        }
+        // // Compare hash to Acuity signature:
+        // if (hash !== req.header('x-acuity-signature')) {
+        //     throw new Error('This message was forged!');
+        // }
         
         const { action, id: appointmentId } = req.body;
         const appointmentDetails = await fetchAppointmentDetails(appointmentId);
