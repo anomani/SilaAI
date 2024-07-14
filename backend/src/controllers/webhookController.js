@@ -6,10 +6,8 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
-    console.log(req.headers)
-    console.log(req.body)
     try {
-        const signature = req.headers['x-acuity-signature'];
+        const signature = req.header['x-acuity-signature'];
         const body = JSON.stringify(req.body);
         const hasher = crypto.createHmac('sha256', process.env.ACUITY_API_KEY);
         hasher.update(body);
