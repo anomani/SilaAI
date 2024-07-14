@@ -7,14 +7,14 @@ dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
     try {
-        const signature = req.header['x-acuity-signature'];
         const body = JSON.stringify(req.body);
-        const hasher = crypto.createHmac('sha256', process.env.ACUITY_API_KEY);
-        hasher.update(body);
-        const hash = hasher.digest('base64');
-    
-        if (hash !== signature) {
-            throw new Error('Invalid signature');
+        var hasher = crypto.createHmac('sha256', secret);
+        hasher.update(buf.toString());
+        var hash = hasher.digest('base64');
+        
+        // Compare hash to Acuity signature:
+        if (hash !== req.header('x-acuity-signature')) {
+            throw new Error('This message was forged!');
         }
         
         const { action, id: appointmentId } = req.body;
