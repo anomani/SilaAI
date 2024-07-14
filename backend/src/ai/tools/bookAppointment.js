@@ -76,8 +76,18 @@ async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, e
 
 // main()
 
-async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price) {
-    
+async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price, addOnArray) {
+    console.log("Date:", date);
+    console.log("Start Time:", startTime);
+    console.log("First Name:", fname);
+    console.log("Last Name:", lname);
+    console.log("Phone:", phone);
+    console.log("Email:", email);
+    console.log("Appointment Type:", appointmentType);
+    console.log("Appointment Duration:", appointmentDuration);
+    console.log("Group:", group);
+    console.log("Price:", price);
+    console.log("Add-Ons:", addOnArray);
     const availability = await getAvailability(date, appointmentDuration, group);
     const endTime = addMinutes(startTime, appointmentDuration);
     //For case that the slot overlaps
