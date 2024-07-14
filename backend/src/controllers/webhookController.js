@@ -6,8 +6,18 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 
 async function handleWebhook(req, res) {
+    console.log(req.headers)
+    console.log(req.body)
     try {
-        verifyWebhookSignature(req);
+        const signature = req.headers['x-acuity-signature'];
+        const body = JSON.stringify(req.body);
+        const hasher = crypto.createHmac('sha256', process.env.ACUITY_API_KEY);
+        hasher.update(body);
+        const hash = hasher.digest('base64');
+    
+        if (hash !== signature) {
+            throw new Error('Invalid signature');
+        }
         
         const { action, id: appointmentId } = req.body;
         const appointmentDetails = await fetchAppointmentDetails(appointmentId);
@@ -33,17 +43,6 @@ async function handleWebhook(req, res) {
     }
 }
 
-function verifyWebhookSignature(req) {
-    const signature = req.headers['x-acuity-signature'];
-    const body = JSON.stringify(req.body);
-    const hasher = crypto.createHmac('sha256', process.env.ACUITY_API_KEY);
-    hasher.update(body);
-    const hash = hasher.digest('base64');
-
-    if (hash !== signature) {
-        throw new Error('Invalid signature');
-    }
-}
 
 async function handleScheduledAppointment(appointmentDetails) {
     const client = await getOrCreateClient(appointmentDetails);
@@ -105,7 +104,7 @@ async function handleRescheduledAppointment(appointmentDetails) {
             price: appointmentDetails.price
         }
     );
-    
+
     if (updatedAppointment) {
         console.log("Appointment rescheduled successfully:", updatedAppointment);
     } else {
