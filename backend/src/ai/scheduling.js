@@ -84,9 +84,16 @@ const tools = [
           price: {
             type: "number",
             description: "The price of the appointment"
-          } 
+          } ,
+          addOns: {
+            type: "array",
+            description: "The add-ons for the appointment",
+            items: {
+              type: "string"
+            }
+          }
         },
-        required: ["date", "startTime", "appointmentType", "apponintmentDuration", "group", "price"]
+        required: ["date", "startTime", "appointmentType", "apponintmentDuration", "group", "price", "addOns"]
       }
     }
   },
@@ -278,7 +285,7 @@ async function handleUserInput(userMessage, phoneNumber) {
               output: JSON.stringify(output)
             });
           } else if (funcName === "bookAppointment") {
-            const output = await bookAppointment(args.date, args.startTime, fname, lname, phoneNumber, email, args.appointmentType, args.appointmentDuration,args.group, args.price);
+            const output = await bookAppointment(args.date, args.startTime, fname, lname, phoneNumber, email, args.appointmentType, args.appointmentDuration,args.group, args.price, args.addOns);
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)

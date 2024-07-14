@@ -8,25 +8,78 @@ const {createAppointment} = require ('../../model/appointment')
 const {checkClientExists, getClientByPhoneNumber, createClient} = require ('../../model/clients')
 const dbUtils = require('../../model/dbUtils')
 const {getAvailability} = require('./getAvailability')
+const axios = require('axios');
+const moment = require('moment-timezone');
+const { appointmentTypes } = require('../../model/appointmentTypes');
+const { addOns } = require('../../model/appointmentTypes');
 
-/*
-appointmentType, date, startTime, endTime, clientId, details
-*/
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray) {
+    const acuityApiUrl = 'https://acuityscheduling.com/api/v1/appointments';
+    const auth = {
+        username: process.env.ACUITY_USER_ID,
+        password: process.env.ACUITY_API_KEY
+    };
+
+    const appointmentTypeID = appointmentTypes[appointmentType];
+    if (!appointmentTypeID) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
+    }
+
+    const timezone = 'America/New_York';
+    const datetime = moment.tz(`${date} ${startTime}`, timezone).format();
+
+    const addonIDs = addOnArray.map(addon => addOns[addon]).filter(id => id !== undefined);
+    
+    const appointmentData = {
+        datetime: datetime,
+        appointmentTypeID: appointmentTypeID,
+        firstName: fname,
+        lastName: lname,
+        email: email,
+        phone: phone,
+        calendarID: 1057492,
+        price: price,
+        addonIDs: addonIDs
+    };
+
+    console.log(appointmentData);
+    try {
+        const response = await axios.post(acuityApiUrl, appointmentData, { 
+            auth,
+            params: {
+                admin: true
+            }
+        });
+        console.log('Appointment booked successfully with Acuity');
+        return response.data;
+    } catch (error) {
+        console.error('Error booking appointment with Acuity:', error.response ? error.response.data : error.message);
+        throw error;
+    }
+}
+
+
+// async function main() {
+//     const date = "2024-07-24";
+//     const startTime = "09:45";
+//     const fname = "Adam";
+//     const lname = "Nomani";
+//     const phone = "2038324011";
+//     const email = "anomani@seas.upenn.edu";
+//     const appointmentType = "Adult Cut";
+//     const price = 75;
+//     const addOns = ["Beard Grooming"];
+
+//     const result = await bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOns);
+//     console.log(result);
+// }
+
+// main()
 
 async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price) {
-    console.log("Datea:", date);
-    console.log("Start Time:", startTime);
-    console.log("First Name:", fname);
-    console.log("Last Name:", lname);
-    console.log("Phone:", phone);
-    console.log("Email:", email);
-    console.log("Appointment Type:", appointmentType);
-    console.log("Appointment Duration:", appointmentDuration);
-    console.log("Price:", price);
+    
     const availability = await getAvailability(date, appointmentDuration, group);
     const endTime = addMinutes(startTime, appointmentDuration);
-    console.log("End time: ", endTime);
     //For case that the slot overlaps
     for (const slot of availability) { 
         if (isAfter(startTime, slot.startTime) && !isAfter(startTime, slot.endTime)) {
@@ -49,20 +102,20 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     }
 
     try {
-        const client = await getClientByPhoneNumber(phone);
-        console.log(client);
-        if(client.id != '') {
-            console.log("Client already exists");
-            const clientId = client.id;
-            await createAppointment(appointmentType, date, startTime, endTime, clientId, "", price);
-            return "Appointment booked successfully";
-        } else {
-            console.log("Client does not exist");
-            await createClient(fname, lname, phone, email, "");
-            const client = await getClientByPhoneNumber(phone);
-            await createAppointment(appointmentType, date, startTime, endTime, client.id, "", price);
-            return "Appointment booked successfully";
-        }
+        const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray);
+        console.log(acuityAppointment);
+        // const client = await getClientByPhoneNumber(phone);
+        // if (client.id != '') {
+        //     console.log("Client already exists");
+        //     const clientId = client.id;
+        //     await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", price);
+        // } else {
+        //     console.log("Client does not exist");
+        //     await createClient(fname, lname, phone, email, "");
+        //     const newClient = await getClientByPhoneNumber(phone);
+        //     await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, newClient.id, "", price);
+        // }
+        return "Appointment booked successfully";
     } catch (error) {
         console.log(error);
         return "Unable to book the appointment";
@@ -107,4 +160,4 @@ function isAfter(time1, time2) {
 
 // runTestCases()
 
-module.exports = { bookAppointment };
+module.exports = { bookAppointment, bookAppointmentWithAcuity };
