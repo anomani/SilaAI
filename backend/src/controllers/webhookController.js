@@ -16,7 +16,7 @@ async function handleWebhook(req, res) {
         // if (hash !== req.header('x-acuity-signature')) {
         //     throw new Error('This message was forged!');
         // }
-        
+        console.log(req.body)
         const { action, id: appointmentId } = req.body;
         const appointmentDetails = await fetchAppointmentDetails(appointmentId);
 
@@ -233,10 +233,5 @@ async function migrateAppointments() {
     }
 }
 
-// async function main() {
-//     await migrateAppointments();
-// }
-
-// main();
 
 module.exports = { handleWebhook, migrateAppointments };
