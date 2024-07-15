@@ -9,6 +9,7 @@ const {getMessagesByClientId} = require('../model/messages')
 const {getAllAppointmentsByClientId} = require('../model/appointment')
 const fs = require('fs');
 const path = require('path');
+const { createRecurringAppointments } = require('./tools/recurringAppointments');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -163,6 +164,95 @@ const tools = [
         required: ["firstName", "lastName", "phoneNumber"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "createRecurringAppointments",
+      description: "Creates recurring appointments at specified intervals",
+      parameters: {
+        type: "object",
+        properties: {
+          initialDate: {
+            type: "string",
+            description: "The date for the first appointment (YYYY-MM-DD)"
+          },
+          startTime: {
+            type: "string",
+            description: "The start time for the appointments (HH:MM)"
+          },
+          appointmentType: { type: "string", description: "Type of appointment" },
+          appointmentDuration: { type: "number", description: "Duration of appointment in minutes" },
+          group: { type: "number", description: "Appointment group (1, 2, or 3)" },
+          price: { type: "number", description: "Price of the appointment" },
+          addOnArray: { 
+            type: "array", 
+            items: { type: "string" },
+            description: "Array of add-ons for the appointment"
+          },
+          recurrenceInterval: {
+            type: "object",
+            properties: {
+              amount: { type: "number", description: "The number of units for recurrence" },
+              unit: { type: "string", description: "The unit of recurrence (days, weeks, months)" }
+            },
+            required: ["amount", "unit"]
+          },
+          numberOfRecurrences: { type: "number", description: "Number of recurring appointments to create" }
+        },
+        required: ["initialDate", "startTime", "fname", "lname", "phone", "email", "appointmentType", "appointmentDuration", "group", "price", "addOnArray", "recurrenceInterval", "numberOfRecurrences"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "findRecurringAvailability",
+      description: "Finds recurring availability for appointments",
+      parameters: {
+        type: "object",
+        properties: {
+          initialDate: {
+            type: "string",
+            description: "The initial date to start searching from (YYYY-MM-DD)"
+          },
+          appointmentDuration: {
+            type: "number",
+            description: "Duration of appointment in minutes"
+          },
+          group: {
+            type: "number",
+            description: "Appointment group (1, 2, or 3)"
+          },
+          recurrenceInterval: {
+            type: "object",
+            properties: {
+              amount: { type: "number", description: "The number of units for recurrence" },
+              unit: { type: "string", description: "The unit of recurrence (days, weeks, months)" }
+            },
+            required: ["amount", "unit"]
+          },
+          numberOfRecurrences: {
+            type: "number",
+            description: "Number of recurring appointments to find"
+          },
+          preferredDayOfWeek: {
+            type: "number",
+            description: "Preferred day of week (0-6, where 0 is Sunday), optional",
+            optional: true
+          },
+          preferredTimeRange: {
+            type: "object",
+            properties: {
+              start: { type: "string", description: "Start time of preferred range (HH:mm)" },
+              end: { type: "string", description: "End time of preferred range (HH:mm)" }
+            },
+            optional: true
+          }
+        },
+        required: ["initialDate", "appointmentDuration", "group", "recurrenceInterval", "numberOfRecurrences"]
+      }
+    }
   }
 ];
 
@@ -310,6 +400,32 @@ async function handleUserInput(userMessage, phoneNumber) {
             });
           } else if (funcName === "createClient") {
             const output = await createClient(args.firstName, args.lastName, phoneNumber);
+            toolOutputs.push({
+              tool_call_id: action.id,
+              output: JSON.stringify(output)
+            });
+          } else if (funcName === "createRecurringAppointments") {
+            const output = await createRecurringAppointments(
+              args.initialDate,
+              args.startTime,
+              fname,
+              lname,
+              phoneNumber,
+              email,
+              args.appointmentType,
+              args.appointmentDuration,
+              args.group,
+              args.price,
+              args.addOnArray,
+              args.recurrenceInterval,
+              args.numberOfRecurrences
+            );
+            toolOutputs.push({
+              tool_call_id: action.id,
+              output: JSON.stringify(output)
+            });
+          } else if (funcName === "findRecurringAvailability") {
+            const output = await findRecurringAvailability(args.initialDate, args.appointmentDuration, args.group, args.recurrenceInterval, args.numberOfRecurrences, args.preferredDayOfWeek, args.preferredTimeRange);
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
