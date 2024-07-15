@@ -52,7 +52,7 @@ async function cancelAppointment(phoneNumber, date) {
         const acuityCancelled = await cancelAcuityAppointment(acuity_id);
 
         if (acuityCancelled) {
-            await deleteAppointment(appointment.id);
+            // await deleteAppointment(appointment.id);
             return appointment;
         } else {
             throw new Error('Failed to cancel appointment in Acuity');
