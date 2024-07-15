@@ -50,10 +50,15 @@ async function getAvailability(day, duration, group) {
                 const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
 
                 if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000 && currentTime < endOfSlot) {
-                    availableSlots.push({
-                        startTime: new Date(currentTime).toTimeString().slice(0, 5),
-                        endTime: new Date(Math.min(appointmentStart, endOfSlot)).toTimeString().slice(0, 5)
-                    });
+                    const slotEndTime = new Date(Math.min(appointmentStart, endOfSlot));
+                    const slotDuration = slotEndTime - currentTime;
+                    
+                    if (slotDuration >= duration * 60000) {
+                        availableSlots.push({
+                            startTime: new Date(currentTime).toTimeString().slice(0, 5),
+                            endTime: slotEndTime.toTimeString().slice(0, 5)
+                        });
+                    }
                 }
 
                 currentTime = appointmentEnd > currentTime ? appointmentEnd : currentTime;
@@ -105,7 +110,7 @@ function getCurrentDate() {
 
 
 // async function main() {
-//     console.log(await getAvailability('2024-07-10', 30, 1))
+//     console.log(await getAvailability('2024-07-25', 60, 1))
 // }
 
 // main()
