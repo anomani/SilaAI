@@ -61,4 +61,21 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
     return bookedAppointments;
 }
 
+
+async function main() {
+    const initialDate = "2024-09-03";
+    const startTime = "09:00";
+    const fname = "Adam";
+    const lname = "Nomani";
+    const phone = "2038324011";
+    const email = "nomaniadam@gmail.com";
+    const appointmentType = "haircut";
+    const appointmentDuration = 30;
+    const group = 1;
+    const price = 100;
+    const addOnArray = [];
+    const recurrenceInterval = { amount: 2, unit: "weeks" };
+    const numberOfRecurrences = 27;
+}
+
 module.exports = { createRecurringAppointments };
