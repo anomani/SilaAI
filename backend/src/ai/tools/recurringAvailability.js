@@ -1,72 +1,81 @@
 const { getAvailability } = require('./getAvailability');
 const moment = require('moment-timezone');
 
-async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceInterval, numberOfRecurrences, preferredDayOfWeek, preferredTime) {
+async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceRule, numberOfRecurrences) {
     const availableSlots = [];
     let currentDate = moment(initialDate);
 
-    console.log("Initial Date:", initialDate);
-    console.log("Appointment Duration:", appointmentDuration);
-    console.log("Group:", group);
-    console.log("Recurrence Interval:", recurrenceInterval);
-    console.log("Number of Recurrences:", numberOfRecurrences);
-    console.log("Preferred Day of Week:", preferredDayOfWeek);
-    console.log("Preferred Time:", preferredTime);
-
     for (let i = 0; i < numberOfRecurrences; i++) {
         if (i > 0) {
-            currentDate = currentDate.add(recurrenceInterval.amount, recurrenceInterval.unit);
-        }
-
-        // If a preferred day of week is specified, adjust the date
-        if (preferredDayOfWeek) {
-            currentDate = currentDate.day(preferredDayOfWeek);
+            currentDate = applyRecurrenceRule(currentDate, recurrenceRule);
         }
 
         const formattedDate = currentDate.format('YYYY-MM-DD');
         const availability = await getAvailability(formattedDate, appointmentDuration, group);
 
-        if (preferredTime) {
-            const slotStart = `${formattedDate} ${preferredTime}`;
-            const isAvailable = availability.some(slot => 
-                slot.startTime === preferredTime
-            );
-
-            if (isAvailable) {
-                availableSlots.push({
-                    date: formattedDate,
-                    time: preferredTime
-                });
-            } else {
-                break; // If the preferred time is not available, stop searching
-            }
-        } else {
-            // If no preferred time is specified, return the first available slot
-            if (availability.length > 0) {
-                availableSlots.push({
-                    date: formattedDate,
-                    time: availability[0].startTime
-                });
-            } else {
-                break; // If no slots are available for a date, stop searching
-            }
+        if (availability.length > 0) {
+            availableSlots.push({
+                date: formattedDate,
+                slots: availability
+            });
         }
     }
 
     return availableSlots;
 }
 
-// async function main() {
-//     const initialDate = "2024-09-03";
-//     const appointmentDuration = 30;
-//     const group = 1;
-//     const recurrenceInterval = { amount: 2, unit: "weeks" };
-//     const numberOfRecurrences = 27;
-//     const preferredDayOfWeek = 6;
-//     const preferredTime = "09:00";
-//     const availableSlots = await findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceInterval, numberOfRecurrences, preferredDayOfWeek, preferredTime);
-//     console.log(availableSlots);
-// }
+function applyRecurrenceRule(currentDate, recurrenceRule) {
+    switch (recurrenceRule.type) {
+        case 'daily':
+            return currentDate.add(recurrenceRule.interval || 1, 'day');
+        case 'weekly':
+            return currentDate.add((recurrenceRule.interval || 1) * 7, 'day').day(recurrenceRule.dayOfWeek);
+        case 'biweekly':
+            return currentDate.add(2, 'week').day(recurrenceRule.dayOfWeek);
+        case 'monthly':
+            if (recurrenceRule.dayOfMonth) {
+                return currentDate.add(recurrenceRule.interval || 1, 'month').date(recurrenceRule.dayOfMonth);
+            } else if (recurrenceRule.weekOfMonth && recurrenceRule.dayOfWeek) {
+                return currentDate.add(recurrenceRule.interval || 1, 'month')
+                    .startOf('month')
+                    .add(recurrenceRule.weekOfMonth - 1, 'weeks')
+                    .day(recurrenceRule.dayOfWeek);
+            }
+        case 'custom':
+            return currentDate.add(recurrenceRule.interval, recurrenceRule.unit);
+        default:
+            throw new Error('Invalid recurrence rule');
+    }
+}
 
-// main();
+
+// Example call to findRecurringAvailability function
+const exampleCall = async () => {
+    const initialDate = '2024-10-22';
+    const appointmentDuration = 30; // Duration in minutes
+    const group = 1; // Example group
+    const recurrenceRule = {
+        type: 'weekly',
+        interval: 1,
+        dayOfWeek: 2 // Tuesday (0 is Sunday, 1 is Monday, etc.)
+    };
+    const numberOfRecurrences = 4;
+
+    try {
+        const recurringAvailability = await findRecurringAvailability(
+            initialDate,
+            appointmentDuration,
+            group,
+            recurrenceRule,
+            numberOfRecurrences
+        );
+        console.log('Recurring Availability:', JSON.stringify(recurringAvailability, null, 2));
+    } catch (error) {
+        console.error('Error finding recurring availability:', error);
+    }
+};
+
+// Uncomment the line below to run the example
+exampleCall();
+
 module.exports = { findRecurringAvailability };

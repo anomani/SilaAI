@@ -2,13 +2,13 @@ const { getAvailability } = require('./getAvailability');
 const { bookAppointment } = require('./bookAppointment');
 const moment = require('moment-timezone');
 
-async function createRecurringAppointments(initialDate, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price, addOnArray, recurrenceInterval, numberOfRecurrences) {
+async function createRecurringAppointments(initialDate, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price, addOnArray, recurrenceRule, numberOfRecurrences) {
     const bookedAppointments = [];
     let currentDate = moment(initialDate);
 
     for (let i = 0; i < numberOfRecurrences; i++) {
         if (i > 0) {
-            currentDate = currentDate.add(recurrenceInterval.amount, recurrenceInterval.unit);
+            currentDate = applyRecurrenceRule(currentDate, recurrenceRule);
         }
 
         const formattedDate = currentDate.format('YYYY-MM-DD');
@@ -61,21 +61,28 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
     return bookedAppointments;
 }
 
-
-async function main() {
-    const initialDate = "2024-09-03";
-    const startTime = "09:00";
-    const fname = "Adam";
-    const lname = "Nomani";
-    const phone = "2038324011";
-    const email = "nomaniadam@gmail.com";
-    const appointmentType = "haircut";
-    const appointmentDuration = 30;
-    const group = 1;
-    const price = 100;
-    const addOnArray = [];
-    const recurrenceInterval = { amount: 2, unit: "weeks" };
-    const numberOfRecurrences = 278;
+function applyRecurrenceRule(currentDate, recurrenceRule) {
+    switch (recurrenceRule.type) {
+        case 'daily':
+            return currentDate.add(recurrenceRule.interval || 1, 'day');
+        case 'weekly':
+            return currentDate.add((recurrenceRule.interval || 1) * 7, 'day').day(recurrenceRule.dayOfWeek);
+        case 'biweekly':
+            return currentDate.add(2, 'week').day(recurrenceRule.dayOfWeek);
+        case 'monthly':
+            if (recurrenceRule.dayOfMonth) {
+                return currentDate.add(recurrenceRule.interval || 1, 'month').date(recurrenceRule.dayOfMonth);
+            } else if (recurrenceRule.weekOfMonth && recurrenceRule.dayOfWeek) {
+                return currentDate.add(recurrenceRule.interval || 1, 'month')
+                    .startOf('month')
+                    .add(recurrenceRule.weekOfMonth - 1, 'weeks')
+                    .day(recurrenceRule.dayOfWeek);
+            }
+        case 'custom':
+            return currentDate.add(recurrenceRule.interval, recurrenceRule.unit);
+        default:
+            throw new Error('Invalid recurrence rule');
+    }
 }
 
 module.exports = { createRecurringAppointments };
