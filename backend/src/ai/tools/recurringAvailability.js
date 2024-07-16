@@ -1,9 +1,17 @@
 const { getAvailability } = require('./getAvailability');
 const moment = require('moment-timezone');
 
-async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceInterval, numberOfRecurrences, preferredDayOfWeek = null, preferredTimeRange = null) {
+async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceInterval, numberOfRecurrences, preferredDayOfWeek, preferredTime) {
     const availableSlots = [];
     let currentDate = moment(initialDate);
+
+    console.log("Initial Date:", initialDate);
+    console.log("Appointment Duration:", appointmentDuration);
+    console.log("Group:", group);
+    console.log("Recurrence Interval:", recurrenceInterval);
+    console.log("Number of Recurrences:", numberOfRecurrences);
+    console.log("Preferred Day of Week:", preferredDayOfWeek);
+    console.log("Preferred Time:", preferredTime);
 
     for (let i = 0; i < numberOfRecurrences; i++) {
         if (i > 0) {
@@ -11,33 +19,54 @@ async function findRecurringAvailability(initialDate, appointmentDuration, group
         }
 
         // If a preferred day of week is specified, adjust the date
-        if (preferredDayOfWeek !== null) {
+        if (preferredDayOfWeek) {
             currentDate = currentDate.day(preferredDayOfWeek);
         }
 
         const formattedDate = currentDate.format('YYYY-MM-DD');
         const availability = await getAvailability(formattedDate, appointmentDuration, group);
 
-        const slotsForThisDate = availability.filter(slot => {
-            if (preferredTimeRange) {
-                const slotStart = moment(`${formattedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm');
-                return slotStart.isBetween(moment(`${formattedDate} ${preferredTimeRange.start}`, 'YYYY-MM-DD HH:mm'), 
-                                           moment(`${formattedDate} ${preferredTimeRange.end}`, 'YYYY-MM-DD HH:mm'), null, '[]');
-            }
-            return true;
-        });
+        if (preferredTime) {
+            const slotStart = `${formattedDate} ${preferredTime}`;
+            const isAvailable = availability.some(slot => 
+                slot.startTime === preferredTime
+            );
 
-        if (slotsForThisDate.length > 0) {
-            availableSlots.push({
-                date: formattedDate,
-                slots: slotsForThisDate
-            });
+            if (isAvailable) {
+                availableSlots.push({
+                    date: formattedDate,
+                    time: preferredTime
+                });
+            } else {
+                break; // If the preferred time is not available, stop searching
+            }
         } else {
-            break; // If no slots are available for a date, stop searching
+            // If no preferred time is specified, return the first available slot
+            if (availability.length > 0) {
+                availableSlots.push({
+                    date: formattedDate,
+                    time: availability[0].startTime
+                });
+            } else {
+                break; // If no slots are available for a date, stop searching
+            }
         }
     }
 
     return availableSlots;
 }
 
+// async function main() {
+//     const initialDate = "2024-09-03";
+//     const appointmentDuration = 30;
+//     const group = 1;
+//     const recurrenceInterval = { amount: 2, unit: "weeks" };
+//     const numberOfRecurrences = 27;
+//     const preferredDayOfWeek = 6;
+//     const preferredTime = "09:00";
+//     const availableSlots = await findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceInterval, numberOfRecurrences, preferredDayOfWeek, preferredTime);
+//     console.log(availableSlots);
+// }
+
+// main();
 module.exports = { findRecurringAvailability };
