@@ -10,6 +10,7 @@ const {getAllAppointmentsByClientId} = require('../model/appointment')
 const fs = require('fs');
 const path = require('path');
 const { createRecurringAppointments } = require('./tools/recurringAppointments');
+const { findRecurringAvailability } = require('./tools/recurringAvailability');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -232,7 +233,7 @@ const tools = [
     type: "function",
     function: {
       name: "findRecurringAvailability",
-      description: "Finds recurring availability for appointments",
+      description: "Finds common available slots for recurring appointments",
       parameters: {
         type: "object",
         properties: {
@@ -256,10 +257,6 @@ const tools = [
                 enum: ["daily", "weekly", "biweekly", "monthly", "custom"], 
                 description: "Type of recurrence" 
               },
-              interval: { 
-                type: "number", 
-                description: "Interval for recurrence (e.g., 2 for every 2 weeks)" 
-              },
               dayOfWeek: { 
                 type: "number", 
                 description: "Day of week (0-6, where 0 is Sunday), for weekly recurrence" 
@@ -271,21 +268,12 @@ const tools = [
               weekOfMonth: { 
                 type: "number", 
                 description: "Week of month (1-5), for monthly recurrence" 
-              },
-              unit: { 
-                type: "string", 
-                enum: ["day", "week", "month"], 
-                description: "Unit for custom recurrence" 
               }
             },
             required: ["type"]
-          },
-          numberOfRecurrences: {
-            type: "number",
-            description: "Number of recurring appointments to find"
           }
         },
-        required: ["initialDate", "appointmentDuration", "group", "recurrenceRule", "numberOfRecurrences"]
+        required: ["initialDate", "appointmentDuration", "group", "recurrenceRule"]
       }
     }
   }
@@ -460,7 +448,12 @@ async function handleUserInput(userMessage, phoneNumber) {
               output: JSON.stringify(output)
             });
           } else if (funcName === "findRecurringAvailability") {
-            const output = await findRecurringAvailability(args.initialDate, args.appointmentDuration, args.group, args.recurrenceRule, args.numberOfRecurrences);
+            const output = await findRecurringAvailability(
+              args.initialDate,
+              args.appointmentDuration,
+              args.group,
+              args.recurrenceRule
+            );
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
