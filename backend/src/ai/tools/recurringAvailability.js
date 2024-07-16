@@ -1,75 +1,91 @@
 const { getAvailability } = require('./getAvailability');
 const moment = require('moment-timezone');
 
-async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceRule, numberOfRecurrences) {
-    const availableSlots = [];
+// Set the default timezone to match your Heroku server
+const serverTimezone = process.env.TZ || 'UTC';
+moment.tz.setDefault(serverTimezone);
+
+async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceRule) {
+    let commonSlots = null;
     let currentDate = moment(initialDate);
+    const endDate = moment(initialDate).add(1, 'year');
 
-    for (let i = 0; i < numberOfRecurrences; i++) {
-        if (i > 0) {
-            currentDate = applyRecurrenceRule(currentDate, recurrenceRule);
+    while (currentDate.isSameOrBefore(endDate)) {
+        if (matchesRecurrenceRule(currentDate, recurrenceRule)) {
+            const formattedDate = currentDate.format('YYYY-MM-DD');
+            const availability = await getAvailability(formattedDate, appointmentDuration, group);
+            console.log('availability', availability);
+            if (Array.isArray(availability) && availability.length > 0) {
+                const startTimes = availability.map(slot => slot.startTime);
+                if (commonSlots === null) {
+                    commonSlots = new Set(startTimes);
+                } else {
+                    commonSlots = new Set(startTimes.filter(time => commonSlots.has(time)));
+                }
+            }
         }
-
-        const formattedDate = currentDate.format('YYYY-MM-DD');
-        const availability = await getAvailability(formattedDate, appointmentDuration, group);
-
-        if (availability.length > 0) {
-            availableSlots.push({
-                date: formattedDate,
-                slots: availability
-            });
-        }
+        currentDate.add(1, 'day');
     }
 
-    return availableSlots;
+    // Convert common start times back to slot objects
+    return Array.from(commonSlots || []).map(startTime => {
+        const endTime = moment(startTime, 'HH:mm').add(appointmentDuration, 'minutes').format('HH:mm');
+        return { startTime, endTime };
+    });
 }
 
-function applyRecurrenceRule(currentDate, recurrenceRule) {
+function matchesRecurrenceRule(date, recurrenceRule) {
     switch (recurrenceRule.type) {
         case 'daily':
-            return currentDate.add(recurrenceRule.interval || 1, 'day');
+            return true;
         case 'weekly':
-            return currentDate.add((recurrenceRule.interval || 1) * 7, 'day').day(recurrenceRule.dayOfWeek);
+            return date.day() === recurrenceRule.dayOfWeek;
         case 'biweekly':
-            return currentDate.add(2, 'week').day(recurrenceRule.dayOfWeek);
+            return date.day() === recurrenceRule.dayOfWeek && date.week() % 2 === 0;
         case 'monthly':
             if (recurrenceRule.dayOfMonth) {
-                return currentDate.add(recurrenceRule.interval || 1, 'month').date(recurrenceRule.dayOfMonth);
+                return date.date() === recurrenceRule.dayOfMonth;
             } else if (recurrenceRule.weekOfMonth && recurrenceRule.dayOfWeek) {
-                return currentDate.add(recurrenceRule.interval || 1, 'month')
-                    .startOf('month')
-                    .add(recurrenceRule.weekOfMonth - 1, 'weeks')
-                    .day(recurrenceRule.dayOfWeek);
+                const weekOfMonth = Math.ceil(date.date() / 7);
+                return date.day() === recurrenceRule.dayOfWeek && weekOfMonth === recurrenceRule.weekOfMonth;
             }
         case 'custom':
-            return currentDate.add(recurrenceRule.interval, recurrenceRule.unit);
+            // Implement custom recurrence logic if needed
+            return false;
         default:
             throw new Error('Invalid recurrence rule');
     }
 }
 
-
-// Example call to findRecurringAvailability function
+// Modify the example call to demonstrate timezone handling
 const exampleCall = async () => {
     const initialDate = '2024-10-22';
     const appointmentDuration = 30; // Duration in minutes
     const group = 1; // Example group
     const recurrenceRule = {
-        type: 'weekly',
-        interval: 1,
-        dayOfWeek: 2 // Tuesday (0 is Sunday, 1 is Monday, etc.)
+        type: 'monthly',
+        weekOfMonth: 1,
+        dayOfWeek: 3 // First Wednesday of the month
     };
-    const numberOfRecurrences = 4;
-
+    
+    console.log(`Current server timezone: ${moment.tz.guess()}`);
+    console.log(`Current time: ${moment().format()}`);
+    
     try {
-        const recurringAvailability = await findRecurringAvailability(
+        console.log('Input:');
+        console.log('Initial Date:', initialDate);
+        console.log('Appointment Duration:', appointmentDuration);
+        console.log('Group:', group);
+        console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
+
+        const commonAvailability = await findRecurringAvailability(
             initialDate,
             appointmentDuration,
             group,
-            recurrenceRule,
-            numberOfRecurrences
+            recurrenceRule
         );
-        console.log('Recurring Availability:', JSON.stringify(recurringAvailability, null, 2));
+        console.log('\nOutput:');
+        console.log('Common Available Slots:', JSON.stringify(commonAvailability, null, 2));
     } catch (error) {
         console.error('Error finding recurring availability:', error);
     }
