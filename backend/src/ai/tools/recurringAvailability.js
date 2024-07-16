@@ -1,11 +1,13 @@
 const { getAvailability } = require('./getAvailability');
 const moment = require('moment-timezone');
 
-// Set the default timezone to match your Heroku server
-const serverTimezone = process.env.TZ || 'UTC';
-moment.tz.setDefault(serverTimezone);
+
 
 async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceRule) {
+    console.log('Initial Date:', initialDate);
+    console.log('Appointment Duration:', appointmentDuration);
+    console.log('Group:', group);
+    console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
     let commonSlots = null;
     let currentDate = moment(initialDate);
     const endDate = moment(initialDate).add(1, 'year');
@@ -14,7 +16,6 @@ async function findRecurringAvailability(initialDate, appointmentDuration, group
         if (matchesRecurrenceRule(currentDate, recurrenceRule)) {
             const formattedDate = currentDate.format('YYYY-MM-DD');
             const availability = await getAvailability(formattedDate, appointmentDuration, group);
-            console.log('availability', availability);
             if (Array.isArray(availability) && availability.length > 0) {
                 const startTimes = availability.map(slot => slot.startTime);
                 if (commonSlots === null) {
@@ -92,6 +93,6 @@ const exampleCall = async () => {
 };
 
 // Uncomment the line below to run the example
-exampleCall();
+// exampleCall();
 
 module.exports = { findRecurringAvailability };
