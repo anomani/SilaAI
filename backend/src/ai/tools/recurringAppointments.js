@@ -3,91 +3,104 @@ const { bookAppointment } = require('./bookAppointment');
 const moment = require('moment-timezone');
 
 async function createRecurringAppointments(initialDate, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price, addOnArray, recurrenceRule) {
-    console.log('initialDate', initialDate);
-    console.log('startTime', startTime);
-    console.log('fname', fname);
-    console.log('lname', lname);
-    console.log('phone', phone);
-    console.log('email', email);
-    console.log('appointmentType', appointmentType);
-    console.log('appointmentDuration', appointmentDuration);
-    console.log('group', group);
-    console.log('price', price);
-    console.log('addOnArray', addOnArray);
-    console.log('recurrenceRule', recurrenceRule);
+    console.log('Initial Date:', initialDate);
+    console.log('Start Time:', startTime);
+    console.log('Appointment Duration:', appointmentDuration);
+    console.log('Group:', group);
+    console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
+
     const bookedAppointments = [];
     let currentDate = moment(initialDate);
     const endDate = moment(initialDate).add(1, 'year');
+    const startDate = moment(initialDate);
 
     while (currentDate.isSameOrBefore(endDate)) {
-        const formattedDate = currentDate.format('YYYY-MM-DD');
-        const availability = await getAvailability(formattedDate, appointmentDuration, group);
+        if (matchesRecurrenceRule(currentDate, recurrenceRule, startDate)) {
+            const formattedDate = currentDate.format('YYYY-MM-DD');
+            console.log('Processing date:', formattedDate);
+            const availability = await getAvailability(formattedDate, appointmentDuration, group);
+            
+            if (typeof availability === 'string') {
+                return availability;
+            } else {
+                console.log('Availability:', availability);
+                
+                const isSlotAvailable = availability.some(slot => {
+                    const slotStart = moment(`${formattedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm');
+                    const slotEnd = moment(`${formattedDate} ${slot.endTime}`, 'YYYY-MM-DD HH:mm');
+                    const appointmentStart = moment(`${formattedDate} ${startTime}`, 'YYYY-MM-DD HH:mm');
+                    const appointmentEnd = appointmentStart.clone().add(appointmentDuration, 'minutes');
 
-        // Check if the specific time slot is available
-        const isSlotAvailable = availability.some(slot => {
-            const slotStart = moment(`${formattedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm');
-            const slotEnd = moment(`${formattedDate} ${slot.endTime}`, 'YYYY-MM-DD HH:mm');
-            const appointmentStart = moment(`${formattedDate} ${startTime}`, 'YYYY-MM-DD HH:mm');
-            const appointmentEnd = appointmentStart.clone().add(appointmentDuration, 'minutes');
+                    return appointmentStart.isSameOrAfter(slotStart) && appointmentEnd.isSameOrBefore(slotEnd);
+                });
 
-            return appointmentStart.isSameOrAfter(slotStart) && appointmentEnd.isSameOrBefore(slotEnd);
-        });
-
-        if (isSlotAvailable) {
-            try {
-                const result = await bookAppointment(
-                    formattedDate,
-                    startTime,
-                    fname,
-                    lname,
-                    phone,
-                    email,
-                    appointmentType,
-                    appointmentDuration,
-                    group,
-                    price,
-                    addOnArray
-                );
-                if (result === "Appointment booked successfully") {
-                    bookedAppointments.push({
-                        date: formattedDate,
-                        startTime: startTime
-                    });
+                if (isSlotAvailable) {
+                    try {
+                        console.log('Booking appointment for', formattedDate, startTime);
+                        const result = await bookAppointment(
+                            formattedDate,
+                            startTime,
+                            fname,
+                            lname,
+                            phone,
+                            email,
+                            appointmentType,
+                            appointmentDuration,
+                            group,
+                            price,
+                            addOnArray
+                        );
+                        if (result === "Appointment booked successfully") {
+                            bookedAppointments.push({
+                                date: formattedDate,
+                                startTime: startTime
+                            });
+                        } else {
+                            console.log(`Failed to book appointment for ${formattedDate}: ${result}`);
+                        }
+                    } catch (error) {
+                        console.error(`Error booking appointment for ${formattedDate}:`, error);
+                    }
                 } else {
-                    console.log(`Failed to book appointment for ${formattedDate}: ${result}`);
-                    break;
+                    console.log(`No availability for ${formattedDate} at ${startTime}`);
                 }
-            } catch (error) {
-                console.error(`Error booking appointment for ${formattedDate}:`, error);
-                break;
             }
-        } else {
-            console.log(`No availability for ${formattedDate} at ${startTime}`);
         }
-
-        currentDate = applyRecurrenceRule(currentDate, recurrenceRule);
+        currentDate.add(1, 'day');
     }
 
     return bookedAppointments;
 }
 
-function applyRecurrenceRule(currentDate, recurrenceRule) {
+function matchesRecurrenceRule(date, recurrenceRule, startDate) {
+    // Process the initial date
+    if (date.isSame(startDate, 'day')) {
+        return true;
+    }
+
+    const interval = recurrenceRule.interval || 1;
+
     switch (recurrenceRule.type) {
         case 'daily':
-            return currentDate.add(1, 'day');
+            return date.diff(startDate, 'days') % interval === 0;
         case 'weekly':
-            return currentDate.add(1, 'week').day(recurrenceRule.dayOfWeek);
+            return date.day() === recurrenceRule.dayOfWeek && 
+                   date.diff(startDate, 'weeks') % interval === 0;
         case 'biweekly':
-            return currentDate.add(2, 'week').day(recurrenceRule.dayOfWeek);
+            return date.day() === recurrenceRule.dayOfWeek && 
+                   date.diff(startDate, 'weeks') % (2 * interval) === 0;
         case 'monthly':
+            const monthsDiff = date.diff(startDate, 'months');
+            if (monthsDiff % interval !== 0) return false;
+
             if (recurrenceRule.dayOfMonth) {
-                return currentDate.add(1, 'month').date(recurrenceRule.dayOfMonth);
+                return date.date() === recurrenceRule.dayOfMonth;
             } else if (recurrenceRule.weekOfMonth && recurrenceRule.dayOfWeek) {
-                return currentDate.add(1, 'month')
-                    .startOf('month')
-                    .add(recurrenceRule.weekOfMonth - 1, 'weeks')
-                    .day(recurrenceRule.dayOfWeek);
+                const weekOfMonth = Math.ceil(date.date() / 7);
+                return date.day() === recurrenceRule.dayOfWeek && 
+                       weekOfMonth === recurrenceRule.weekOfMonth;
             }
+            return false;
         default:
             throw new Error('Invalid recurrence rule');
     }
@@ -95,7 +108,7 @@ function applyRecurrenceRule(currentDate, recurrenceRule) {
 
 // Example function call
 async function exampleRecurringAppointments() {
-  const initialDate = '2025-01-07';
+  const initialDate = '2025-01-08';
   const startTime = '09:00';
   const fname = 'Adam';
   const lname = 'Nomani';
@@ -107,9 +120,9 @@ async function exampleRecurringAppointments() {
   const price = 75;
   const addOnArray = [];
   const recurrenceRule = {
-    type: 'monthly',
-    dayOfWeek: 2, // Monday (0 is Sunday, 1 is Monday, etc.)
-    weekOfMonth: 1
+    type: 'weekly',
+    interval: 2, // Every 3 months
+    dayOfWeek: 3
   };
 
   try {

@@ -194,6 +194,10 @@ const tools = [
                 enum: ["daily", "weekly", "biweekly", "monthly", "custom"], 
                 description: "Type of recurrence" 
               },
+              interval: {
+                type: "number",
+                description: "Interval for recurrence (e.g., every 2 weeks, every 3 months)"
+              },
               dayOfWeek: { 
                 type: "number", 
                 description: "Day of week (0-6, where 0 is Sunday), for weekly recurrence" 
@@ -246,6 +250,10 @@ const tools = [
                 type: "string", 
                 enum: ["daily", "weekly", "biweekly", "monthly", "custom"], 
                 description: "Type of recurrence" 
+              },
+              interval: {
+                type: "number",
+                description: "Interval for recurrence (e.g., every 2 weeks, every 3 months)"
               },
               dayOfWeek: { 
                 type: "number", 

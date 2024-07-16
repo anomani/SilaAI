@@ -1,8 +1,6 @@
 const { getAvailability } = require('./getAvailability');
 const moment = require('moment-timezone');
 
-
-
 async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceRule) {
     console.log('Initial Date:', initialDate);
     console.log('Appointment Duration:', appointmentDuration);
@@ -36,20 +34,30 @@ async function findRecurringAvailability(initialDate, appointmentDuration, group
 }
 
 function matchesRecurrenceRule(date, recurrenceRule) {
+    const interval = recurrenceRule.interval || 1;
+    const startDate = moment(recurrenceRule.startDate || date);
+
     switch (recurrenceRule.type) {
         case 'daily':
-            return true;
+            return date.diff(startDate, 'days') % interval === 0;
         case 'weekly':
-            return date.day() === recurrenceRule.dayOfWeek;
+            return date.day() === recurrenceRule.dayOfWeek && 
+                   date.diff(startDate, 'weeks') % interval === 0;
         case 'biweekly':
-            return date.day() === recurrenceRule.dayOfWeek && date.week() % 2 === 0;
+            return date.day() === recurrenceRule.dayOfWeek && 
+                   date.diff(startDate, 'weeks') % (2 * interval) === 0;
         case 'monthly':
+            const monthsDiff = date.diff(startDate, 'months');
+            if (monthsDiff % interval !== 0) return false;
+
             if (recurrenceRule.dayOfMonth) {
                 return date.date() === recurrenceRule.dayOfMonth;
             } else if (recurrenceRule.weekOfMonth && recurrenceRule.dayOfWeek) {
                 const weekOfMonth = Math.ceil(date.date() / 7);
-                return date.day() === recurrenceRule.dayOfWeek && weekOfMonth === recurrenceRule.weekOfMonth;
+                return date.day() === recurrenceRule.dayOfWeek && 
+                       weekOfMonth === recurrenceRule.weekOfMonth;
             }
+            return false;
         case 'custom':
             // Implement custom recurrence logic if needed
             return false;
@@ -65,8 +73,10 @@ const exampleCall = async () => {
     const group = 1; // Example group
     const recurrenceRule = {
         type: 'monthly',
+        interval: 3, // Every 3 months
         weekOfMonth: 1,
-        dayOfWeek: 3 // First Wednesday of the month
+        dayOfWeek: 3, // First Wednesday of every 3 months
+        startDate: '2024-10-22'
     };
     
     console.log(`Current server timezone: ${moment.tz.guess()}`);
