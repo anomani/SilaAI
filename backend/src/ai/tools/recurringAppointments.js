@@ -75,7 +75,7 @@ async function main() {
     const price = 100;
     const addOnArray = [];
     const recurrenceInterval = { amount: 2, unit: "weeks" };
-    const numberOfRecurrences = 27;
+    const numberOfRecurrences = 278;
 }
 
 module.exports = { createRecurringAppointments };
