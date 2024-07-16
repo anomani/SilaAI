@@ -95,7 +95,7 @@ function applyRecurrenceRule(currentDate, recurrenceRule) {
 
 // Example function call
 async function exampleRecurringAppointments() {
-  const initialDate = '2024-11-05';
+  const initialDate = '2025-01-07';
   const startTime = '09:00';
   const fname = 'Adam';
   const lname = 'Nomani';
