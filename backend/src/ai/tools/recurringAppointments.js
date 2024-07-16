@@ -100,7 +100,7 @@ async function exampleRecurringAppointments() {
   const fname = 'Adam';
   const lname = 'Nomani';
   const phone = '+12038324011';
-  const email = 'john.doe@example.com';
+  const email = 'nomaniadam@gmail.com';
   const appointmentType = 'Adult Cut';
   const appointmentDuration = 30; // minutes
   const group = 1;
@@ -108,7 +108,8 @@ async function exampleRecurringAppointments() {
   const addOnArray = [];
   const recurrenceRule = {
     type: 'monthly',
-    dayOfWeek: 2 // Monday (0 is Sunday, 1 is Monday, etc.)
+    dayOfWeek: 2, // Monday (0 is Sunday, 1 is Monday, etc.)
+    weekOfMonth: 1
   };
 
   try {
