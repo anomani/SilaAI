@@ -8,7 +8,7 @@ const openai = new OpenAI({
 });
 
 async function analyzeNames(names) {
-  const chunkSize = 1000; // Increased chunk size
+  const chunkSize = 10; // Increased chunk size
   const results = {};
   const chunks = [];
 
@@ -56,9 +56,7 @@ async function getMuslimClients() {
     SELECT * FROM Client
     WHERE id IN (${muslimClientIds.join(', ')})
   `;
-  console.log(query);
   return query;
 }
-
 
 module.exports = { analyzeNames, getMuslimClients };

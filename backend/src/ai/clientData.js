@@ -70,23 +70,6 @@ const tools = [
       required: []
     }
   }
-},
-{
-  type: "function",
-  function: {
-    name: "checkJobStatus",
-    description: "Checks the status of a background job",
-    parameters: {
-      type: "object",
-      properties: {
-        jobId: {
-          type: "string",
-          description: "The ID of the job to check"
-        }
-      },
-      required: ["jobId"]
-    }
-  }
 }
 ];
 
@@ -99,7 +82,7 @@ async function createAssistant(date) {
       name: "Client Data",
       model: "gpt-4o",
       tools: tools,
-      temperature: 0.1
+      temperature: 1
     });
   }
   return assistant;
@@ -139,7 +122,6 @@ async function handleUserInputData(userMessage) {
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
         if (assistantMessage) {
-          console.log("assistantMessage", assistantMessage.content[0].text.value);
           return assistantMessage.content[0].text.value;
         }
       } else if (runStatus.status === "requires_action") {
@@ -173,28 +155,16 @@ async function handleUserInputData(userMessage) {
             console.log(listLink);
             output = queryId;
           } else if (funcName === "getMuslimClients") {
-            const jobId = await getMuslimClients();
-            output = `Job started with ID: ${jobId}. You can check the status using the checkJobStatus function.`;
-          } else if (funcName === "checkJobStatus") {
-            const job = await analyzeNamesQueue.getJob(args.jobId);
-            if (!job) {
-              output = `Job with ID ${args.jobId} not found`;
-            } else {
-              const state = await job.getState();
-              if (state === 'completed') {
-                const result = await job.getResult();
-                const queryId = uuidv4();
-                queryStore[queryId] = result;
-                const listLink = `/custom-list?id=${queryId}`;
-                output = `Job completed. You can view the results at: ${listLink}`;
-              } else {
-                output = `Job status: ${state}`;
-              }
-            }
+            console.log("getMuslimClients");
+            const list = await getMuslimClients();
+            const queryId = uuidv4();
+            queryStore[queryId] = list;
+            const listLink = `/custom-list?id=${queryId}`;
+            console.log(listLink);
+            output = queryId;
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
-
           toolOutputs.push({
             tool_call_id: action.id,
             output: JSON.stringify(output)
