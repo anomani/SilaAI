@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { handleUserInput, startMuslimClientsJob, checkJobStatus } from '../services/api';
+import { handleUserInput } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../components/ChatContext';
 
@@ -10,41 +10,12 @@ const ChatScreen = () => {
   const { messages, setMessages } = useChat();
   const navigation = useNavigation();
   const [showIntro, setShowIntro] = useState(true);
-  const [jobId, setJobId] = useState(null);
-  const [jobStatus, setJobStatus] = useState(null);
 
   useEffect(() => {
     if (messages.length > 0) {
       setShowIntro(false);
     }
   }, [messages]);
-
-  useEffect(() => {
-    let intervalId;
-    if (jobId) {
-      intervalId = setInterval(async () => {
-        try {
-          const status = await checkJobStatus(jobId);
-          if (status.status === 'completed') {
-            clearInterval(intervalId);
-            setJobId(null);
-            if (status.id) {
-              setMessages(prevMessages => [...prevMessages, { text: `Job completed. You can view the results at: custom-list?id=${status.id}`, sender: 'bot' }]);
-            } else {
-              setMessages(prevMessages => [...prevMessages, { text: `Job completed, but no results ID was provided.`, sender: 'bot' }]);
-            }
-          } else if (status.status === 'failed') {
-            clearInterval(intervalId);
-            setJobId(null);
-            setMessages(prevMessages => [...prevMessages, { text: `Job failed: ${status.error}`, sender: 'bot' }]);
-          }
-        } catch (error) {
-          console.error('Error checking job status:', error);
-        }
-      }, 5000); // Check every 5 seconds
-    }
-    return () => clearInterval(intervalId);
-  }, [jobId]);
 
   const suggestedPrompts = [
     "Create a list of clients who have not shown up in more than 6 months",
@@ -62,16 +33,9 @@ const ChatScreen = () => {
     setMessage('');
 
     try {
-      if (text.toLowerCase().includes('create a list of my muslim clients')) {
-        const response = await startMuslimClientsJob();
-        const jobId = response.jobId;
-        setJobId(jobId);
-        setMessages([...newMessages, { text: `Job started with ID: ${jobId}. I'll notify you when it's complete.`, sender: 'bot' }]);
-      } else {
-        const response = await handleUserInput(text);
-        const responseMessage = typeof response === 'string' ? response : response.message;
-        setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
-      }
+      const response = await handleUserInput(text);
+      const responseMessage = typeof response === 'string' ? response : response.message;
+      setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages([...newMessages, { text: 'Sorry, there was an error processing your request.', sender: 'bot' }]);
@@ -79,7 +43,7 @@ const ChatScreen = () => {
   };
 
   const handleLinkPress = (id) => {
-    console.log('Navigating with id:', id); // Add this line for debugging
+    console.log('Navigating with id:', id);
     navigation.navigate('QueryResults', { id });
   };
 
@@ -90,24 +54,19 @@ const ChatScreen = () => {
 
   const renderItem = ({ item }) => (
     <View style={[styles.messageContainer, item.sender === 'user' ? styles.userMessage : styles.botMessage]}>
-      {item.sender === 'bot' && (item.text.includes('Job completed.') || item.text.includes('Custom list')) ? (
+      {item.sender === 'bot' && item.text.includes('Custom list') ? (
         <Text style={styles.messageText}>
-          {item.text.includes('Job completed.') ? 'Job Finished. ' : ''}
-          You can view and edit the list
+          {item.text.split('here:')[0]}
           <Text
             style={styles.link}
             onPress={() => {
-              let id;
-              if (item.text.includes('custom-list?id=')) {
-                id = item.text.split('custom-list?id=')[1];
-              } else {
-                id = item.text.split('edit the list here: ')[1];
-              }
+              const id = item.text.split('here:')[1].trim();
               handleLinkPress(id);
             }}
           >
-            {' here'}
+            here
           </Text>
+          .
         </Text>
       ) : (
         <Text style={styles.messageText}>{item.text}</Text>
@@ -147,11 +106,6 @@ const ChatScreen = () => {
           keyExtractor={(item, index) => index.toString()}
           contentContainerStyle={styles.chatContainer}
         />
-        {jobStatus && jobStatus.status !== 'completed' && (
-          <View style={styles.jobStatusContainer}>
-            <Text style={styles.jobStatusText}>Job Status: {jobStatus.status}</Text>
-          </View>
-        )}
       </View>
       <View style={styles.inputContainer}>
         <TextInput
@@ -245,16 +199,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   promptButtonText: {
-    color: '#fff',
-    textAlign: 'center',
-  },
-  jobStatusContainer: {
-    backgroundColor: '#333',
-    padding: 10,
-    margin: 10,
-    borderRadius: 5,
-  },
-  jobStatusText: {
     color: '#fff',
     textAlign: 'center',
   },

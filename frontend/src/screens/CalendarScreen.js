@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { getAppointmentsByDay, getClientById, getAppointmentsByClientId } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
@@ -14,17 +14,49 @@ const CalendarScreen = ({ navigation }) => {
   const [currentAppointmentIndex, setCurrentAppointmentIndex] = useState(0);
   const [previousAppointments, setPreviousAppointments] = useState([]);
   const [currentClientId, setCurrentClientId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const scrollViewRef = useRef(null);
+  const [isScrollViewReady, setIsScrollViewReady] = useState(false);
+
+  const scrollToCurrentTime = useCallback(() => {
+    if (scrollViewRef.current && isScrollViewReady) {
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      
+      if (hours >= 9 && hours < 21) {
+        const scrollPosition = ((hours - 9) + minutes / 60) * 100 - 100; // Subtract 100 to center the current time
+        scrollViewRef.current.scrollTo({ y: scrollPosition, animated: true });
+      }
+    }
+  }, [isScrollViewReady]);
 
   useEffect(() => {
     fetchAppointments();
+    
+    // Set a small delay to ensure the ScrollView is rendered
+    const timer = setTimeout(() => {
+      setIsScrollViewReady(true);
+    }, 100);
 
-    // Update current time every minute
+    return () => clearTimeout(timer);
+  }, [date]);
+
+  useEffect(() => {
+    if (isScrollViewReady) {
+      scrollToCurrentTime();
+    }
+  }, [isScrollViewReady, scrollToCurrentTime]);
+
+  useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
+      scrollToCurrentTime();
     }, 60000);
 
     return () => clearInterval(timer);
-  }, [date]);
+  }, [scrollToCurrentTime]);
 
   useEffect(() => {
     updateCurrentAppointment();
@@ -65,6 +97,8 @@ const CalendarScreen = ({ navigation }) => {
   };
 
   const fetchAppointments = async () => {
+    setIsLoading(true);
+    setAppointments([]); // Clear existing appointments
     try {
       const estDate = new Date(date);
       estDate.setHours(estDate.getHours() - 4); // Convert to EST
@@ -86,6 +120,8 @@ const CalendarScreen = ({ navigation }) => {
       setAppointments(adjustedAppointments);
     } catch (error) {
       console.error('Error fetching appointments:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -271,12 +307,15 @@ const CalendarScreen = ({ navigation }) => {
   };
 
   const renderCurrentTimeLine = () => {
-    const now = currentTime;
+    const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
     const timePosition = ((hours - 9) + minutes / 60) * 100;
 
-    if (hours >= 9 && hours < 21) {
+    // Check if the selected date is today
+    const isToday = date.toDateString() === now.toDateString();
+
+    if (isToday && hours >= 9 && hours < 21) {
       return (
         <View
           style={[
@@ -332,10 +371,16 @@ const CalendarScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       
-      {viewMode === 'list' ? (
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      ) : viewMode === 'list' ? (
         <ScrollView 
+          ref={scrollViewRef}
           style={styles.calendarContainer}
           contentContainerStyle={{ minHeight: totalHeight }}
+          onLayout={() => setIsScrollViewReady(true)}
         >
           <View style={styles.timelineContainer}>
             <View style={styles.timeline}>
@@ -661,6 +706,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     width: '20%', // Allocate 20% of the width to the price
     textAlign: 'right', // Align the price to the right
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
