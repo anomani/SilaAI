@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { getAppointmentsByDay, getClientById } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
+import Swiper from 'react-native-swiper';
 
 const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
   const [date, setDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState('list');
 
   useEffect(() => {
     fetchAppointments();
@@ -85,6 +87,28 @@ const CalendarScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const toggleViewMode = () => {
+    setViewMode(viewMode === 'list' ? 'card' : 'list');
+  };
+
+  const renderClientCard = (appointment) => (
+    <View style={styles.cardContainer}>
+      <Image
+        source={{ uri: appointment.clientImage || 'https://via.placeholder.com/150' }}
+        style={styles.clientImage}
+      />
+      <Text style={styles.cardClientName}>{appointment.clientName}</Text>
+      <Text style={styles.cardDate}>{formatDate(new Date(appointment.date))}</Text>
+      <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
+      <Text style={styles.cardType}>{appointment.appointmenttype}</Text>
+      <Text style={styles.cardPrice}>${appointment.price}</Text>
+      <Text style={styles.cardNote}>{appointment.note || 'See the doctor from the comfort of your home'}</Text>
+      <TouchableOpacity style={styles.addNoteButton} onPress={() => {/* Add note functionality */}}>
+        <Text style={styles.addNoteButtonText}>Add note</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -98,18 +122,40 @@ const CalendarScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.refreshButton} onPress={fetchAppointments}>
           <Ionicons name="refresh" size={24} color="#007AFF" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.viewToggleButton} onPress={toggleViewMode}>
+          <Ionicons name={viewMode === 'list' ? 'card' : 'list'} size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
-      {appointments.length > 0 ? (
-        <FlatList
-          data={appointments} 
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-        />
+      
+      {viewMode === 'list' ? (
+        appointments.length > 0 ? (
+          <FlatList
+            data={appointments} 
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id.toString()}
+          />
+        ) : (
+          <View style={styles.noAppointmentsContainer}>
+            <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+          </View>
+        )
       ) : (
-        <View style={styles.noAppointmentsContainer}>
-          <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
-        </View>
+        <Swiper 
+          style={styles.swiper}
+          showsPagination={false}
+          loop={false}
+          showsButtons={true}
+          nextButton={<Text style={styles.buttonText}>›</Text>}
+          prevButton={<Text style={styles.buttonText}>‹</Text>}
+        >
+          {appointments.map((appointment) => (
+            <View key={appointment.id.toString()}>
+              {renderClientCard(appointment)}
+            </View>
+          ))}
+        </Swiper>
       )}
+      
       <View style={styles.totalContainer}>
         <Text style={styles.totalText}>Daily Total: ${calculateDailyTotal()}</Text>
       </View>
@@ -167,6 +213,11 @@ const styles = StyleSheet.create({
     top: 10, 
     right: 60 
   },
+  viewToggleButton: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+  },
   item: { flexDirection: 'row', alignItems: 'center', padding: 10, borderBottomWidth: 1, borderBottomColor: '#333' },
   icon: { marginRight: 10 },
   itemText: { flex: 1 },
@@ -201,9 +252,68 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#007AFF',
   },
+  cardContainer: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 15,
+    padding: 20,
+    margin: 10,
+    alignItems: 'center',
+  },
+  clientImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    marginBottom: 15,
+  },
+  cardClientName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 10,
+  },
+  cardDate: {
+    fontSize: 18,
+    color: '#007AFF',
+    marginBottom: 5,
+  },
+  cardTime: {
+    fontSize: 16,
+    color: '#aaa',
+    marginBottom: 5,
+  },
+  cardType: {
+    fontSize: 16,
+    color: '#aaa',
+    marginBottom: 5,
+  },
+  cardPrice: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 10,
+  },
+  cardNote: {
+    fontSize: 14,
+    color: '#aaa',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  addNoteButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+  },
+  addNoteButtonText: {
+    color: 'white',
+    fontSize: 16,
+  },
+  swiper: {
+    flex: 1,
+  },
+  buttonText: {
+    fontSize: 24,
+    color: '#007AFF',
+  },
 });
 
 export default CalendarScreen;
-
-
-
