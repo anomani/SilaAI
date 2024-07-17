@@ -43,7 +43,7 @@ const ClientDetailsScreen = ({ route, navigation }) => {
 
   const formatDate = (dateString) => {
     const date = convertToEST(dateString);
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
   };
 

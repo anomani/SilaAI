@@ -1,18 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { getAppointmentsByDay, getClientById } from '../services/api';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions } from 'react-native';
+import { getAppointmentsByDay, getClientById, getAppointmentsByClientId } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import Swiper from 'react-native-swiper';
+import avatarImage from '../../assets/lebron-hair.png'; // Adjust the path as needed
 
 const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
   const [date, setDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('list');
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentAppointmentIndex, setCurrentAppointmentIndex] = useState(0);
+  const [previousAppointments, setPreviousAppointments] = useState([]);
+  const [currentClientId, setCurrentClientId] = useState(null);
 
   useEffect(() => {
     fetchAppointments();
+
+    // Update current time every minute
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
   }, [date]);
+
+  useEffect(() => {
+    updateCurrentAppointment();
+  }, [currentTime, appointments]);
+
+  useEffect(() => {
+    if (currentClientId) {
+      fetchPreviousAppointments(currentClientId);
+    }
+  }, [currentClientId]);
+
+  const updateCurrentAppointment = () => {
+    const now = currentTime;
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+    let nextAppointmentIndex = appointments.findIndex(appointment => {
+      const [startHour, startMinute] = appointment.startTime.split(':');
+      const startTimeInMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
+      return startTimeInMinutes > currentTimeInMinutes;
+    });
+
+    if (nextAppointmentIndex === -1) {
+      // If no next appointment, show the last appointment
+      nextAppointmentIndex = appointments.length - 1;
+    } else if (nextAppointmentIndex > 0) {
+      // Check if current time is within the previous appointment
+      const prevAppointment = appointments[nextAppointmentIndex - 1];
+      const [endHour, endMinute] = prevAppointment.endTime.split(':');
+      const endTimeInMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
+      if (currentTimeInMinutes < endTimeInMinutes) {
+        nextAppointmentIndex--;
+      }
+    }
+
+    setCurrentAppointmentIndex(Math.max(0, nextAppointmentIndex));
+  };
 
   const fetchAppointments = async () => {
     try {
@@ -36,6 +86,17 @@ const CalendarScreen = ({ navigation }) => {
       setAppointments(adjustedAppointments);
     } catch (error) {
       console.error('Error fetching appointments:', error);
+    }
+  };
+
+  const fetchPreviousAppointments = async (clientId) => {
+    try {
+      const allAppointments = await getAppointmentsByClientId(clientId);
+      const sortedAppointments = allAppointments.sort((a, b) => new Date(b.date) - new Date(a.date));
+      const previousAppointments = sortedAppointments.slice(1, 6); // Get up to 5 previous appointments
+      setPreviousAppointments(previousAppointments);
+    } catch (error) {
+      console.error('Error fetching previous appointments:', error);
     }
   };
 
@@ -91,23 +152,167 @@ const CalendarScreen = ({ navigation }) => {
     setViewMode(viewMode === 'list' ? 'card' : 'list');
   };
 
-  const renderClientCard = (appointment) => (
-    <View style={styles.cardContainer}>
-      <Image
-        source={{ uri: appointment.clientImage || 'https://via.placeholder.com/150' }}
-        style={styles.clientImage}
-      />
-      <Text style={styles.cardClientName}>{appointment.clientName}</Text>
-      <Text style={styles.cardDate}>{formatDate(new Date(appointment.date))}</Text>
-      <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
-      <Text style={styles.cardType}>{appointment.appointmenttype}</Text>
-      <Text style={styles.cardPrice}>${appointment.price}</Text>
-      <Text style={styles.cardNote}>{appointment.note || 'See the doctor from the comfort of your home'}</Text>
-      <TouchableOpacity style={styles.addNoteButton} onPress={() => {/* Add note functionality */}}>
-        <Text style={styles.addNoteButtonText}>Add note</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const renderClientCard = (appointment) => {
+    // Update the current client ID when rendering a new card
+    if (appointment.clientid !== currentClientId) {
+      setCurrentClientId(appointment.clientid);
+    }
+
+    return (
+      <View style={styles.cardViewContainer}>
+        <ScrollView contentContainerStyle={styles.cardScrollViewContent}>
+          <View style={styles.cardContainer}>
+            <Image
+              source={avatarImage}
+              style={styles.clientImage}
+            />
+            <Text style={styles.cardClientName}>{appointment.clientName}</Text>
+            <Text style={styles.cardDate}>{formatDate(new Date(appointment.date))}</Text>
+            <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
+            <Text 
+              style={styles.cardType} 
+              numberOfLines={1} 
+              ellipsizeMode="tail"
+            >
+              {appointment.appointmenttype}
+            </Text>
+            <Text style={styles.cardPrice}>${appointment.price}</Text>
+            <Text style={styles.cardNote}>{appointment.note || 'No notes available'}</Text>
+            <TouchableOpacity style={styles.addNoteButton} onPress={() => {/* Add note functionality */}}>
+              <Text style={styles.addNoteButtonText}>Add note</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.previousAppointmentsContainer}>
+              <Text style={styles.previousAppointmentsTitle}>Previous Appointments</Text>
+              {previousAppointments.map((prevApp, index) => (
+                <View key={index} style={styles.previousAppointmentItem}>
+                  <Text style={styles.prevAppDate}>{formatDate(new Date(prevApp.date))}</Text>
+                  <Text 
+                    style={styles.prevAppType} 
+                    numberOfLines={1} 
+                    ellipsizeMode="tail"
+                  >
+                    {prevApp.appointmenttype}
+                  </Text>
+                  <Text style={styles.prevAppPrice}>${prevApp.price}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  };
+
+  const renderTimeSlots = () => {
+    const slots = [];
+    for (let hour = 9; hour <= 21; hour++) {
+      slots.push(
+        <View key={hour} style={styles.timeSlot}>
+          <Text style={styles.timeText}>
+            {hour === 12 ? '12p' : hour > 12 ? `${hour - 12}p` : `${hour}a`}
+          </Text>
+        </View>
+      );
+    }
+    return slots;
+  };
+
+  const renderAppointments = () => {
+    if (appointments.length === 0) {
+      return (
+        <View style={styles.noAppointmentsContainer}>
+          <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+        </View>
+      );
+    }
+
+    const appointmentBlocks = [];
+    appointments.forEach((appointment, index) => {
+      const [startHour, startMinute] = appointment.startTime.split(':');
+      const [endHour, endMinute] = appointment.endTime.split(':');
+      
+      // Convert 12-hour format to 24-hour format
+      const start = (parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0)) + parseInt(startMinute) / 60;
+      const end = (parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0)) + parseInt(endMinute) / 60;
+      
+      const duration = end - start;
+      const topPosition = (start - 9) * 100; // 100px per hour
+
+
+      appointmentBlocks.push(
+        <TouchableOpacity
+          key={appointment.id}
+          style={[
+            styles.appointmentBlock,
+            {
+              top: topPosition,
+              height: Math.max(duration * 100, 50), // Minimum height of 50px
+            },
+          ]}
+          onPress={() => navigation.navigate('AppointmentDetails', { appointment })}
+        >
+          <View style={styles.appointmentHeader}>
+            <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
+              {appointment.clientName}
+            </Text>
+            <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
+              {appointment.appointmenttype}
+            </Text>
+          </View>
+          <Text style={styles.appointmentTime}>
+            {`${appointment.startTime} - ${appointment.endTime}`}
+          </Text>
+        </TouchableOpacity>
+      );
+    });
+
+    return appointmentBlocks;
+  };
+
+  const renderCurrentTimeLine = () => {
+    const now = currentTime;
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const timePosition = ((hours - 9) + minutes / 60) * 100;
+
+    if (hours >= 9 && hours < 21) {
+      return (
+        <View
+          style={[
+            styles.currentTimeLine,
+            { top: timePosition }
+          ]}
+        />
+      );
+    }
+    return null;
+  };
+
+  const getAppointmentColor = (type) => {
+    const colors = {
+      'Adult Cut': '#4CAF50',
+      'Beard Grooming': '#2196F3',
+      'Full Service': '#9C27B0',
+      // Add more types and colors as needed
+    };
+    return colors[type] || '#FF9800'; // Default color
+  };
+
+  const totalHours = 21 - 9 + 1; // From 9am to 9pm, inclusive
+  const totalHeight = totalHours * 100; // 100px per hour
+
+  const goToNextAppointment = () => {
+    if (currentAppointmentIndex < appointments.length - 1) {
+      setCurrentAppointmentIndex(currentAppointmentIndex + 1);
+    }
+  };
+
+  const goToPreviousAppointment = () => {
+    if (currentAppointmentIndex > 0) {
+      setCurrentAppointmentIndex(currentAppointmentIndex - 1);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -128,32 +333,41 @@ const CalendarScreen = ({ navigation }) => {
       </View>
       
       {viewMode === 'list' ? (
-        appointments.length > 0 ? (
-          <FlatList
-            data={appointments} 
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id.toString()}
-          />
-        ) : (
-          <View style={styles.noAppointmentsContainer}>
-            <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
-          </View>
-        )
-      ) : (
-        <Swiper 
-          style={styles.swiper}
-          showsPagination={false}
-          loop={false}
-          showsButtons={true}
-          nextButton={<Text style={styles.buttonText}>›</Text>}
-          prevButton={<Text style={styles.buttonText}>‹</Text>}
+        <ScrollView 
+          style={styles.calendarContainer}
+          contentContainerStyle={{ minHeight: totalHeight }}
         >
-          {appointments.map((appointment) => (
-            <View key={appointment.id.toString()}>
-              {renderClientCard(appointment)}
+          <View style={styles.timelineContainer}>
+            <View style={styles.timeline}>
+              {renderTimeSlots()}
             </View>
-          ))}
-        </Swiper>
+            <View style={[styles.appointmentsContainer, { height: totalHeight }]}>
+              {renderAppointments()}
+              {renderCurrentTimeLine()}
+            </View>
+          </View>
+        </ScrollView>
+      ) : (
+        <View style={styles.cardView}>
+          {appointments.length > 0 ? (
+            <>
+              {renderClientCard(appointments[currentAppointmentIndex])}
+              <View style={styles.cardNavigation}>
+                <TouchableOpacity onPress={goToPreviousAppointment} style={styles.navButton}>
+                  <Text style={styles.navButtonText}>‹</Text>
+                </TouchableOpacity>
+                <Text style={styles.appointmentCounter}>
+                  {currentAppointmentIndex + 1} / {appointments.length}
+                </Text>
+                <TouchableOpacity onPress={goToNextAppointment} style={styles.navButton}>
+                  <Text style={styles.navButtonText}>›</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+          )}
+        </View>
       )}
       
       <View style={styles.totalContainer}>
@@ -252,17 +466,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#007AFF',
   },
+  cardView: {
+    flex: 1,
+    width: '100%',
+  },
+  cardViewContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardScrollViewContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
   cardContainer: {
     backgroundColor: '#2c2c2e',
     borderRadius: 15,
     padding: 20,
-    margin: 10,
     alignItems: 'center',
+    width: Dimensions.get('window').width - 40, // Full width minus 40px for margins
+    maxWidth: 400, // Maximum width of the card
   },
   clientImage: {
     width: 150,
     height: 150,
-    borderRadius: 75,
+    borderRadius: 75, // To make it circular
     marginBottom: 15,
   },
   cardClientName: {
@@ -285,6 +515,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#aaa',
     marginBottom: 5,
+    maxWidth: '100%', // Ensure the text doesn't overflow the container
   },
   cardPrice: {
     fontSize: 20,
@@ -313,6 +544,123 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 24,
     color: '#007AFF',
+  },
+  calendarContainer: {
+    flex: 1,
+  },
+  timelineContainer: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  timeline: {
+    width: 50,
+    borderRightWidth: 1,
+    borderRightColor: '#333',
+  },
+  timeSlot: {
+    height: 100,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    paddingTop: 2, // Add a small top padding
+  },
+  timeText: {
+    color: '#aaa',
+    fontSize: 12,
+  },
+  appointmentsContainer: {
+    flex: 1,
+    position: 'relative',
+    borderLeftWidth: 1,
+    borderLeftColor: '#333',
+  },
+  appointmentBlock: {
+    position: 'absolute',
+    left: 2,
+    right: 2,
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#007AFF',
+    borderWidth: 1,
+    borderColor: '#0056b3', // A slightly darker shade of blue for the border
+  },
+  appointmentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  appointmentName: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+    flex: 1,
+    marginRight: 4,
+  },
+  appointmentType: {
+    color: 'white',
+    fontSize: 12,
+    textAlign: 'right',
+  },
+  appointmentTime: {
+    color: 'white',
+    fontSize: 10,
+  },
+  currentTimeLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'red',
+    zIndex: 1000,
+  },
+  cardNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '90%',
+    marginTop: 20,
+  },
+  previousAppointmentsContainer: {
+    width: '100%',
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#444',
+    paddingTop: 10,
+  },
+  previousAppointmentsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 10,
+  },
+  previousAppointmentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    width: '100%', // Ensure full width
+  },
+  prevAppDate: {
+    color: '#aaa',
+    fontSize: 14,
+    width: '30%', // Allocate 30% of the width to the date
+  },
+  prevAppType: {
+    color: '#aaa',
+    fontSize: 14,
+    flex: 1, // Allow this to take up available space
+    marginHorizontal: 5, // Add some horizontal margin
+  },
+  prevAppPrice: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    width: '20%', // Allocate 20% of the width to the price
+    textAlign: 'right', // Align the price to the right
   },
 });
 

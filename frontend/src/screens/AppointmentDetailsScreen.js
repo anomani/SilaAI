@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
 import { deleteAppointment, rescheduleAppointment, getClientById } from '../services/api';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import moment from 'moment';
 
 const AppointmentDetailsScreen = ({ route, navigation }) => {
   const { appointment } = route.params;
@@ -34,6 +35,14 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
     navigation.navigate('RescheduleAppointment', { appointment });
   };
 
+  const formatTime = (time) => {
+    return moment(time, 'HH:mm').format('h:mm A');
+  };
+
+  const formatDate = (date) => {
+    return moment(date).format('MMMM D, YYYY');
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.card}>
@@ -44,11 +53,11 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
         </View>
         <View style={styles.infoRow}>
           <Icon name="event" size={24} color="#007AFF" />
-          <Text style={styles.label}>Date: <Text style={styles.value}>{appointment.date}</Text></Text>
+          <Text style={styles.label}>Date: <Text style={styles.value}>{formatDate(appointment.date)}</Text></Text>
         </View>
         <View style={styles.infoRow}>
           <Icon name="access-time" size={24} color="#007AFF" />
-          <Text style={styles.label}>Time: <Text style={styles.value}>{appointment.starttime} - {appointment.endtime}</Text></Text>
+          <Text style={styles.label}>Time: <Text style={styles.value}>{formatTime(appointment.starttime)} - {formatTime(appointment.endtime)}</Text></Text>
         </View>
         <View style={styles.infoRow}>
           <Icon name="category" size={24} color="#007AFF" />
