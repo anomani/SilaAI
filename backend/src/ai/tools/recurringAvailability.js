@@ -1,7 +1,7 @@
 const { getAvailability } = require('./getAvailability');
 const moment = require('moment-timezone');
 
-async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceRule) {
+async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceRule, clientId) {
     console.log('Initial Date:', initialDate);
     console.log('Appointment Duration:', appointmentDuration);
     console.log('Group:', group);
@@ -13,7 +13,7 @@ async function findRecurringAvailability(initialDate, appointmentDuration, group
     while (currentDate.isSameOrBefore(endDate)) {
         if (matchesRecurrenceRule(currentDate, recurrenceRule)) {
             const formattedDate = currentDate.format('YYYY-MM-DD');
-            const availability = await getAvailability(formattedDate, appointmentDuration, group);
+            const availability = await getAvailability(formattedDate, appointmentDuration, group, clientId);
             if (Array.isArray(availability) && availability.length > 0) {
                 const startTimes = availability.map(slot => slot.startTime);
                 if (commonSlots === null) {

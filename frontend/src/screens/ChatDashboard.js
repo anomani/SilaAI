@@ -106,15 +106,9 @@ const ChatDashboard = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Client Chat</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity onPress={fetchMessages}>
-            <Text style={styles.refreshIcon}>🔄</Text>
-          </TouchableOpacity>
-          <TouchableOpacity>
-            <Text style={styles.settingsIcon}>⚙️</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity>
+          <Text style={styles.settingsIcon}></Text>
+        </TouchableOpacity>
       </View>
       <View style={styles.searchContainer}>
         <TextInput
@@ -124,6 +118,9 @@ const ChatDashboard = ({ navigation }) => {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+        <TouchableOpacity onPress={fetchMessages} style={styles.refreshButton}>
+          <Text style={styles.refreshIcon}>🔄</Text>
+        </TouchableOpacity>
       </View>
       <FlatList
         data={filteredClients}
@@ -140,42 +137,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#111318',
-    marginTop: 50,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     padding: 16,
     backgroundColor: '#111318',
   },
-  headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerButtons: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  refreshIcon: {
-    color: 'white',
-    fontSize: 24,
-    marginRight: 16,
-  },
-  settingsIcon: {
-    color: 'white',
-    fontSize: 24,
-  },
-  searchContainer: {
     padding: 16,
   },
   searchInput: {
+    flex: 1,
     height: 40,
     backgroundColor: '#292e38',
     color: 'white',
     borderRadius: 20,
     paddingHorizontal: 16,
+    marginRight: 10,
+  },
+  refreshButton: {
+    padding: 8,
+  },
+  refreshIcon: {
+    color: 'white',
+    fontSize: 24,
+  },
+  settingsIcon: {
+    color: 'white',
+    fontSize: 24,
   },
   clientContainer: {
     flexDirection: 'row',

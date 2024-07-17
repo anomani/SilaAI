@@ -11,7 +11,7 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
 
     const bookedAppointments = [];
     let currentDate = moment(initialDate);
-    const endDate = moment(initialDate).add(1, 'year');
+    const endDate = moment(initialDate).add(10, 'year');
     const startDate = moment(initialDate);
 
     while (currentDate.isSameOrBefore(endDate)) {
@@ -107,47 +107,47 @@ function matchesRecurrenceRule(date, recurrenceRule, startDate) {
 }
 
 // Example function call
-async function exampleRecurringAppointments() {
-  const initialDate = '2025-01-08';
-  const startTime = '09:00';
-  const fname = 'Adam';
-  const lname = 'Nomani';
-  const phone = '+12038324011';
-  const email = 'nomaniadam@gmail.com';
-  const appointmentType = 'Adult Cut';
-  const appointmentDuration = 30; // minutes
-  const group = 1;
-  const price = 75;
-  const addOnArray = [];
-  const recurrenceRule = {
-    type: 'weekly',
-    interval: 2, // Every 3 months
-    dayOfWeek: 3
-  };
+// async function exampleRecurringAppointments() {
+//   const initialDate = '2025-01-08';
+//   const startTime = '09:00';
+//   const fname = 'Adam';
+//   const lname = 'Nomani';
+//   const phone = '+12038324011';
+//   const email = 'nomaniadam@gmail.com';
+//   const appointmentType = 'Adult Cut';
+//   const appointmentDuration = 30; // minutes
+//   const group = 1;
+//   const price = 75;
+//   const addOnArray = [];
+//   const recurrenceRule = {
+//     type: 'weekly',
+//     interval: 2, // Every 3 months
+//     dayOfWeek: 3
+//   };
 
-  try {
-    const bookedAppointments = await createRecurringAppointments(
-      initialDate,
-      startTime,
-      fname,
-      lname,
-      phone,
-      email,
-      appointmentType,
-      appointmentDuration,
-      group,
-      price,
-      addOnArray,
-      recurrenceRule
-    );
+//   try {
+//     const bookedAppointments = await createRecurringAppointments(
+//       initialDate,
+//       startTime,
+//       fname,
+//       lname,
+//       phone,
+//       email,
+//       appointmentType,
+//       appointmentDuration,
+//       group,
+//       price,
+//       addOnArray,
+//       recurrenceRule
+//     );
 
-    console.log('Booked appointments:', bookedAppointments);
-  } catch (error) {
-    console.error('Error creating recurring appointments:', error);
-  }
-}
+//     console.log('Booked appointments:', bookedAppointments);
+//   } catch (error) {
+//     console.error('Error creating recurring appointments:', error);
+//   }
+// }
 
-// Call the example function
-exampleRecurringAppointments();
+// // Call the example function
+// exampleRecurringAppointments();
 
 module.exports = { createRecurringAppointments };
