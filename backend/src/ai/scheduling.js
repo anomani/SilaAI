@@ -212,9 +212,13 @@ const tools = [
               }
             },
             required: ["type"]
+          },
+          clientId: {
+            type: "number",
+            description: "The ID of the client booking the recurring appointment"
           }
         },
-        required: ["initialDate", "appointmentDuration", "group", "recurrenceRule"]
+        required: ["initialDate", "appointmentDuration", "group", "recurrenceRule", "clientId"]
       }
     }
   },
@@ -430,7 +434,8 @@ async function handleUserInput(userMessage, phoneNumber) {
               args.initialDate,
               args.appointmentDuration,
               args.group,
-              args.recurrenceRule
+              args.recurrenceRule,
+              client.id
             );
             toolOutputs.push({
               tool_call_id: action.id,

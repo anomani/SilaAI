@@ -1,24 +1,10 @@
 const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
-const fs = require('fs');
-const os = require('os');
-const path = require('path')
 const {getAppointmentsByDay} = require('../../model/appointment')
-const dbUtils = require('../../model/dbUtils');
-
-const apiKey = process.env.BROWSERCLOUD_API_KEY;
 
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// async function main() {
-//     console.log(await getAvailability("2024-07-24", 45, 1));
-// }
-
-// main();
-
-async function getAvailability(day, duration, group) {
+async function getAvailability(day, duration, group, clientId = null) {
     console.log("Day:", day);
     console.log("Duration:", duration);
     console.log("Group:", group);
@@ -46,6 +32,12 @@ async function getAvailability(day, duration, group) {
             let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
 
             for (let i = 0; i <= appointments.length; i++) {
+                const appointment = appointments[i];
+                if (clientId && appointment && appointment.clientId === clientId) {
+                    // Skip this appointment if it belongs to the current client
+                    continue;
+                }
+
                 const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
                 const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
 
@@ -107,12 +99,5 @@ function getCurrentDate() {
     const dateTimeString = now.toLocaleString();
     return dateTimeString;
 }
-
-
-// async function main() {
-//     console.log(await getAvailability('2024-07-25', 60, 1))
-// }
-
-// main()
 
 module.exports = {getAvailability, getCurrentDate}
