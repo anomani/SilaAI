@@ -11,7 +11,7 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
 
     const bookedAppointments = [];
     let currentDate = moment(initialDate);
-    const endDate = moment(initialDate).add(10, 'year');
+    const endDate = moment(initialDate).add(1, 'year');
     const startDate = moment(initialDate);
 
     while (currentDate.isSameOrBefore(endDate)) {
