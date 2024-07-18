@@ -144,6 +144,18 @@ async function findAndUpdateAppointmentByAcuityId(acuityId, updateData) {
     }
 }
 
+async function getUpcomingAppointments(clientId, limit = 5) {
+  const currentDate = new Date().toISOString().split('T')[0];
+  const query = `
+    SELECT * FROM appointments
+    WHERE clientId = ? AND date >= ?
+    ORDER BY date ASC, startTime ASC
+    LIMIT ?
+  `;
+  const [rows] = await db.query(query, [clientId, currentDate, limit]);
+  return rows;
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -152,5 +164,6 @@ module.exports = {
     getAppointmentsByDay,
     getAllAppointmentsByClientId,
     findAppointmentByClientAndTime,
-    findAndUpdateAppointmentByAcuityId
+    findAndUpdateAppointmentByAcuityId,
+    getUpcomingAppointments
 };

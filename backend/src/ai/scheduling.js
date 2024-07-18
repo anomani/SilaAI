@@ -6,7 +6,7 @@ const { bookAppointment } = require('./tools/bookAppointment');
 const {cancelAppointment} = require('./tools/cancelAppointment')
 const { getClientByPhoneNumber,getDaysSinceLastAppointment, createClient } = require('../model/clients');
 const {getMessagesByClientId} = require('../model/messages')
-const {getAllAppointmentsByClientId} = require('../model/appointment')
+const {getAllAppointmentsByClientId, getUpcomingAppointments} = require('../model/appointment')
 const fs = require('fs');
 const path = require('path');
 const { createRecurringAppointments } = require('./tools/recurringAppointments');
@@ -278,6 +278,27 @@ const tools = [
         required: ["initialDate", "startTime", "fname", "lname", "phone", "email", "appointmentType", "appointmentDuration", "group", "price", "addOnArray", "recurrenceRule"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "getUpcomingAppointments",
+      description: "Gets the upcoming appointments for the client, sorted by date",
+      parameters: {
+        type: "object",
+        properties: {
+          clientId: {
+            type: "string",
+            description: "The ID of the client whose appointments are to be retrieved"
+          },
+          limit: {
+            type: "number",
+            description: "The maximum number of appointments to retrieve (optional)"
+          }
+        },
+        required: ["clientId"]
+      }
+    }
   }
 ];
 
@@ -456,6 +477,12 @@ async function handleUserInput(userMessage, phoneNumber) {
               args.addOnArray,
               args.recurrenceRule
             );
+            toolOutputs.push({
+              tool_call_id: action.id,
+              output: JSON.stringify(output)
+            });
+          } else if (funcName === "getUpcomingAppointments") {
+            const output = await getUpcomingAppointments(client.id, args.limit);
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
