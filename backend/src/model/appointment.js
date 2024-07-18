@@ -158,6 +158,7 @@ async function getUpcomingAppointments(clientId, limit = 5) {
 }
 
 
+
 module.exports = {
     createAppointment,
     getAppointmentById,
