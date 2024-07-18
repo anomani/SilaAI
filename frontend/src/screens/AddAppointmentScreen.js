@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
-import { addAppointment, searchClients } from '../services/api';
+import { bookAppointmentWithAcuity, searchClients } from '../services/api';
 import CustomTimePicker from '../components/CustomTimePicker';
+import { Modal, FlatList } from 'react-native';
 
 const AddAppointmentScreen = ({ navigation }) => {
   const [appointment, setAppointment] = useState({
@@ -13,13 +13,15 @@ const AddAppointmentScreen = ({ navigation }) => {
     date: new Date(),
     startTime: '00:00',
     endTime: '00:00',
-    details: ''
+    details: '',
+    price: '' // Add price field
   });
   const [filteredClients, setFilteredClients] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null); // Add these to your state declarations
   const [showAppointmentTypePicker, setShowAppointmentTypePicker] = useState(false);
 
   const handleInputChange = async (field, value) => {
@@ -48,39 +50,46 @@ const AddAppointmentScreen = ({ navigation }) => {
 
   const handleSelectClient = (item) => {
     if (item.id === 'new') {
-      navigation.navigate('AddClient'); // Navigate to the add client screen
+      navigation.navigate('AddClient');
     } else {
       setAppointment({ ...appointment, clientName: `${item.firstname} ${item.lastname}` });
-      setSelectedClientId(item.id); // Store the selected client ID
+      setSelectedClientId(item.id);
+      setSelectedClient(item); // Store the entire client object
     }
-    setFilteredClients([]); // Clear the dropdown
+    setFilteredClients([]);
   };
 
-  const handleClientAdded = (clientId, clientName) => {
+  const handleClientAdded = (clientId, clientData) => {
     setSelectedClientId(clientId);
-    setAppointment({ ...appointment, clientName });
+    setSelectedClient(clientData);
+    setAppointment({ ...appointment, clientName: `${clientData.firstname} ${clientData.lastname}` });
   };
 
   const handleAddAppointment = async () => {
-    const formatDate = (date) => {
-      return date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
-    };
-
-    const appointmentToSubmit = {
-      appointmentType: appointment.appointmentType.toString(),
-      clientName: appointment.clientName.toString(),
-      clientId: selectedClientId, // Include the selected client ID
-      date: formatDate(appointment.date), // YYYY-MM-DD
-      startTime: appointment.startTime, // HH:MM
-      endTime: appointment.endTime, // HH:MM
-      details: appointment.details.toString()
-    };
-
     try {
-      await addAppointment(appointmentToSubmit);
+      if (!selectedClient) {
+        throw new Error('No client selected');
+      }
+
+      const appointmentData = {
+        date: appointment.date.toISOString().split('T')[0], // YYYY-MM-DD format
+        startTime: appointment.startTime,
+        fname: selectedClient.firstname,
+        lname: selectedClient.lastname,
+        phone: selectedClient.phonenumber,
+        email: selectedClient.email,
+        appointmentType: appointment.appointmentType,
+        price: parseFloat(appointment.price),
+        addOnArray: appointment.addOns || []
+      };
+      console.log(appointmentData)
+      const result = await bookAppointmentWithAcuity(appointmentData);
+
+      console.log('Appointment booked:', result);
       navigation.goBack();
     } catch (error) {
-      console.error('Error adding appointment:', error);
+      console.error('Error booking appointment:', error);
+      Alert.alert('Booking Error', 'Failed to book appointment. Please try again.');
     }
   };
 
@@ -113,14 +122,58 @@ const AddAppointmentScreen = ({ navigation }) => {
   };
 
   const appointmentTypes = [
-    { label: 'Adult Cut', value: 'adultCut' },
-    { label: 'High-School Cut', value: 'highSchoolCut' },
-    { label: 'Kids Cut', value: 'kidsCut' },
-    { label: 'Lineup + Taper', value: 'lineupTaper' },
-    { label: 'Beard Grooming Only', value: 'beardGroomingOnly' },
-    { label: 'Adult - (Full Service)', value: 'adultFullService' },
-    { label: 'OFF DAY/EMERGENCY - (Full Service)', value: 'offDayEmergency' },
+    { label: 'Adult Cut', value: 'Adult Cut' },
+    { label: 'High-School Cut', value: 'High-School Cut' },
+    { label: 'Kids Cut - (12 & Under)', value: 'Kids Cut - (12 & Under)' },
+    { label: 'Lineup + Taper', value: 'Lineup + Taper' },
+    { label: 'Beard Grooming Only', value: 'Beard Grooming Only' },
+    { label: 'Adult - (Full Service)', value: 'Adult - (Full Service)' },
+    { label: 'OFF DAY/EMERGENCY - (Full Service)', value: 'OFF DAY/EMERGENCY - (Full Service)' },
+    { label: 'Hair Cut', value: 'Hair Cut' },
+    { label: 'Hair Cut + Beard', value: 'Hair Cut + Beard' },
+    { label: 'Haircut + Beard', value: 'Haircut + Beard' },
+    { label: 'High-School - (Full Service)', value: 'High-School - (Full Service)' },
+    { label: 'Kids - (12 & Under)/Seniors', value: 'Kids - (12 & Under)/Seniors' },
+    { label: 'UziExpress Clean Up', value: 'UziExpress Clean Up' },
+    { label: 'Adult Haircut (18 & Up)', value: 'Adult Haircut (18 & Up)' },
+    { label: 'Adult Haircut + Beard (18 & Up)', value: 'Adult Haircut + Beard (18 & Up)' },
+    { label: 'Student Haircut (17 & Under)', value: 'Student Haircut (17 & Under)' },
+    { label: 'Student Haircut + Beard (17 & Under)', value: 'Student Haircut + Beard (17 & Under)' },
   ];
+
+  const renderAppointmentTypePicker = () => (
+    <Modal
+      visible={showAppointmentTypePicker}
+      transparent={true}
+      animationType="slide"
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <FlatList
+            data={appointmentTypes}
+            keyExtractor={(item) => item.value}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.pickerItem}
+                onPress={() => {
+                  handleAppointmentTypeChange(item.value);
+                  setShowAppointmentTypePicker(false);
+                }}
+              >
+                <Text style={styles.pickerItemText}>{item.label}</Text>
+              </TouchableOpacity>
+            )}
+          />
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowAppointmentTypePicker(false)}
+          >
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <View style={styles.container}>
@@ -198,20 +251,7 @@ const AddAppointmentScreen = ({ navigation }) => {
           {appointmentTypes.find(type => type.value === appointment.appointmentType)?.label || 'Select Appointment Type'}
         </Text>
       </TouchableOpacity>
-      {showAppointmentTypePicker && (
-        <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={appointment.appointmentType}
-            style={styles.picker}
-            onValueChange={handleAppointmentTypeChange}
-            dropdownIconColor="#fff"
-          >
-            {appointmentTypes.map((type) => (
-              <Picker.Item key={type.value} label={type.label} value={type.value} color="#fff" />
-            ))}
-          </Picker>
-        </View>
-      )}
+      {renderAppointmentTypePicker()}
       <Text style={styles.label}>Add details</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -220,6 +260,15 @@ const AddAppointmentScreen = ({ navigation }) => {
         placeholder="Notes"
         placeholderTextColor="#888"
         multiline
+      />
+      <Text style={styles.label}>Price</Text>
+      <TextInput
+        style={styles.input}
+        value={appointment.price}
+        onChangeText={(value) => handleInputChange('price', value)}
+        placeholder="Price"
+        placeholderTextColor="#888"
+        keyboardType="numeric"
       />
       <Button title="Add Appointment" onPress={handleAddAppointment} />
     </View>
@@ -279,6 +328,39 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   inputText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    maxHeight: '80%',
+  },
+  pickerItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+  },
+  pickerItemText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#444',
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  closeButtonText: {
     color: '#fff',
     fontSize: 16,
   },

@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -285,6 +285,16 @@ export const checkJobStatus = async (jobId) => {
     return response.data;
   } catch (error) {
     console.error('Error checking job status:', error);
+    throw error;
+  }
+};
+
+export const bookAppointmentWithAcuity = async (appointmentData) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.post('/appointments/acuity', appointmentData)));
+    return response.data;
+  } catch (error) {
+    console.error('Error booking appointment with Acuity:', error);
     throw error;
   }
 };
