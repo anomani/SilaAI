@@ -18,11 +18,6 @@ async function createAppointment(appointmentType, acuityId, date, startTime, end
     }
 }
 
-// async function main() {
-//     await createAppointment('test', '2005-03-01', '12:00', '13:00', 3367, 'test');
-// }
-// main()
-
 async function getAppointmentById(appointmentId) {
     const db = dbUtils.getDB();
     const sql = 'SELECT * FROM Appointment WHERE id = $1';
