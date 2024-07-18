@@ -97,8 +97,16 @@ function matchesRecurrenceRule(date, recurrenceRule, startDate) {
                 return date.date() === recurrenceRule.dayOfMonth;
             } else if (recurrenceRule.weekOfMonth && recurrenceRule.dayOfWeek) {
                 const weekOfMonth = Math.ceil(date.date() / 7);
-                return date.day() === recurrenceRule.dayOfWeek && 
-                       weekOfMonth === recurrenceRule.weekOfMonth;
+                const lastDayOfMonth = date.clone().endOf('month');
+                const lastWeekNumber = Math.ceil(lastDayOfMonth.date() / 7);
+
+                if (recurrenceRule.weekOfMonth === 5 && weekOfMonth === lastWeekNumber) {
+                    // Handle the case when 5th week is requested but month only has 4 weeks
+                    return date.day() === recurrenceRule.dayOfWeek;
+                } else {
+                    return date.day() === recurrenceRule.dayOfWeek && 
+                           weekOfMonth === recurrenceRule.weekOfMonth;
+                }
             }
             return false;
         default:
