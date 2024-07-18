@@ -191,8 +191,8 @@ const tools = [
             properties: {
               type: { 
                 type: "string", 
-                enum: ["daily", "weekly", "biweekly", "monthly", "custom"], 
-                description: "Type of recurrence" 
+                enum: ["daily", "weekly", "monthly"], 
+                description: "Type of recurrence. If we have a monthly recurrence then both the day of the week and week of month are required. If we have a weekly recurrence then only the day of the week is required." 
               },
               interval: {
                 type: "number",
@@ -201,10 +201,6 @@ const tools = [
               dayOfWeek: { 
                 type: "number", 
                 description: "Day of week (0-6, where 0 is Sunday), for weekly recurrence" 
-              },
-              dayOfMonth: { 
-                type: "number", 
-                description: "Day of month (1-31), for monthly recurrence" 
               },
               weekOfMonth: { 
                 type: "number", 
