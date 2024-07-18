@@ -32,6 +32,7 @@ function formatPhoneNumber(phoneNumber) {
   return '+' + cleaned;
 }
 
+
 async function sendMessage(to, body) {
   console.log("To: ", to)
   const customer = await getClientByPhoneNumber(to);

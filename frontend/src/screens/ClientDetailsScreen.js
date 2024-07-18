@@ -8,7 +8,7 @@ const ClientDetailsScreen = ({ route, navigation }) => {
   const [appointments, setAppointments] = useState([]);
   const [groupedAppointments, setGroupedAppointments] = useState({});
   const [daysSinceLastAppointment, setDaysSinceLastAppointment] = useState('');
-
+  console.log(client);
   useEffect(() => {
     fetchAppointments();
     fetchDaysSinceLastAppointment();
