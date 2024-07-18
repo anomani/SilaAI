@@ -160,6 +160,7 @@ async function fetchAppointmentDetails(appointmentId) {
     }
 }
 
+
 async function fetchAllAppointments() {
     const apiUrl = 'https://acuityscheduling.com/api/v1/appointments';
     const auth = Buffer.from(`${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`).toString('base64');
