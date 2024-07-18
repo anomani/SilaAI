@@ -479,6 +479,7 @@ async function handleUserInput(userMessage, phoneNumber) {
             });
           } else if (funcName === "getUpcomingAppointments") {
             const output = await getUpcomingAppointments(client.id, args.limit);
+            console.log(output)
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
