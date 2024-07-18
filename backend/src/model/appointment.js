@@ -147,13 +147,13 @@ async function findAndUpdateAppointmentByAcuityId(acuityId, updateData) {
 async function getUpcomingAppointments(clientId, limit = 5) {
   const currentDate = new Date().toISOString().split('T')[0];
   const query = `
-    SELECT * FROM appointments
-    WHERE clientId = ? AND date >= ?
+    SELECT * FROM Appointment
+    WHERE clientId = $1 AND date >= $2
     ORDER BY date ASC, startTime ASC
-    LIMIT ?
+    LIMIT $3
   `;
-  const [rows] = await db.query(query, [clientId, currentDate, limit]);
-  return rows;
+  const res = await db.query(query, [clientId, currentDate, limit]);
+  return res.rows;
 }
 
 module.exports = {
