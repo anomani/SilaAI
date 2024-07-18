@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
-import { getAppointmentsByDay, getClientById, getAppointmentsByClientId } from '../services/api';
+import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import Swiper from 'react-native-swiper';
 import avatarImage from '../../assets/lebron-hair.png'; // Adjust the path as needed
+import Icon from 'react-native-vector-icons/FontAwesome';
+import twilioAvatar from '../../assets/icon.png';
+import defaultAvatar from '../../assets/avatar.png';
 
 const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
@@ -15,9 +18,11 @@ const CalendarScreen = ({ navigation }) => {
   const [previousAppointments, setPreviousAppointments] = useState([]);
   const [currentClientId, setCurrentClientId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState([]);
 
   const scrollViewRef = useRef(null);
   const [isScrollViewReady, setIsScrollViewReady] = useState(false);
+  const messagesScrollViewRef = useRef(null);
 
   const scrollToCurrentTime = useCallback(() => {
     if (scrollViewRef.current && isScrollViewReady) {
@@ -65,8 +70,15 @@ const CalendarScreen = ({ navigation }) => {
   useEffect(() => {
     if (currentClientId) {
       fetchPreviousAppointments(currentClientId);
+      fetchMessages(currentClientId);
     }
   }, [currentClientId]);
+
+  useEffect(() => {
+    if (messagesScrollViewRef.current) {
+      messagesScrollViewRef.current.scrollToEnd({ animated: false });
+    }
+  }, [messages]);
 
   const updateCurrentAppointment = () => {
     const now = currentTime;
@@ -136,6 +148,18 @@ const CalendarScreen = ({ navigation }) => {
     }
   };
 
+  const fetchMessages = async (clientId) => {
+    try {
+      const data = await getMessagesByClientId(clientId);
+      // Sort messages by date, oldest first
+      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setMessages(sortedMessages);
+      setMessagesRead(clientId);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
+
   const convertTo12HourFormat = (time) => {
     const [hours, minutes] = time.split(':');
     const period = hours >= 12 ? 'PM' : 'AM';
@@ -188,6 +212,32 @@ const CalendarScreen = ({ navigation }) => {
     setViewMode(viewMode === 'list' ? 'card' : 'list');
   };
 
+  const formatTimestamp = (dateString) => {
+    const [datePart, timePart] = dateString.split(', ');
+    const [month, day, year] = datePart.split('/');
+    const [time, period] = timePart.split(' ');
+    const [hours, minutes] = time.split(':');
+
+    let adjustedHours = parseInt(hours, 10) - 4;
+    let adjustedPeriod = period;
+
+    if (adjustedHours < 0) {
+      adjustedHours += 12;
+      adjustedPeriod = period === 'AM' ? 'PM' : 'AM';
+    } else if (adjustedHours === 0) {
+      adjustedHours = 12;
+    } else if (adjustedHours > 12) {
+      adjustedHours -= 12;
+      adjustedPeriod = 'PM';
+    }
+
+    return `${adjustedHours}:${minutes} ${adjustedPeriod}`;
+  };
+
+  const navigateToFullMessageHistory = (clientId, clientName) => {
+    navigation.navigate('ClientMessages', { clientid: clientId, clientName: clientName });
+  };
+
   const renderClientCard = (appointment) => {
     // Update the current client ID when rendering a new card
     if (appointment.clientid !== currentClientId) {
@@ -233,6 +283,46 @@ const CalendarScreen = ({ navigation }) => {
                   <Text style={styles.prevAppPrice}>${prevApp.price}</Text>
                 </View>
               ))}
+            </View>
+            
+            <View style={styles.messageHistoryContainer}>
+              <Text style={styles.messageHistoryTitle}>Message History</Text>
+              {messages.length > 0 ? (
+                <View style={styles.messagesContainer}>
+                  {messages.slice(-5).map((message, index) => {
+                    const isAssistant = message.fromtext === '+18446480598';
+                    const avatar = isAssistant ? twilioAvatar : defaultAvatar;
+                    const senderName = isAssistant ? 'Assistant' : appointment.clientName;
+
+                    return (
+                      <View 
+                        key={index}
+                        style={[styles.messageContainer, isAssistant ? styles.assistantMessage : styles.clientMessage]}
+                      >
+                        {!isAssistant && <Image source={avatar} style={styles.avatar} />}
+                        <View style={styles.messageContent}>
+                          <Text style={styles.messageSender}>{senderName}</Text>
+                          <View style={[styles.messageBubble, isAssistant ? styles.assistantBubble : styles.clientBubble]}>
+                            <Text style={[styles.messageText, isAssistant ? styles.assistantText : styles.clientText]}>
+                              {message.body}
+                            </Text>
+                            <Text style={styles.timestamp}>{formatTimestamp(message.date)}</Text>
+                          </View>
+                        </View>
+                        {isAssistant && <Image source={avatar} style={styles.avatar} />}
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={styles.noMessagesText}>No messaging history</Text>
+              )}
+              <TouchableOpacity 
+                style={styles.fullHistoryButton}
+                onPress={() => navigateToFullMessageHistory(appointment.clientid, appointment.clientName)}
+              >
+                <Text style={styles.fullHistoryButtonText}>See Full Message History</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
@@ -401,9 +491,11 @@ const CalendarScreen = ({ navigation }) => {
                 <TouchableOpacity onPress={goToPreviousAppointment} style={styles.navButton}>
                   <Text style={styles.navButtonText}>‹</Text>
                 </TouchableOpacity>
-                <Text style={styles.appointmentCounter}>
-                  {currentAppointmentIndex + 1} / {appointments.length}
-                </Text>
+                <View style={styles.appointmentCounterContainer}>
+                  <Text style={styles.appointmentCounter}>
+                    {currentAppointmentIndex + 1} / {appointments.length}
+                  </Text>
+                </View>
                 <TouchableOpacity onPress={goToNextAppointment} style={styles.navButton}>
                   <Text style={styles.navButtonText}>›</Text>
                 </TouchableOpacity>
@@ -662,10 +754,31 @@ const styles = StyleSheet.create({
   },
   cardNavigation: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    width: '90%',
     marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  navButton: {
+    padding: 10,
+    backgroundColor: '#007AFF',
+    borderRadius: 5,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  navButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  appointmentCounterContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  appointmentCounter: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   previousAppointmentsContainer: {
     width: '100%',
@@ -711,6 +824,90 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  messageHistoryContainer: {
+    width: '100%',
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#444',
+    paddingTop: 10,
+  },
+  messageHistoryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 10,
+  },
+  messagesContainer: {
+    width: '100%',
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    padding: 8,
+    alignItems: 'flex-end',
+    marginBottom: 8,
+  },
+  assistantMessage: {
+    justifyContent: 'flex-end',
+  },
+  clientMessage: {
+    justifyContent: 'flex-start',
+  },
+  avatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  messageContent: {
+    maxWidth: '70%',
+  },
+  messageSender: {
+    color: '#9da6b8',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  messageBubble: {
+    borderRadius: 12,
+    padding: 8,
+  },
+  assistantBubble: {
+    backgroundColor: '#195de6',
+  },
+  clientBubble: {
+    backgroundColor: '#292e38',
+  },
+  messageText: {
+    color: 'white',
+    fontSize: 14,
+  },
+  assistantText: {
+    color: 'white',
+  },
+  clientText: {
+    color: 'white',
+  },
+  timestamp: {
+    fontSize: 10,
+    color: '#9da6b8',
+    alignSelf: 'flex-end',
+    marginTop: 2,
+  },
+  noMessagesText: {
+    color: '#aaa',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  fullHistoryButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  fullHistoryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

@@ -1,6 +1,7 @@
 const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment } = require('../model/appointment');
 const { createAppointment } = require('../model/appointment');
 const dbUtils = require('../model/dbUtils');
+const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
 
 async function createNewAppointment(req, res) {
   try {
@@ -56,5 +57,21 @@ async function delAppointment(req, res) {
     }
 }
 
+async function bookAppointmentWithAcuityController(req, res) {
+  try {
+    console.log(req.body)
+    const { date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray } = req.body;
+    if (!date || !startTime || !fname || !lname || !phone || !email || !appointmentType || !price) {
+      return res.status(400).send('Missing required fields');
+    }
 
-module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment };
+    const result = await bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray);
+
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error booking appointment with Acuity:', error);
+    res.status(500).send(`Error booking appointment with Acuity: ${error.message}`);
+  }
+}
+
+module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController };
