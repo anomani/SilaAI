@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-
+// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -295,6 +295,16 @@ export const bookAppointmentWithAcuity = async (appointmentData) => {
     return response.data;
   } catch (error) {
     console.error('Error booking appointment with Acuity:', error);
+    throw error;
+  }
+};
+
+export const createBlockedTime = async (blockedTimeData) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.post('/appointments/blocked-time', blockedTimeData)));
+    return response.data;
+  } catch (error) {
+    console.error('Error creating blocked time:', error);
     throw error;
   }
 };

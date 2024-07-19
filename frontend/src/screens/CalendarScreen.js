@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
-import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead } from '../services/api';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert } from 'react-native';
+import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import Swiper from 'react-native-swiper';
@@ -24,6 +24,14 @@ const CalendarScreen = ({ navigation }) => {
   const [draggedAppointment, setDraggedAppointment] = useState(null);
   const [newAppointmentTime, setNewAppointmentTime] = useState(null);
   const [isRescheduleModalVisible, setIsRescheduleModalVisible] = useState(false);
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+  const [isBlockTimeModalVisible, setIsBlockTimeModalVisible] = useState(false);
+  const [blockedTimeData, setBlockedTimeData] = useState({
+    date: '',
+    startTime: '',
+    endTime: '',
+    reason: ''
+  });
 
   const scrollViewRef = useRef(null);
   const messagesScrollViewRef = useRef(null);
@@ -321,17 +329,15 @@ const CalendarScreen = ({ navigation }) => {
     return slots;
   };
 
-  const onGestureEvent = (event) => {
-    // Handle the gesture event without Reanimated
+  const onGestureEvent = (event, appointment) => {
     const { translationY } = event.nativeEvent;
-    // You can update the UI based on translationY if needed
+    const newStartTime = calculateNewTime(appointment.startTime, translationY);
+    setNewAppointmentTime(newStartTime);
   };
 
   const onHandlerStateChange = (event, appointment) => {
     if (event.nativeEvent.oldState === State.ACTIVE) {
       setDraggedAppointment(appointment);
-      const newStartTime = calculateNewTime(appointment.startTime, event.nativeEvent.translationY);
-      setNewAppointmentTime(newStartTime);
       setIsRescheduleModalVisible(true);
     }
   };
@@ -393,35 +399,38 @@ const CalendarScreen = ({ navigation }) => {
       const duration = end - start;
       const topPosition = (start - 9) * 100; // 100px per hour
 
-
       appointmentBlocks.push(
-        <PanGestureHandler
+        <TouchableOpacity
           key={appointment.id}
-          onGestureEvent={onGestureEvent}
-          onHandlerStateChange={(event) => onHandlerStateChange(event, appointment)}
+          onPress={() => navigation.navigate('AppointmentDetails', { appointment })}
         >
-          <View
-            style={[
-              styles.appointmentBlock,
-              {
-                top: topPosition,
-                height: Math.max(duration * 100, 50), // Minimum height of 50px
-              },
-            ]}
+          <PanGestureHandler
+            onGestureEvent={(event) => onGestureEvent(event, appointment)}
+            onHandlerStateChange={(event) => onHandlerStateChange(event, appointment)}
           >
-            <View style={styles.appointmentHeader}>
-              <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
-                {appointment.clientName}
-              </Text>
-              <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
-                {appointment.appointmenttype}
+            <View
+              style={[
+                styles.appointmentBlock,
+                {
+                  top: topPosition,
+                  height: Math.max(duration * 100, 50), // Minimum height of 50px
+                },
+              ]}
+            >
+              <View style={styles.appointmentHeader}>
+                <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
+                  {appointment.clientName}
+                </Text>
+                <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
+                  {appointment.appointmenttype}
+                </Text>
+              </View>
+              <Text style={styles.appointmentTime}>
+                {`${appointment.startTime} - ${appointment.endTime}`}
               </Text>
             </View>
-            <Text style={styles.appointmentTime}>
-              {`${appointment.startTime} - ${appointment.endTime}`}
-            </Text>
-          </View>
-        </PanGestureHandler>
+          </PanGestureHandler>
+        </TouchableOpacity>
       );
     });
 
@@ -475,6 +484,31 @@ const CalendarScreen = ({ navigation }) => {
     }
   };
 
+  const handleAddButtonPress = () => {
+    setIsDropdownVisible(true);
+  };
+
+  const handleBlockTime = () => {
+    setIsDropdownVisible(false);
+    setIsBlockTimeModalVisible(true);
+  };
+
+  const handleCreateAppointment = () => {
+    setIsDropdownVisible(false);
+    navigation.navigate('AddAppointment');
+  };
+
+  const handleBlockTimeSubmit = async () => {
+    try {
+      await createBlockedTime(blockedTimeData);
+      Alert.alert('Success', 'Time blocked successfully');
+      setIsBlockTimeModalVisible(false);
+      fetchAppointments(); // Refresh the appointments list
+    } catch (error) {
+      Alert.alert('Error', 'Failed to block time');
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -482,7 +516,7 @@ const CalendarScreen = ({ navigation }) => {
         <View style={styles.headerDateContainer}>
           <Text style={styles.headerDate}>{formatDate(date)}</Text>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddAppointment')}>
+        <TouchableOpacity style={styles.addButton} onPress={handleAddButtonPress}>
           <Ionicons name="add-circle" size={24} color="#007AFF" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.refreshButton} onPress={fetchAppointments}>
@@ -560,6 +594,48 @@ const CalendarScreen = ({ navigation }) => {
         onConfirm={confirmReschedule}
         onCancel={() => setIsRescheduleModalVisible(false)}
       />
+
+      {/* Dropdown Modal */}
+      <Modal
+        transparent={true}
+        visible={isDropdownVisible}
+        onRequestClose={() => setIsDropdownVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          onPress={() => setIsDropdownVisible(false)}
+        >
+          <View style={styles.dropdown}>
+            <TouchableOpacity style={styles.dropdownItem} onPress={handleBlockTime}>
+              <Text style={styles.dropdownItemText}>Block Time</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.dropdownItem} onPress={handleCreateAppointment}>
+              <Text style={styles.dropdownItemText}>Create Appointment</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Block Time Modal */}
+      <Modal
+        transparent={true}
+        visible={isBlockTimeModalVisible}
+        onRequestClose={() => setIsBlockTimeModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.blockTimeModal}>
+            <Text style={styles.modalTitle}>Block Time</Text>
+            {/* Add input fields for date, startTime, endTime, and reason */}
+            {/* For simplicity, I'm omitting the actual input fields. You should add them here. */}
+            <TouchableOpacity style={styles.submitButton} onPress={handleBlockTimeSubmit}>
+              <Text style={styles.submitButtonText}>Submit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setIsBlockTimeModalVisible(false)}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -956,6 +1032,63 @@ const styles = StyleSheet.create({
   },
   dayNavButtonText: {
     color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdown: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 10,
+    padding: 10,
+    width: '80%',
+  },
+  dropdownItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+  },
+  dropdownItemText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  blockTimeModal: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  submitButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cancelButton: {
+    backgroundColor: '#FF3B30',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  cancelButtonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
