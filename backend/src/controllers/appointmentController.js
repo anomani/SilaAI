@@ -1,5 +1,5 @@
 const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment } = require('../model/appointment');
-const { createAppointment } = require('../model/appointment');
+const { createAppointment, createBlockedTime } = require('../model/appointment');
 const dbUtils = require('../model/dbUtils');
 const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
 
@@ -74,4 +74,21 @@ async function bookAppointmentWithAcuityController(req, res) {
   }
 }
 
-module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController };
+async function createBlockedTimeController(req, res) {
+  try {
+    const { date, startTime, endTime, reason } = req.body;
+
+    if (!date || !startTime || !endTime || !reason) {
+      return res.status(400).send('Missing required fields');
+    }
+
+    const result = await createBlockedTime(date, startTime, endTime, reason);
+
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Error creating blocked time:', error);
+    res.status(500).send(`Error creating blocked time: ${error.message}`);
+  }
+}
+
+module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController };

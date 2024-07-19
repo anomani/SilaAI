@@ -152,6 +152,25 @@ async function getUpcomingAppointments(clientId, limit = 5) {
   return res.rows;
 }
 
+
+async function createBlockedTime(date, startTime, endTime, reason) {
+    const db = dbUtils.getDB();
+    const sql = `
+        INSERT INTO Appointment (appointmentType, date, startTime, endTime, details, clientId, price)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
+    `;
+    const values = ['BLOCKED_TIME', date, startTime, endTime, reason, null, 0];
+    try {
+        const res = await db.query(sql, values);
+        console.log('Blocked time created with ID:', res.rows[0].id);
+        return res.rows[0].id;
+    } catch (err) {
+        console.error('Error creating blocked time:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -161,5 +180,6 @@ module.exports = {
     getAllAppointmentsByClientId,
     findAppointmentByClientAndTime,
     findAndUpdateAppointmentByAcuityId,
-    getUpcomingAppointments
+    getUpcomingAppointments,
+    createBlockedTime
 };
