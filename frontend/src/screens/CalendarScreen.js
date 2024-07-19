@@ -8,6 +8,8 @@ import avatarImage from '../../assets/lebron-hair.png'; // Adjust the path as ne
 import Icon from 'react-native-vector-icons/FontAwesome';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import RescheduleConfirmModal from '../components/RescheduleConfirmModal';
 
 const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
@@ -19,49 +21,24 @@ const CalendarScreen = ({ navigation }) => {
   const [currentClientId, setCurrentClientId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState([]);
+  const [draggedAppointment, setDraggedAppointment] = useState(null);
+  const [newAppointmentTime, setNewAppointmentTime] = useState(null);
+  const [isRescheduleModalVisible, setIsRescheduleModalVisible] = useState(false);
 
   const scrollViewRef = useRef(null);
-  const [isScrollViewReady, setIsScrollViewReady] = useState(false);
   const messagesScrollViewRef = useRef(null);
-
-  const scrollToCurrentTime = useCallback(() => {
-    if (scrollViewRef.current && isScrollViewReady) {
-      const now = new Date();
-      const hours = now.getHours();
-      const minutes = now.getMinutes();
-      
-      if (hours >= 9 && hours < 21) {
-        const scrollPosition = ((hours - 9) + minutes / 60) * 100 - 100; // Subtract 100 to center the current time
-        scrollViewRef.current.scrollTo({ y: scrollPosition, animated: true });
-      }
-    }
-  }, [isScrollViewReady]);
 
   useEffect(() => {
     fetchAppointments();
-    
-    // Set a small delay to ensure the ScrollView is rendered
-    const timer = setTimeout(() => {
-      setIsScrollViewReady(true);
-    }, 100);
-
-    return () => clearTimeout(timer);
   }, [date]);
-
-  useEffect(() => {
-    if (isScrollViewReady) {
-      scrollToCurrentTime();
-    }
-  }, [isScrollViewReady, scrollToCurrentTime]);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-      scrollToCurrentTime();
     }, 60000);
 
     return () => clearInterval(timer);
-  }, [scrollToCurrentTime]);
+  }, []);
 
   useEffect(() => {
     updateCurrentAppointment();
@@ -344,6 +321,57 @@ const CalendarScreen = ({ navigation }) => {
     return slots;
   };
 
+  const onGestureEvent = (event) => {
+    // Handle the gesture event without Reanimated
+    const { translationY } = event.nativeEvent;
+    // You can update the UI based on translationY if needed
+  };
+
+  const onHandlerStateChange = (event, appointment) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      setDraggedAppointment(appointment);
+      const newStartTime = calculateNewTime(appointment.startTime, event.nativeEvent.translationY);
+      setNewAppointmentTime(newStartTime);
+      setIsRescheduleModalVisible(true);
+    }
+  };
+
+  const calculateNewTime = (startTime, translationY) => {
+    const [hours, minutes] = startTime.split(':');
+    const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
+    const newMinutes = totalMinutes + Math.round(translationY / (100 / 60)); // 100px per hour
+    const newHours = Math.floor(newMinutes / 60);
+    const newMinutesRemainder = newMinutes % 60;
+    return `${newHours.toString().padStart(2, '0')}:${newMinutesRemainder.toString().padStart(2, '0')}`;
+  };
+
+  const confirmReschedule = async () => {
+    // Implement the API call to update the appointment time
+    // For now, we'll just update the local state
+    const updatedAppointments = appointments.map(app => 
+      app.id === draggedAppointment.id 
+        ? { ...app, startTime: newAppointmentTime, endTime: calculateEndTime(newAppointmentTime, app.endTime) }
+        : app
+    );
+    setAppointments(updatedAppointments);
+    setIsRescheduleModalVisible(false);
+    setDraggedAppointment(null);
+    setNewAppointmentTime(null);
+  };
+
+  const calculateEndTime = (newStartTime, oldEndTime) => {
+    const [oldStartHour, oldStartMinute] = draggedAppointment.startTime.split(':');
+    const [oldEndHour, oldEndMinute] = oldEndTime.split(':');
+    const duration = (parseInt(oldEndHour) * 60 + parseInt(oldEndMinute)) - (parseInt(oldStartHour) * 60 + parseInt(oldStartMinute));
+    
+    const [newStartHour, newStartMinute] = newStartTime.split(':');
+    const newEndMinutes = parseInt(newStartHour) * 60 + parseInt(newStartMinute) + duration;
+    const newEndHour = Math.floor(newEndMinutes / 60);
+    const newEndMinuteRemainder = newEndMinutes % 60;
+    
+    return `${newEndHour.toString().padStart(2, '0')}:${newEndMinuteRemainder.toString().padStart(2, '0')}`;
+  };
+
   const renderAppointments = () => {
     if (appointments.length === 0) {
       return (
@@ -367,29 +395,33 @@ const CalendarScreen = ({ navigation }) => {
 
 
       appointmentBlocks.push(
-        <TouchableOpacity
+        <PanGestureHandler
           key={appointment.id}
-          style={[
-            styles.appointmentBlock,
-            {
-              top: topPosition,
-              height: Math.max(duration * 100, 50), // Minimum height of 50px
-            },
-          ]}
-          onPress={() => navigation.navigate('AppointmentDetails', { appointment })}
+          onGestureEvent={onGestureEvent}
+          onHandlerStateChange={(event) => onHandlerStateChange(event, appointment)}
         >
-          <View style={styles.appointmentHeader}>
-            <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
-              {appointment.clientName}
-            </Text>
-            <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
-              {appointment.appointmenttype}
+          <View
+            style={[
+              styles.appointmentBlock,
+              {
+                top: topPosition,
+                height: Math.max(duration * 100, 50), // Minimum height of 50px
+              },
+            ]}
+          >
+            <View style={styles.appointmentHeader}>
+              <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
+                {appointment.clientName}
+              </Text>
+              <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
+                {appointment.appointmenttype}
+              </Text>
+            </View>
+            <Text style={styles.appointmentTime}>
+              {`${appointment.startTime} - ${appointment.endTime}`}
             </Text>
           </View>
-          <Text style={styles.appointmentTime}>
-            {`${appointment.startTime} - ${appointment.endTime}`}
-          </Text>
-        </TouchableOpacity>
+        </PanGestureHandler>
       );
     });
 
@@ -470,7 +502,6 @@ const CalendarScreen = ({ navigation }) => {
           ref={scrollViewRef}
           style={styles.calendarContainer}
           contentContainerStyle={{ minHeight: totalHeight }}
-          onLayout={() => setIsScrollViewReady(true)}
         >
           <View style={styles.timelineContainer}>
             <View style={styles.timeline}>
@@ -511,17 +542,24 @@ const CalendarScreen = ({ navigation }) => {
         <Text style={styles.totalText}>Daily Total: ${calculateDailyTotal()}</Text>
       </View>
       <View style={styles.navigation}>
-        <TouchableOpacity style={styles.navButton} onPress={() => changeDate(-1)}>
-          <Text style={styles.navButtonText}>Previous Day</Text>
+        <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(-1)}>
+          <Text style={styles.dayNavButtonText}>Previous Day</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={goToToday}>
-          <Text style={styles.navButtonText}>Today</Text>
+        <TouchableOpacity style={styles.dayNavButton} onPress={goToToday}>
+          <Text style={styles.dayNavButtonText}>Today</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => changeDate(1)}>
-          <Text style={styles.navButtonText}>Next Day</Text>
+        <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(1)}>
+          <Text style={styles.dayNavButtonText}>Next Day</Text>
         </TouchableOpacity>
       </View>
       <Footer navigation={navigation} />
+      <RescheduleConfirmModal
+        isVisible={isRescheduleModalVisible}
+        appointment={draggedAppointment}
+        newTime={newAppointmentTime}
+        onConfirm={confirmReschedule}
+        onCancel={() => setIsRescheduleModalVisible(false)}
+      />
     </View>
   );
 };
@@ -576,7 +614,7 @@ const styles = StyleSheet.create({
   time: { fontSize: 14, color: '#aaa' },
   type: { fontSize: 14, color: '#aaa' },
   clientName: { fontSize: 16, color: '#aaa' }, // Added this line
-  navigation: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
+  navigation: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 10 },
   navButton: { padding: 10, backgroundColor: '#333', borderRadius: 5 },
   navButtonText: { color: 'white', fontSize: 16 },
   footer: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#333' },
@@ -905,6 +943,18 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   fullHistoryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  dayNavButton: {
+    padding: 10,
+    backgroundColor: '#4a4a4a', // Gray color
+    borderRadius: 5,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  dayNavButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',

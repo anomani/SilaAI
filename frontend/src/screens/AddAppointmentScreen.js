@@ -3,7 +3,6 @@ import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform }
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
 import { bookAppointmentWithAcuity, searchClients } from '../services/api';
-import CustomTimePicker from '../components/CustomTimePicker';
 import { Modal, FlatList } from 'react-native';
 
 const AddAppointmentScreen = ({ navigation }) => {
@@ -11,17 +10,17 @@ const AddAppointmentScreen = ({ navigation }) => {
     appointmentType: '',
     clientName: '',
     date: new Date(),
-    startTime: '00:00',
-    endTime: '00:00',
+    startTime: new Date(),
+    endTime: new Date(),
     details: '',
-    price: '' // Add price field
+    price: ''
   });
   const [filteredClients, setFilteredClients] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState(null);
-  const [selectedClient, setSelectedClient] = useState(null); // Add these to your state declarations
+  const [selectedClient, setSelectedClient] = useState(null);
   const [showAppointmentTypePicker, setShowAppointmentTypePicker] = useState(false);
 
   const handleInputChange = async (field, value) => {
@@ -34,18 +33,20 @@ const AddAppointmentScreen = ({ navigation }) => {
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || appointment.date;
-    setShowDatePicker(false);
+    setShowDatePicker(Platform.OS === 'ios');
     setAppointment({ ...appointment, date: currentDate });
   };
 
-  const handleStartTimeChange = (time) => {
-    setAppointment({ ...appointment, startTime: time });
-    setShowStartTimePicker(false);
+  const handleStartTimeChange = (event, selectedTime) => {
+    const currentTime = selectedTime || appointment.startTime;
+    setShowStartTimePicker(Platform.OS === 'ios');
+    setAppointment({ ...appointment, startTime: currentTime });
   };
 
-  const handleEndTimeChange = (time) => {
-    setAppointment({ ...appointment, endTime: time });
-    setShowEndTimePicker(false);
+  const handleEndTimeChange = (event, selectedTime) => {
+    const currentTime = selectedTime || appointment.endTime;
+    setShowEndTimePicker(Platform.OS === 'ios');
+    setAppointment({ ...appointment, endTime: currentTime });
   };
 
   const handleSelectClient = (item) => {
@@ -54,7 +55,7 @@ const AddAppointmentScreen = ({ navigation }) => {
     } else {
       setAppointment({ ...appointment, clientName: `${item.firstname} ${item.lastname}` });
       setSelectedClientId(item.id);
-      setSelectedClient(item); // Store the entire client object
+      setSelectedClient(item);
     }
     setFilteredClients([]);
   };
@@ -71,9 +72,17 @@ const AddAppointmentScreen = ({ navigation }) => {
         throw new Error('No client selected');
       }
 
+      const formatDate = (date) => {
+        return date.toISOString().split('T')[0];
+      };
+
+      const formatTime = (date) => {
+        return date.toTimeString().split(' ')[0].slice(0, 5);
+      };
+
       const appointmentData = {
-        date: appointment.date.toISOString().split('T')[0], // YYYY-MM-DD format
-        startTime: appointment.startTime,
+        date: formatDate(appointment.date),
+        startTime: formatTime(appointment.startTime),
         fname: selectedClient.firstname,
         lname: selectedClient.lastname,
         phone: selectedClient.phonenumber,
@@ -96,29 +105,6 @@ const AddAppointmentScreen = ({ navigation }) => {
   const handleAppointmentTypeChange = (itemValue) => {
     handleInputChange('appointmentType', itemValue);
     setShowAppointmentTypePicker(false);
-  };
-
-  const handleDatePress = () => {
-    if (Platform.OS === 'ios') {
-      setShowDatePicker(true);
-    } else {
-      showAndroidDatePicker();
-    }
-  };
-
-  const showAndroidDatePicker = async () => {
-    try {
-      const { action, year, month, day } = await DateTimePicker.open({
-        value: appointment.date,
-        mode: 'date',
-      });
-      if (action !== DateTimePicker.dismissedAction) {
-        const selectedDate = new Date(year, month, day);
-        handleDateChange(null, selectedDate);
-      }
-    } catch (error) {
-      console.warn('Error opening date picker', error);
-    }
   };
 
   const appointmentTypes = [
@@ -202,44 +188,54 @@ const AddAppointmentScreen = ({ navigation }) => {
         listStyle={styles.listStyle}
       />
       <Text style={styles.label}>Date</Text>
-      <TouchableOpacity onPress={handleDatePress}>
+      <TouchableOpacity onPress={() => setShowDatePicker(true)}>
         <Text style={[styles.input, styles.inputText]}>
           {appointment.date.toLocaleDateString('en-US')}
         </Text>
       </TouchableOpacity>
-      {Platform.OS === 'ios' && showDatePicker && (
+      {showDatePicker && (
         <DateTimePicker
+          testID="datePicker"
           value={appointment.date}
           mode="date"
-          display="spinner"
+          is24Hour={true}
+          display="default"
           onChange={handleDateChange}
           themeVariant="dark"
         />
       )}
       <Text style={styles.label}>Starts at</Text>
       <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
-        <Text style={styles.input}>
-          {appointment.startTime}
+        <Text style={[styles.input, styles.inputText]}>
+          {appointment.startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </TouchableOpacity>
       {showStartTimePicker && (
-        <CustomTimePicker
-          visible={showStartTimePicker}
-          onClose={() => setShowStartTimePicker(false)}
-          onSelect={handleStartTimeChange}
+        <DateTimePicker
+          testID="startTimePicker"
+          value={appointment.startTime}
+          mode="time"
+          is24Hour={true}
+          display="default"
+          onChange={handleStartTimeChange}
+          themeVariant="dark"
         />
       )}
       <Text style={styles.label}>Ends at</Text>
       <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
-        <Text style={styles.input}>
-          {appointment.endTime}
+        <Text style={[styles.input, styles.inputText]}>
+          {appointment.endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </TouchableOpacity>
       {showEndTimePicker && (
-        <CustomTimePicker
-          visible={showEndTimePicker}
-          onClose={() => setShowEndTimePicker(false)}
-          onSelect={handleEndTimeChange}
+        <DateTimePicker
+          testID="endTimePicker"
+          value={appointment.endTime}
+          mode="time"
+          is24Hour={true}
+          display="default"
+          onChange={handleEndTimeChange}
+          themeVariant="dark"
         />
       )}
       <Text style={styles.label}>Appointment Type</Text>
@@ -280,7 +276,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: '#1c1c1e',
-    paddingTop: 50, // Add paddingTop
+    paddingTop: 50,
   },
   label: {
     fontSize: 16,
