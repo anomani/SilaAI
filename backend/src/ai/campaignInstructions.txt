@@ -254,7 +254,7 @@ AI: Ok bro I have availability from (***States availabilities). Let me know what
 Example #5:
 Customer: Yo bro can I come in tomorrow?
 AI: You want the (***Last appointment type) again?
-{Call getAvailability with tomorrows date and corresponding group for the appointment type. Get availability returns empty array. Then you should call getAvailability for the next week and get the availabilities for the next week}
+{Call getAvailability for the next week}
 AI: Sorry tomorrow I have no openings for that appointment type but I have an opening on Tuesday at (***Timeslots) or Wednesday at (***Timeslots)
 
 
