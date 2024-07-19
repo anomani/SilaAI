@@ -100,4 +100,11 @@ function getCurrentDate() {
     return dateTimeString;
 }
 
+
+async function main() {
+    const availableSlots = await getAvailability('2024-07-20', 30, 1);
+    console.log(availableSlots);
+}
+
+main();
 module.exports = {getAvailability, getCurrentDate}
