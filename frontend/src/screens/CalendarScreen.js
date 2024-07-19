@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput } from 'react-native';
 import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import Swiper from 'react-native-swiper';
-import avatarImage from '../../assets/lebron-hair.png'; // Adjust the path as needed
+import avatarImage from '../../assets/avatar.png'; // Adjust the path as needed
 import Icon from 'react-native-vector-icons/FontAwesome';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
@@ -27,7 +27,7 @@ const CalendarScreen = ({ navigation }) => {
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [isBlockTimeModalVisible, setIsBlockTimeModalVisible] = useState(false);
   const [blockedTimeData, setBlockedTimeData] = useState({
-    date: '',
+    date: new Date().toISOString().split('T')[0],
     startTime: '',
     endTime: '',
     reason: ''
@@ -498,6 +498,13 @@ const CalendarScreen = ({ navigation }) => {
     navigation.navigate('AddAppointment');
   };
 
+  const handleBlockTimeInputChange = (field, value) => {
+    setBlockedTimeData(prevData => ({
+      ...prevData,
+      [field]: value
+    }));
+  };
+
   const handleBlockTimeSubmit = async () => {
     try {
       await createBlockedTime(blockedTimeData);
@@ -625,8 +632,46 @@ const CalendarScreen = ({ navigation }) => {
         <View style={styles.modalOverlay}>
           <View style={styles.blockTimeModal}>
             <Text style={styles.modalTitle}>Block Time</Text>
-            {/* Add input fields for date, startTime, endTime, and reason */}
-            {/* For simplicity, I'm omitting the actual input fields. You should add them here. */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Date:</Text>
+              <TextInput
+                style={styles.input}
+                value={blockedTimeData.date}
+                onChangeText={(value) => handleBlockTimeInputChange('date', value)}
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Start Time:</Text>
+              <TextInput
+                style={styles.input}
+                value={blockedTimeData.startTime}
+                onChangeText={(value) => handleBlockTimeInputChange('startTime', value)}
+                placeholder="HH:MM AM/PM"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>End Time:</Text>
+              <TextInput
+                style={styles.input}
+                value={blockedTimeData.endTime}
+                onChangeText={(value) => handleBlockTimeInputChange('endTime', value)}
+                placeholder="HH:MM AM/PM"
+                placeholderTextColor="#999"
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Reason:</Text>
+              <TextInput
+                style={styles.input}
+                value={blockedTimeData.reason}
+                onChangeText={(value) => handleBlockTimeInputChange('reason', value)}
+                placeholder="Reason for blocking time"
+                placeholderTextColor="#999"
+              />
+            </View>
             <TouchableOpacity style={styles.submitButton} onPress={handleBlockTimeSubmit}>
               <Text style={styles.submitButtonText}>Submit</Text>
             </TouchableOpacity>
@@ -1091,6 +1136,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  inputContainer: {
+    marginBottom: 15,
+  },
+  inputLabel: {
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 5,
+  },
+  input: {
+    backgroundColor: '#333',
+    borderRadius: 5,
+    padding: 10,
+    color: '#fff',
   },
 });
 
