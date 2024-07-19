@@ -103,11 +103,20 @@ async function handleUserInputData(userMessage) {
     const assistant = await createAssistant(date);
     const thread = await createThread();
 
+    // Check if there's an active run
+    const runs = await openai.beta.threads.runs.list(thread.id);
+    const activeRun = runs.data.find(run => ['in_progress', 'queued'].includes(run.status));
+
+    if (activeRun) {
+      // If there's an active run, wait for it to complete
+      await waitForRunCompletion(thread.id, activeRun.id);
+    }
+
+    // Now it's safe to create a new message and start a new run
     const message = await openai.beta.threads.messages.create(thread.id, {
       role: "user",
       content: userMessage,
     });
-
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id
@@ -186,8 +195,21 @@ async function handleUserInputData(userMessage) {
   }
 }
 
+// Add this helper function to wait for a run to complete
+async function waitForRunCompletion(threadId, runId) {
+  while (true) {
+    await delay(1000);
+    const runStatus = await openai.beta.threads.runs.retrieve(threadId, runId);
+    if (['completed', 'failed', 'cancelled'].includes(runStatus.status)) {
+      break;
+    }
+  }
+}
+
 // Add this function to retrieve the query
 function getStoredQuery(id) {
+  console.log(id)
+  console.log(queryStore);
   return queryStore[id];
 }
 
