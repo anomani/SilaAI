@@ -8,7 +8,7 @@ const openai = new OpenAI({
 });
 
 async function analyzeNames(names) {
-  const chunkSize = 10; // Increased chunk size
+  const chunkSize = 5; // Increased chunk size
   const results = {};
   const chunks = [];
 
