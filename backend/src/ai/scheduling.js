@@ -35,24 +35,33 @@ const tools = [
     type: "function",
     function: {
       name: "getAvailability",
-      description: "Given the day will return an array of JSON objects with the following properties: id, appointmentType, clientId, date, startTime, endTime, details. These are the already made appointments for that day.",
+      description: "Given the day, appointment type, and add-ons, returns an array of available time slots.",
       parameters: {
         type: "object",
         properties: {
           day: {
             type: "string",
-            description: "What day that they are checking availability for. This should be in the form of YYYY-MM-DD. Convert anything else that the user gives to this form. Use the getCurrentDate if the user uses phrases such as today or tomorrow"
+            description: "The day to check availability for, in the format YYYY-MM-DD."
           },
-          duration: {
-            type: "number",
-            description: "The duration of the appointment in minutes"
+          appointmentType: {
+            type: "string",
+            enum: Object.keys(appointmentTypes),
+            description: "The type of appointment they want to book."
+          },
+          addOns: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: Object.keys(addOns)
+            },
+            description: "An array of add-ons for the appointment."
           },
           group: {
             type: "number",
-            description: "The appointment group that the appointment is in. Should be a number that is either 1,2, or 3"
+            description: "The appointment group (1, 2, or 3)."
           }
         },
-        required: ["day", "duration", "group"]
+        required: ["day", "appointmentType", "addOns", "group"]
       }
     }
   },
@@ -406,10 +415,17 @@ async function handleUserInput(userMessage, phoneNumber) {
           const args = JSON.parse(action.function.arguments);
 
           if (funcName === "getAvailability") {
-            let output = await getAvailability(args.day, args.duration, args.group);
+            const appointmentTypeInfo = appointmentTypes[args.appointmentType];
+            if (!appointmentTypeInfo) {
+              throw new Error(`Invalid appointment type: ${args.appointmentType}`);
+            }
+
+            const totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
+
+            let output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group, totalDuration);
             if (output.length === 0) {
               // If no availability, find the next available slots
-              const nextAvailableSlots = await findNextAvailableSlots(args.day, args.duration, args.group);
+              const nextAvailableSlots = await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, args.group);
               output = {
                 requestedDay: args.day,
                 nextAvailableSlots: nextAvailableSlots
@@ -438,12 +454,6 @@ async function handleUserInput(userMessage, phoneNumber) {
               totalPrice,
               args.addOns
             );
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } else if (funcName === "getCurrentDate") {
-            const output = getCurrentDate();
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
@@ -523,14 +533,10 @@ async function handleUserInput(userMessage, phoneNumber) {
   }
 }
 
-
-// async function main() {
-//   const currentDate = new Date(getCurrentDate());
-//   console.log("Current Date:", currentDate)
-//   const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
-//   console.log("Day:", day)
-// }
-
-// main()
+function calculateTotalDuration(appointmentType, addOnArray) {
+  const appointmentDuration = appointmentTypes[appointmentType].duration;
+  const addOnsDuration = addOnArray.reduce((total, addOn) => total + addOns[addOn].duration, 0);
+  return appointmentDuration + addOnsDuration;
+}
 
 module.exports = { getAvailability, bookAppointment, handleUserInput };
