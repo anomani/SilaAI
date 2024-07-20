@@ -102,8 +102,8 @@ async function handleIncomingMessage(req, res) {
         console.log('Duplicate message detected, skipping save');
       }
     }
-
-    const responseMessage = await handleUserInput(Body, Author);
+    const areeb = '+16478985997'
+    const responseMessage = await handleUserInput(Body, areeb);
     console.log(responseMessage)
     if (responseMessage === "user" || responseMessage === "User")  {
       await toggleLastMessageReadStatus(clientId);
