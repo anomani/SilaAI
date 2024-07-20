@@ -2,12 +2,20 @@ const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
 const {getAppointmentsByDay} = require('../../model/appointment')
+const { appointmentTypes } = require('../../model/appointmentTypes');
 
-
-async function getAvailability(day, duration, group, clientId = null) {
+async function getAvailability(day, appointmentType, group, clientId = null) {
     console.log("Day:", day);
-    console.log("Duration:", duration);
+    console.log("Appointment Type:", appointmentType);
     console.log("Group:", group);
+
+    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
+    }
+
+    const duration = appointmentTypeInfo.duration;
+
     try {
         const date = new Date(day);
         const dayOfWeek = date.getDay();
@@ -101,14 +109,21 @@ function getCurrentDate() {
 }
 
 
-async function findNextAvailableSlots(startDay, duration, group, numberOfSlots = 5) {
+async function findNextAvailableSlots(startDay, appointmentType, group, numberOfSlots = 5) {
+  const appointmentTypeInfo = appointmentTypes[appointmentType];
+  if (!appointmentTypeInfo) {
+    throw new Error(`Invalid appointment type: ${appointmentType}`);
+  }
+
+  const duration = appointmentTypeInfo.duration;
+
   let currentDay = new Date(startDay);
   let availableSlots = [];
   let daysChecked = 0;
 
   while (availableSlots.length < numberOfSlots && daysChecked < 14) {
     const dayString = currentDay.toISOString().split('T')[0];
-    const dayAvailability = await getAvailability(dayString, duration, group);
+    const dayAvailability = await getAvailability(dayString, appointmentType, group);
     
     if (Array.isArray(dayAvailability) && dayAvailability.length > 0) {
       for (const slot of dayAvailability) {
