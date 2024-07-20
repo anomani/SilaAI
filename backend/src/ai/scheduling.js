@@ -318,11 +318,10 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
   
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
-  console.log(aiPrompt)
 
   // Place aiPrompt before assistantInstructions
   let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
-  
+  console.log(fullInstructions)
   fullInstructions = fullInstructions
     .replace('${appointment}', JSON.stringify(appointment, null, 2))
     .replace('${appointmentDuration}', appointmentDuration)
