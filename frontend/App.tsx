@@ -22,6 +22,7 @@ import ChatScreen from './src/screens/ChatScreen';
 import EditClientScreen from './src/screens/EditClientScreen';
 import ChatDashboard from './src/screens/ChatDashboard';
 import ClientMessagesScreen from './src/screens/ClientMessagesScreen';
+import InitiateConversation from './src/screens/InitiateConversation';
 
 const Stack = createStackNavigator();
 
@@ -131,6 +132,7 @@ const AppContent: React.FC = () => {
         component={ClientMessagesScreen} 
         initialParams={{ clientid: 0, clientName: '' }}
       />
+      <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
     </Stack.Navigator>
   );
 };

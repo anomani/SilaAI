@@ -135,7 +135,7 @@ const sendMessagesToSelectedClients = async (req, res) => {
         console.log(`Client not found for id: ${id}`);
       }
     }
-    res.status(200).json({ message: 'Messages sent' });
+    res.status(200).json({ message: 'Messages sent successfully' });
   } catch (error) {
     console.error('Error sending messages to selected clients:', error);
     res.status(500).json({ error: 'Error sending messages' });
