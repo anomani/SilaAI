@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, Image, ActivityIndicator, TouchableOpacity, Modal, TextInput, SafeAreaView } from 'react-native';
+import { View, Text, FlatList, StyleSheet, Image, ActivityIndicator, TouchableOpacity, Modal, TextInput, SafeAreaView, ScrollView } from 'react-native';
 import { getCustomList, sendMessagesToSelectedClients, updateClientOutreachDate } from '../services/api';
 import Checkbox from 'expo-checkbox';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ const QueryResults = ({ route }) => {
   const [selectedClients, setSelectedClients] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [conversationMessage, setConversationMessage] = useState('');
+  const [aiPrompt, setAiPrompt] = useState('');
   const [search, setSearch] = useState('');
   const { id } = route.params;
 
@@ -54,8 +55,8 @@ const QueryResults = ({ route }) => {
       return;
     }
     try {
-      console.log(selectedClients, conversationMessage);
-      await sendMessagesToSelectedClients(selectedClients, conversationMessage);
+      console.log(selectedClients, conversationMessage, aiPrompt);
+      await sendMessagesToSelectedClients(selectedClients, conversationMessage, aiPrompt);
       
       // Update client outreach date for each selected client
       const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
@@ -66,6 +67,7 @@ const QueryResults = ({ route }) => {
       alert('Conversations initiated successfully and client outreach dates updated. You can view the chats in the chat dashboard and will get notifications when you need to jump in.');
       setSelectedClients([]);
       setConversationMessage('');
+      setAiPrompt('');
       setModalVisible(false);
     } catch (error) {
       console.error('Error initiating conversations or updating outreach dates:', error);
@@ -152,7 +154,7 @@ const QueryResults = ({ route }) => {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.centeredView}>
-          <View style={styles.modalView}>
+          <ScrollView contentContainerStyle={styles.modalView}>
             <Text style={styles.modalText}>
               Initiate conversation with {selectedClients.length} selected client(s)
             </Text>
@@ -164,6 +166,17 @@ const QueryResults = ({ route }) => {
               onChangeText={setConversationMessage}
               value={conversationMessage}
               placeholder="Type your message here"
+              placeholderTextColor="#999"
+              multiline
+            />
+            <Text style={styles.instructionText}>
+              (Optional) Provide a prompt for the AI to guide the conversation:
+            </Text>
+            <TextInput
+              style={styles.input}
+              onChangeText={setAiPrompt}
+              value={aiPrompt}
+              placeholder="AI prompt (optional)"
               placeholderTextColor="#999"
               multiline
             />
@@ -181,7 +194,7 @@ const QueryResults = ({ route }) => {
                 <Text style={styles.textStyle}>Initiate</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </SafeAreaView>
@@ -265,6 +278,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     width: '90%',
+    maxHeight: '80%',
   },
   modalText: {
     marginBottom: 15,

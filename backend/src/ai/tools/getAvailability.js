@@ -22,11 +22,11 @@ async function getAvailability(day, appointmentType, addOnArray, group, clientId
         const dayOfWeek = date.getDay();
         console.log(dayOfWeek)
         if (dayOfWeek === 0 || dayOfWeek === 1) {
-            return `I don't take appointments on ${dayOfWeek === 0 ? 'Sunday' : 'Monday'}`;
+            return []
         }
         const groupAvailability = getGroupAvailability(group, dayOfWeek);
         if (!groupAvailability) {
-            return "No availability for this group on the selected day";
+            return []
         }
 
         const appointments = await getAppointmentsByDay(day);
