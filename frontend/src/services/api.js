@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -252,9 +252,9 @@ export const getCustomList = async (id) => {
   }
 };
 
-export const sendMessagesToSelectedClients = async (ids, messageTemplate) => {
+export const sendMessagesToSelectedClients = async (ids, messageTemplate, aiPrompt) => {
   try {
-      await retryRequest(() => throttledRequest(() => api.post('/chat/send-messages-to-selected-clients', { ids, messageTemplate })));
+    await retryRequest(() => throttledRequest(() => api.post('/chat/send-messages-to-selected-clients', { ids, messageTemplate, aiPrompt })));
   } catch (error) {
     console.error('Error sending messages to selected clients:', error);
     throw error;
