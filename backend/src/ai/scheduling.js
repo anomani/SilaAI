@@ -319,7 +319,11 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
   console.log(aiPrompt)
-  assistantInstructions = assistantInstructions
+
+  // Place aiPrompt before assistantInstructions
+  let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
+  
+  fullInstructions = fullInstructions
     .replace('${appointment}', JSON.stringify(appointment, null, 2))
     .replace('${appointmentDuration}', appointmentDuration)
     .replace('${fname}', fname)
@@ -329,12 +333,9 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
     .replace('${daysSinceLastAppointment}', daysSinceLastAppointment)
     .replace('${day}', day);
 
-  // Add the AI prompt to the instructions
-  assistantInstructions += `\n\nAdditional Instructions: ${aiPrompt}`;
-
   if (!assistants.has(phone)) {
     const newAssistant = await openai.beta.assistants.create({
-      instructions: assistantInstructions,
+      instructions: fullInstructions,
       name: `Scheduling Assistant for ${fname} ${lname}`,
       model: "gpt-4o",
       tools: tools,
