@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { createRecurringAppointments } = require('./tools/recurringAppointments');
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
+const { appointmentTypes } = require('../model/appointmentTypes');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -73,6 +74,7 @@ const tools = [
           },
           appointmentType: {
             type: "string",
+            enum: Object.keys(appointmentTypes),
             description: "The type of appointment they want to book."
           },
           appointmentDuration: {
@@ -95,7 +97,7 @@ const tools = [
             }
           }
         },
-        required: ["date", "startTime", "appointmentType", "apponintmentDuration", "group", "price", "addOns"]
+        required: ["date", "startTime", "appointmentType", "appointmentDuration", "group", "price", "addOns"]
       }
     }
   },
