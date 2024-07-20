@@ -101,30 +101,30 @@ function getCurrentDate() {
 }
 
 
-async function findNextAvailableDay(startDay, duration, group) {
+async function findNextAvailableSlots(startDay, duration, group, numberOfSlots = 5) {
   let currentDay = new Date(startDay);
-  currentDay.setDate(currentDay.getDate() + 1); // Start from the next day
+  let availableSlots = [];
+  let daysChecked = 0;
 
-  for (let i = 0; i < 14; i++) { // Look for availability in the next 14 days
+  while (availableSlots.length < numberOfSlots && daysChecked < 14) {
     const dayString = currentDay.toISOString().split('T')[0];
-    const availability = await getAvailability(dayString, duration, group);
+    const dayAvailability = await getAvailability(dayString, duration, group);
     
-    if (Array.isArray(availability) && availability.length > 0) {
-      return dayString;
+    if (Array.isArray(dayAvailability) && dayAvailability.length > 0) {
+      for (const slot of dayAvailability) {
+        availableSlots.push({
+          date: dayString,
+          ...slot
+        });
+        if (availableSlots.length >= numberOfSlots) break;
+      }
     }
 
     currentDay.setDate(currentDay.getDate() + 1);
+    daysChecked++;
   }
 
-  return null; // No availability found in the next 14 days
+  return availableSlots;
 }
 
-
-
-// async function main() {
-//     const availableSlots = await getAvailability('2024-07-20', 30, 1);
-//     console.log(availableSlots);
-// }
-
-// main();
-module.exports = {getAvailability, getCurrentDate, findNextAvailableDay}
+module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots}
