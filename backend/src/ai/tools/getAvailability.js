@@ -101,10 +101,30 @@ function getCurrentDate() {
 }
 
 
+async function findNextAvailableDay(startDay, duration, group) {
+  let currentDay = new Date(startDay);
+  currentDay.setDate(currentDay.getDate() + 1); // Start from the next day
+
+  for (let i = 0; i < 14; i++) { // Look for availability in the next 14 days
+    const dayString = currentDay.toISOString().split('T')[0];
+    const availability = await getAvailability(dayString, duration, group);
+    
+    if (Array.isArray(availability) && availability.length > 0) {
+      return dayString;
+    }
+
+    currentDay.setDate(currentDay.getDate() + 1);
+  }
+
+  return null; // No availability found in the next 14 days
+}
+
+
+
 // async function main() {
 //     const availableSlots = await getAvailability('2024-07-20', 30, 1);
 //     console.log(availableSlots);
 // }
 
 // main();
-module.exports = {getAvailability, getCurrentDate}
+module.exports = {getAvailability, getCurrentDate, findNextAvailableDay}

@@ -1,7 +1,7 @@
 const { OpenAI } = require('openai');
 const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
-const { getAvailability, getCurrentDate } = require('./tools/getAvailability');
+const { getAvailability, getCurrentDate, findNextAvailableDay } = require('./tools/getAvailability');
 const { bookAppointment } = require('./tools/bookAppointment');
 const {cancelAppointment} = require('./tools/cancelAppointment')
 const { getClientByPhoneNumber,getDaysSinceLastAppointment, createClient } = require('../model/clients');
@@ -411,7 +411,16 @@ async function handleUserInput(userMessage, phoneNumber) {
           const args = JSON.parse(action.function.arguments);
 
           if (funcName === "getAvailability") {
-            const output = await getAvailability(args.day, args.duration, args.group);
+            let output = await getAvailability(args.day, args.duration, args.group);
+            if (output.length === 0) {
+              // If no availability, find the next available day
+              const nextAvailableDay = await findNextAvailableDay(args.day, args.duration, args.group);
+              output = {
+                requestedDay: args.day,
+                nextAvailableDay: nextAvailableDay,
+                availableSlots: await getAvailability(nextAvailableDay, args.duration, args.group)
+              };
+            }
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
