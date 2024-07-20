@@ -1,20 +1,19 @@
 const appointmentTypes = {
-    "Adult - (Full Service)": 22874968,
-    "OFF DAY/EMERGENCY - (Full Service)": 15060525,
-    "Adult Cut": 15050466,
-    "High-School Cut": 14803389,
-    "Kids Cut - (12 & Under)": 3413025,
-    "Lineup + Taper": 15051749,
-    "Beard Grooming Only": 15051757,
+    "Adult - (Full Service)": { id: 22874968, price: 100, duration: 60 },
+    "OFF DAY/EMERGENCY - (Full Service)": { id: 15060525, price: 150, duration: 60 },
+    "Adult Cut": { id: 15050466, price: 55, duration: 30 },
+    "High-School Cut": { id: 14803389, price: 45, duration: 30 },
+    "Kids Cut - (12 & Under)": { id: 3413025, price: 35, duration: 30 },
+    "Lineup + Taper": { id: 15051749, price: 35, duration: 30 },
+    "Beard Grooming Only": { id: 15051757, price: 30, duration: 30 },
 };
 
 const addOns = {
-    "Beard Grooming": 187938,
-    "Beard Grooming for Lineup + Taper": 1128808,
-    "Colour Enhancement for Patchy Beard": 187944,
-    "Hot Towel + Black Mask Treatment for Clogged Pores": 187941,
-    "Shampoo & Hair Wash": 1128814,
-    "Wax - Hair Removal ($5+)": 1128727
+    "Beard Grooming": { id: 187938, price: 20, duration: 15 },
+    "Beard Grooming for Lineup + Taper": { id: 1128808, price: 0, duration: 0 },
+    "Colour Enhancement": { id: 187944, price: 20, duration: 15 },
+    "Hot Towel + Black Mask Treatment for Clogged Pores": { id: 187941, price: 10, duration: 0 },
+    "Wax - Hair Removal": { id: 1128727, price: 5, duration: 0 }
 };
 
 module.exports = { appointmentTypes, addOns };

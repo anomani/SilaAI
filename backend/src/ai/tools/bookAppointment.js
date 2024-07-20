@@ -10,8 +10,7 @@ const dbUtils = require('../../model/dbUtils')
 const {getAvailability} = require('./getAvailability')
 const axios = require('axios');
 const moment = require('moment-timezone');
-const { appointmentTypes } = require('../../model/appointmentTypes');
-const { addOns } = require('../../model/appointmentTypes');
+const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 
 async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray) {
     const acuityApiUrl = 'https://acuityscheduling.com/api/v1/appointments';
@@ -20,19 +19,19 @@ async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, e
         password: process.env.ACUITY_API_KEY
     };
 
-    const appointmentTypeID = appointmentTypes[appointmentType];
-    if (!appointmentTypeID) {
+    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    if (!appointmentTypeInfo) {
         throw new Error(`Invalid appointment type: ${appointmentType}`);
     }
 
     const timezone = 'America/New_York';
     const datetime = moment.tz(`${date} ${startTime}`, timezone).format();
 
-    const addonIDs = addOnArray.map(addon => addOns[addon]).filter(id => id !== undefined);
+    const addonIDs = addOnArray.map(addon => addOns[addon].id).filter(id => id !== undefined);
     
     const appointmentData = {
         datetime: datetime,
-        appointmentTypeID: appointmentTypeID,
+        appointmentTypeID: appointmentTypeInfo.id,
         firstName: fname,
         lastName: lname,
         email: email,

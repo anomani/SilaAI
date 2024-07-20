@@ -77,18 +77,10 @@ const tools = [
             enum: Object.keys(appointmentTypes),
             description: "The type of appointment they want to book."
           },
-          appointmentDuration: {
-            type: "number",
-            description: "The duration of the appointment in minutes"
-          },
           group: {
             type: "number",
             description: "The appointment group that the appointment is in. Should be a number that is either 1,2, or 3"
           },
-          price: {
-            type: "number",
-            description: "The price of the appointment"
-          } ,
           addOns: {
             type: "array",
             description: "The add-ons for the appointment",
@@ -98,7 +90,7 @@ const tools = [
             }
           }
         },
-        required: ["date", "startTime", "appointmentType", "appointmentDuration", "group", "price", "addOns"]
+        required: ["date", "startTime", "appointmentType", "group", "addOns"]
       }
     }
   },
@@ -428,7 +420,24 @@ async function handleUserInput(userMessage, phoneNumber) {
               output: JSON.stringify(output)
             });
           } else if (funcName === "bookAppointment") {
-            const output = await bookAppointment(args.date, args.startTime, fname, lname, phoneNumber, email, args.appointmentType, args.appointmentDuration,args.group, args.price, args.addOns);
+            const appointmentTypeInfo = appointmentTypes[args.appointmentType];
+            const addOnInfo = args.addOns.map(addon => addOns[addon]);
+            const totalPrice = appointmentTypeInfo.price + addOnInfo.reduce((sum, addon) => sum + addon.price, 0);
+            const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
+
+            const output = await bookAppointment(
+              args.date,
+              args.startTime,
+              fname,
+              lname,
+              phoneNumber,
+              email,
+              args.appointmentType,
+              totalDuration,
+              args.group,
+              totalPrice,
+              args.addOns
+            );
             toolOutputs.push({
               tool_call_id: action.id,
               output: JSON.stringify(output)
