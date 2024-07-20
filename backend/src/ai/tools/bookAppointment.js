@@ -87,8 +87,10 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     console.log("Group:", group);
     console.log("Price:", price);
     console.log("Add-Ons:", addOnArray);
-    const availability = await getAvailability(date, appointmentDuration, group);
+
+    const availability = await getAvailability(date, appointmentType, addOnArray, group);
     const endTime = addMinutes(startTime, appointmentDuration);
+
     //For case that the slot overlaps
     for (const slot of availability) { 
         if (isAfter(startTime, slot.startTime) && !isAfter(startTime, slot.endTime)) {
