@@ -12,6 +12,7 @@ const path = require('path');
 const { createRecurringAppointments } = require('./tools/recurringAppointments');
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
+const { getAIPrompt } = require('../model/aiPrompt');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -312,15 +313,12 @@ async function createThread(phoneNumber) {
 }
 
 async function createAssistant(fname, lname, phone, messages, appointment, appointmentDuration, daysSinceLastAppointment, day, client) {
-  let instructionsPath;
-  if (client.outreach_date) {
-    console.log("Campaign")
-    instructionsPath = path.join(__dirname, 'campaignInstructions.txt');
-  } else {
-    instructionsPath = path.join(__dirname, 'assistantInstructions.txt');
-  }
-
+  const instructionsPath = path.join(__dirname, 'assistantInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
+  
+  // Get the AI prompt for this client
+  const aiPrompt = await getAIPrompt(client.id);
+  console.log(aiPrompt)
   assistantInstructions = assistantInstructions
     .replace('${appointment}', JSON.stringify(appointment, null, 2))
     .replace('${appointmentDuration}', appointmentDuration)
@@ -330,6 +328,9 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
     .replace('${messages}', JSON.stringify(messages, null, 2))
     .replace('${daysSinceLastAppointment}', daysSinceLastAppointment)
     .replace('${day}', day);
+
+  // Add the AI prompt to the instructions
+  assistantInstructions += `\n\nAdditional Instructions: ${aiPrompt}`;
 
   if (!assistants.has(phone)) {
     const newAssistant = await openai.beta.assistants.create({
@@ -539,4 +540,4 @@ function calculateTotalDuration(appointmentType, addOnArray) {
   return appointmentDuration + addOnsDuration;
 }
 
-module.exports = { getAvailability, bookAppointment, handleUserInput };
+module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant };

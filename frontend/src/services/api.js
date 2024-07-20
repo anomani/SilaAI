@@ -252,9 +252,9 @@ export const getCustomList = async (id) => {
   }
 };
 
-export const sendMessagesToSelectedClients = async (ids, messageTemplate, aiPrompt) => {
+export const sendMessagesToSelectedClients = async (ids, messageTemplate) => {
   try {
-    await retryRequest(() => throttledRequest(() => api.post('/chat/send-messages-to-selected-clients', { ids, messageTemplate, aiPrompt })));
+    await retryRequest(() => throttledRequest(() => api.post('/chat/send-messages-to-selected-clients', { ids, messageTemplate })));
   } catch (error) {
     console.error('Error sending messages to selected clients:', error);
     throw error;
@@ -306,6 +306,25 @@ export const createBlockedTime = async (blockedTimeData) => {
     return response.data;
   } catch (error) {
     console.error('Error creating blocked time:', error);
+    throw error;
+  }
+};
+
+export const setAIPrompt = async (clientId, prompt) => {
+  try {
+    await api.post('/ai-prompt/set-prompt', { clientId, prompt });
+  } catch (error) {
+    console.error('Error setting AI prompt:', error);
+    throw error;
+  }
+};
+
+export const getAIPrompt = async (clientId) => {
+  try {
+    const response = await api.get(`/ai-prompt/get-prompt/${clientId}`);
+    return response.data.prompt;
+  } catch (error) {
+    console.error('Error getting AI prompt:', error);
     throw error;
   }
 };

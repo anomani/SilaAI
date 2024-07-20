@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, Image, ActivityIndicator, TouchableOpacity, Modal, TextInput, SafeAreaView, ScrollView } from 'react-native';
-import { getCustomList, sendMessagesToSelectedClients, updateClientOutreachDate } from '../services/api';
+import { View, Text, FlatList, StyleSheet, Image, ActivityIndicator, TouchableOpacity, TextInput, SafeAreaView, ScrollView } from 'react-native';
+import { getCustomList, sendMessagesToSelectedClients, updateClientOutreachDate, setAIPrompt } from '../services/api';
 import Checkbox from 'expo-checkbox';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -10,9 +10,6 @@ const QueryResults = ({ route }) => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedClients, setSelectedClients] = useState([]);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [conversationMessage, setConversationMessage] = useState('');
-  const [aiPrompt, setAiPrompt] = useState('');
   const [search, setSearch] = useState('');
   const { id } = route.params;
 
@@ -45,34 +42,10 @@ const QueryResults = ({ route }) => {
       alert('Please select at least one client');
       return;
     }
-    setConversationMessage(`Hey {firstName},\n\n`);
-    setModalVisible(true);
-  };
-
-  const initiateConversation = async () => {
-    if (!conversationMessage.trim()) {
-      alert('Please enter a message');
-      return;
-    }
-    try {
-      console.log(selectedClients, conversationMessage, aiPrompt);
-      await sendMessagesToSelectedClients(selectedClients, conversationMessage, aiPrompt);
-      
-      // Update client outreach date for each selected client
-      const today = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-      for (const clientId of selectedClients) {
-        await updateClientOutreachDate(clientId, today);
-      }
-
-      alert('Conversations initiated successfully and client outreach dates updated. You can view the chats in the chat dashboard and will get notifications when you need to jump in.');
-      setSelectedClients([]);
-      setConversationMessage('');
-      setAiPrompt('');
-      setModalVisible(false);
-    } catch (error) {
-      console.error('Error initiating conversations or updating outreach dates:', error);
-      alert('Failed to initiate conversations or update outreach dates');
-    }
+    navigation.navigate('InitiateConversation', {
+      selectedClients,
+      clientCount: selectedClients.length,
+    });
   };
 
   const selectAllClients = () => {
@@ -147,56 +120,6 @@ const QueryResults = ({ route }) => {
           </>
         )}
       </View>
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.centeredView}>
-          <ScrollView contentContainerStyle={styles.modalView}>
-            <Text style={styles.modalText}>
-              Initiate conversation with {selectedClients.length} selected client(s)
-            </Text>
-            <Text style={styles.instructionText}>
-              Write the initial message and AI will take care of the rest! Use {'{firstName}'} to automatically insert the client's first name.
-            </Text>
-            <TextInput
-              style={styles.input}
-              onChangeText={setConversationMessage}
-              value={conversationMessage}
-              placeholder="Type your message here"
-              placeholderTextColor="#999"
-              multiline
-            />
-            <Text style={styles.instructionText}>
-              (Optional) Provide a prompt for the AI to guide the conversation:
-            </Text>
-            <TextInput
-              style={styles.input}
-              onChangeText={setAiPrompt}
-              value={aiPrompt}
-              placeholder="AI prompt (optional)"
-              placeholderTextColor="#999"
-              multiline
-            />
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonCancel]}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={styles.textStyle}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.buttonInitiate]}
-                onPress={initiateConversation}
-              >
-                <Text style={styles.textStyle}>Initiate</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -255,75 +178,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  centeredView: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingTop: 140,
-  },
-  modalView: {
-    margin: 20,
-    backgroundColor: '#2c2c2e',
-    borderRadius: 20,
-    padding: 35,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    width: '90%',
-    maxHeight: '80%',
-  },
-  modalText: {
-    marginBottom: 15,
-    textAlign: 'center',
-    color: '#fff',
-    fontSize: 18,
-  },
-  instructionText: {
-    marginBottom: 10,
-    textAlign: 'center',
-    color: '#ccc',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  input: {
-    height: 100,
-    width: '100%',
-    borderColor: '#444',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    color: '#fff',
-    backgroundColor: '#1c1c1e',
-    textAlignVertical: 'top',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    marginTop: 20,
-  },
-  button: {
-    borderRadius: 20,
-    padding: 10,
-    elevation: 2,
-    marginHorizontal: 10,
-  },
-  buttonCancel: {
-    backgroundColor: '#555',
-  },
-  buttonInitiate: {
-    backgroundColor: '#007bff',
-  },
-  textStyle: {
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
   },
   selectionControls: {
     flexDirection: 'row',
