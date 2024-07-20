@@ -20,7 +20,8 @@ const QueryResults = ({ route }) => {
   const fetchQueryResults = async () => {
     setLoading(true);
     try {
-      const data = await getCustomList(id);
+      const cleanId = id.replace(/[()]/g, '');
+      const data = await getCustomList(cleanId);
       setClients(data);
     } catch (error) {
       console.error('Error fetching query results:', error);
