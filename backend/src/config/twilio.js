@@ -50,6 +50,16 @@ async function sendMessage(to, body) {
       role: "assistant",
       content: body,
     });
+
+    // List the messages of the thread and print them out
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    console.log("Thread messages:");
+    messages.data.forEach((message, index) => {
+      console.log(`Message ${index + 1}:`);
+      console.log(`Role: ${message.role}`);
+      console.log(`Content: ${message.content[0].text.value}`);
+      console.log('---');
+    });
   }
   const to_formatted = formatPhoneNumber(to);
   console.log("To formatted: ", to_formatted)
