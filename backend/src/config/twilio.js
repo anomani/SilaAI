@@ -1,7 +1,7 @@
 const twilio = require('twilio');
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
-const { handleUserInput } = require('../ai/scheduling');
+const { handleUserInput, createThread } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus } = require('../model/messages');
 const { getClientByPhoneNumber } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
@@ -41,6 +41,14 @@ async function sendMessage(to, body) {
   if (customer.id != '') {
     clientId = customer.id
     await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId);
+
+    // Add the message to the thread as an assistant message
+    const thread = await createThread(to);
+    
+    await openai.beta.threads.messages.create(thread.id, {
+      role: "assistant",
+      content: body,
+    });
   }
   const to_formatted = formatPhoneNumber(to);
   console.log("To formatted: ", to_formatted)

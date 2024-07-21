@@ -545,4 +545,4 @@ function calculateTotalDuration(appointmentType, addOnArray) {
   return appointmentDuration + addOnsDuration;
 }
 
-module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant };
+module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread };
