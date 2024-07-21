@@ -10,8 +10,9 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 const { getUserPushToken } = require('../model/pushToken');
 const { getUserByPhoneNumber } = require('../model/users');
-
 const { Expo } = require('expo-server-sdk');
+const OpenAI = require('openai');
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Initialize the Expo SDK
 let expo = new Expo();
