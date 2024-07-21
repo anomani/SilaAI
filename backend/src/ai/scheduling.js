@@ -355,7 +355,7 @@ async function createTemporaryAssistant(phoneNumber) {
     name: `Assistant to get name of the client`,
     model: "gpt-4o",
     tools: tools,
-    temperature: 0.1
+    temperature: 0.2
   });
   return newAssistant;
 }
