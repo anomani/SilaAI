@@ -371,6 +371,7 @@ async function handleUserInput(userMessage, phoneNumber) {
     } else {
       console.log("Client already exists");
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
+      console.log(messages)
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
       console.log(appointment)
       let appointmentDuration = appointment.length > 0 ? getAppointmentDuration(appointment) : 30;
