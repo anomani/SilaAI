@@ -319,6 +319,11 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
 
+  // Format messages for better readability
+  const formattedMessages = messages.map(msg => 
+    `From: ${msg.fromtext}\nTo: ${msg.totext}\nDate: ${msg.date}\nMessage: ${msg.body}`
+  ).join('\n\n');
+
   // Place aiPrompt before assistantInstructions
   let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
   fullInstructions = fullInstructions
@@ -327,7 +332,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
     .replace('${fname}', fname)
     .replace('${lname}', lname)
     .replace('${phone}', phone)
-    .replace('${messages}', JSON.stringify(messages, null, 2))
+    .replace('${messages}', formattedMessages)
     .replace('${daysSinceLastAppointment}', daysSinceLastAppointment)
     .replace('${day}', day);
 
