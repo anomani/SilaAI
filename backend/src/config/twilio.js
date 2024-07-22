@@ -123,7 +123,6 @@ async function handleIncomingMessage(req, res) {
     }
     // const areeb = '+16478985997'
     const responseMessage = await handleUserInput(Body, Author);
-    console.log(responseMessage)
     if (responseMessage === "user" || responseMessage === "User")  {
       await toggleLastMessageReadStatus(clientId);
       await sendNotificationToUser(client.firstname, Body, clientId);  // Pass clientId here
