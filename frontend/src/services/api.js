@@ -338,3 +338,23 @@ export const getClientAppointmentsAroundCurrent = async (clientId, currentAppoin
     throw error;
   }
 };
+
+export const getNotesByClientId = async (clientId) => {
+  try {
+    const response = await axios.get(`${API_URL}/notes/${clientId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching notes:', error);
+    throw error;
+  }
+};
+
+export const createNote = async (clientId, content) => {
+  try {
+    const response = await axios.post(`${API_URL}/notes`, { clientId, content });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating note:', error);
+    throw error;
+  }
+};
