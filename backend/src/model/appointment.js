@@ -174,6 +174,39 @@ async function createBlockedTime(date, startTime, endTime, reason) {
     }
 }
 
+async function getClientAppointmentsAroundCurrent(clientId, currentAppointmentId, limit = 2) {
+    const db = dbUtils.getDB();
+    const query = `
+        WITH current_appointment AS (
+            SELECT date, startTime FROM Appointment WHERE id = $1
+        )
+        SELECT * FROM (
+            (SELECT * FROM Appointment 
+             WHERE clientId = $2 AND (date < (SELECT date FROM current_appointment) 
+                                      OR (date = (SELECT date FROM current_appointment) AND startTime < (SELECT startTime FROM current_appointment)))
+             ORDER BY date DESC, startTime DESC
+             LIMIT $3)
+            UNION ALL
+            (SELECT * FROM Appointment WHERE id = $1)
+            UNION ALL
+            (SELECT * FROM Appointment 
+             WHERE clientId = $2 AND (date > (SELECT date FROM current_appointment) 
+                                      OR (date = (SELECT date FROM current_appointment) AND startTime > (SELECT startTime FROM current_appointment)))
+             ORDER BY date ASC, startTime ASC
+             LIMIT $3)
+        ) AS combined_appointments
+        ORDER BY date ASC, startTime ASC;
+    `;
+    const values = [currentAppointmentId, clientId, limit];
+    try {
+        const res = await db.query(query, values);
+        return res.rows;
+    } catch (err) {
+        console.error('Error fetching client appointments:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -184,5 +217,6 @@ module.exports = {
     findAppointmentByClientAndTime,
     findAndUpdateAppointmentByAcuityId,
     getUpcomingAppointments,
-    createBlockedTime
+    createBlockedTime,
+    getClientAppointmentsAroundCurrent
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput } from 'react-native';
-import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime } from '../services/api';
+import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import Swiper from 'react-native-swiper';
@@ -32,6 +32,7 @@ const CalendarScreen = ({ navigation }) => {
     endTime: '',
     reason: ''
   });
+  const [clientAppointments, setClientAppointments] = useState([]);
 
   const scrollViewRef = useRef(null);
   const messagesScrollViewRef = useRef(null);
@@ -64,6 +65,12 @@ const CalendarScreen = ({ navigation }) => {
       messagesScrollViewRef.current.scrollToEnd({ animated: false });
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (currentClientId && appointments[currentAppointmentIndex]) {
+      fetchClientAppointmentsAroundCurrent(currentClientId, appointments[currentAppointmentIndex].id);
+    }
+  }, [currentClientId, currentAppointmentIndex, appointments]);
 
   const updateCurrentAppointment = () => {
     const now = currentTime;
@@ -142,6 +149,15 @@ const CalendarScreen = ({ navigation }) => {
       setMessagesRead(clientId);
     } catch (error) {
       console.error('Error fetching messages:', error);
+    }
+  };
+
+  const fetchClientAppointmentsAroundCurrent = async (clientId, currentAppointmentId) => {
+    try {
+      const data = await getClientAppointmentsAroundCurrent(clientId, currentAppointmentId);
+      setClientAppointments(data);
+    } catch (error) {
+      console.error('Error fetching client appointments around current:', error);
     }
   };
 
@@ -253,19 +269,23 @@ const CalendarScreen = ({ navigation }) => {
               <Text style={styles.addNoteButtonText}>Add note</Text>
             </TouchableOpacity>
             
-            <View style={styles.previousAppointmentsContainer}>
-              <Text style={styles.previousAppointmentsTitle}>Previous Appointments</Text>
-              {previousAppointments.map((prevApp, index) => (
-                <View key={index} style={styles.previousAppointmentItem}>
-                  <Text style={styles.prevAppDate}>{formatDate(new Date(prevApp.date))}</Text>
+            <View style={styles.clientAppointmentsContainer}>
+              <Text style={styles.clientAppointmentsTitle}>Appointments</Text>
+              {clientAppointments.map((app, index) => (
+                <View key={index} style={[
+                  styles.clientAppointmentItem,
+                  app.id === appointment.id ? styles.currentAppointment : null
+                ]}>
+                  <Text style={styles.appDate}>{formatDate(new Date(app.date))}</Text>
                   <Text 
-                    style={styles.prevAppType} 
+                    style={styles.appType} 
                     numberOfLines={1} 
                     ellipsizeMode="tail"
                   >
-                    {prevApp.appointmenttype}
+                    {app.appointmenttype}
                   </Text>
-                  <Text style={styles.prevAppPrice}>${prevApp.price}</Text>
+                  <Text style={styles.appTime}>{`${app.starttime} - ${app.endtime}`}</Text>
+                  <Text style={styles.appPrice}>${app.price}</Text>
                 </View>
               ))}
             </View>
@@ -1150,6 +1170,55 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     padding: 10,
     color: '#fff',
+  },
+  clientAppointmentsContainer: {
+    width: '100%',
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#444',
+    paddingTop: 10,
+  },
+  clientAppointmentsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 10,
+  },
+  clientAppointmentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    width: '100%',
+  },
+  currentAppointment: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 5,
+  },
+  appDate: {
+    color: '#aaa',
+    fontSize: 14,
+    width: '25%',
+  },
+  appType: {
+    color: '#aaa',
+    fontSize: 14,
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  appTime: {
+    color: '#aaa',
+    fontSize: 14,
+    width: '25%',
+  },
+  appPrice: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    width: '15%',
+    textAlign: 'right',
   },
 });
 
