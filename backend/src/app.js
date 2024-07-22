@@ -10,6 +10,7 @@ const clientRoutes = require('./routes/clientRoutes');
 const tokenRoutes = require('./routes/tokenRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const aiPromptRoutes = require('./routes/aiPromptRoutes');
+const noteRoutes = require('./routes/noteRoutes');
 
 const app = express();
 
@@ -25,5 +26,6 @@ app.use('/api', clientRoutes);
 app.use('/api', tokenRoutes);
 app.use('/webhook', webhookRoutes);
 app.use('/api/ai-prompt', aiPromptRoutes);
+app.use('/api/notes', noteRoutes);
 
 module.exports = app;

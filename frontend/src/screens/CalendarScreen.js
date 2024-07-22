@@ -153,7 +153,6 @@ const CalendarScreen = ({ navigation }) => {
   };
 
   const fetchClientAppointmentsAroundCurrent = async (clientId, currentAppointmentId) => {
-    console.log(clientId, currentAppointmentId)
     try {
       const data = await getClientAppointmentsAroundCurrent(clientId, currentAppointmentId);
       setClientAppointments(data);
@@ -285,7 +284,6 @@ const CalendarScreen = ({ navigation }) => {
                   >
                     {app.appointmenttype}
                   </Text>
-                  <Text style={styles.appTime}>{`${app.starttime} - ${app.endtime}`}</Text>
                   <Text style={styles.appPrice}>${app.price}</Text>
                 </View>
               ))}
@@ -1201,7 +1199,7 @@ const styles = StyleSheet.create({
   appDate: {
     color: '#aaa',
     fontSize: 14,
-    width: '25%',
+    width: '30%',
   },
   appType: {
     color: '#aaa',
@@ -1209,16 +1207,11 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 5,
   },
-  appTime: {
-    color: '#aaa',
-    fontSize: 14,
-    width: '25%',
-  },
   appPrice: {
     color: '#007AFF',
     fontSize: 14,
     fontWeight: 'bold',
-    width: '15%',
+    width: '20%',
     textAlign: 'right',
   },
 });
