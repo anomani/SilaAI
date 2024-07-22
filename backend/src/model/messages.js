@@ -5,18 +5,6 @@ async function saveMessage(from, to, body, date, clientid) {
     throw new Error('Invalid clientid');
   }
   const db = dbUtils.getDB();
-  
-  // First, let's check the current max ID
-  const checkMaxIdSql = 'SELECT MAX(id) FROM Messages';
-  const maxIdResult = await db.query(checkMaxIdSql);
-  const currentMaxId = maxIdResult.rows[0].max || 0;
-  console.log("Current max ID in Messages table:", currentMaxId);
-
-  // Reset the sequence if it's out of sync
-  const resetSequenceSql = `
-    SELECT setval('messages_id_seq', COALESCE((SELECT MAX(id) FROM Messages), 0));
-  `;
-  await db.query(resetSequenceSql);
 
   const sql = `
     INSERT INTO Messages (fromText, toText, body, date, clientid)
@@ -28,10 +16,6 @@ async function saveMessage(from, to, body, date, clientid) {
     const res = await db.query(sql, values);
     const newId = res.rows[0].id;
     console.log("Message saved with id:", newId);
-    
-    if (newId <= currentMaxId) {
-      console.warn(`Warning: New ID (${newId}) is not greater than current max ID (${currentMaxId})`);
-    }
     
     return { id: newId };
   } catch (err) {
