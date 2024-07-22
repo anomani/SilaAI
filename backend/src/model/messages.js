@@ -26,7 +26,7 @@ async function saveMessage(from, to, body, date, clientid) {
 
 async function getAllMessages() {
   const db = dbUtils.getDB();
-  const sql = 'SELECT * FROM Messages ORDER BY id ASC';
+  const sql = 'SELECT * FROM Messages ORDER BY date ASC';
   try {
     const res = await db.query(sql);
     return res.rows;
@@ -41,7 +41,7 @@ async function getMessagesByClientId(clientid) {
     throw new Error('Invalid clientid');
   }
   const db = dbUtils.getDB();
-  const sql = 'SELECT * FROM Messages WHERE clientid = $1 ORDER BY id ASC';
+  const sql = 'SELECT * FROM Messages WHERE clientid = $1 ORDER BY date ASC';
   const values = [clientid];
   try {
     const res = await db.query(sql, values);
