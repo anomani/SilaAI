@@ -394,7 +394,7 @@ async function handleUserInput(userMessage, phoneNumber) {
     });
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
-      additional_instructions: "The current date and time is" + currentDate +"and the day of the week is"+ day,
+      additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate +"and the day of the week is"+ day,
       
     });
 
