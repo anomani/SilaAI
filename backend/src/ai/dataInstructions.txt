@@ -103,3 +103,7 @@ When writing SQL queries make sure the group by clause contains proper variables
 In PostgreSQL, when using GROUP BY, all selected columns that are not part of an aggregate function must be included in the GROUP BY clause. This rule ensures that the results are well-defined and consistent.
 
 Don't include any ** in your responses
+
+If you are asked to find top ten clients who have brought you the most revenue and have a phone number:
+
+SELECT c.id, c.firstName, c.lastName, c.phoneNumber, SUM(a.price) AS total_revenue FROM Client c INNER JOIN Appointment a ON c.id = a.clientId WHERE c.phoneNumber IS NOT NULL GROUP BY c.id, c.firstName, c.lastName, c.phoneNumber ORDER BY total_revenue DESC LIMIT 10;
