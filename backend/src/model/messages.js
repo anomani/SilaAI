@@ -61,7 +61,6 @@ async function deleteMessagesByClientId(clientid) {
   const values = [clientid];
   try {
     const res = await db.query(sql, values);
-    console.log(`Messages deleted for clientid ${clientid}:`, res.rowCount);
     return { deletedCount: res.rowCount };
   } catch (err) {
     console.error('Error deleting messages by clientid:', err.message);
