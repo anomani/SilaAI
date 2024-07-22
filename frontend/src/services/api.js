@@ -328,3 +328,13 @@ export const getAIPrompt = async (clientId) => {
     throw error;
   }
 };
+
+export const getClientAppointmentsAroundCurrent = async (clientId, currentAppointmentId) => {
+  try {
+    const response = await axios.get(`${API_URL}/appointments/client/${clientId}/around-current/${currentAppointmentId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching client appointments around current:', error);
+    throw error;
+  }
+};

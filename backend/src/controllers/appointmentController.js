@@ -1,4 +1,4 @@
-const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment } = require('../model/appointment');
+const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment, getClientAppointmentsAroundCurrent } = require('../model/appointment');
 const { createAppointment, createBlockedTime } = require('../model/appointment');
 const dbUtils = require('../model/dbUtils');
 const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
@@ -91,4 +91,14 @@ async function createBlockedTimeController(req, res) {
   }
 }
 
-module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController };
+async function getClientAppointmentsAroundCurrentController(req, res) {
+    try {
+        const { clientId, currentAppointmentId } = req.params;
+        const appointments = await getClientAppointmentsAroundCurrent(clientId, currentAppointmentId);
+        res.status(200).json(appointments);
+    } catch (error) {
+        res.status(500).send(`Error fetching client appointments around current: ${error.message}`);
+    }
+}
+
+module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController };
