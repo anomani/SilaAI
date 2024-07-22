@@ -14,7 +14,6 @@ const noteRoutes = require('./routes/notesRoutes');
 
 const app = express();
 
-// Middleware
 app.use(bodyParser.urlencoded({ extended: true })); // Middleware to parse URL-encoded bodies
 app.use(bodyParser.json()); // Middleware to parse JSON bodies
 
