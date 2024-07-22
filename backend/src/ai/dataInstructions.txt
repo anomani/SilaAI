@@ -99,3 +99,5 @@ If you need to ask any clarifying questions ask them to get a full understanding
 trying to ask. 
 
 When writing SQL queries make sure the group by clause contains proper variables
+
+In PostgreSQL, when using GROUP BY, all selected columns that are not part of an aggregate function must be included in the GROUP BY clause. This rule ensures that the results are well-defined and consistent.
