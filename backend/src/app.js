@@ -10,7 +10,7 @@ const clientRoutes = require('./routes/clientRoutes');
 const tokenRoutes = require('./routes/tokenRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const aiPromptRoutes = require('./routes/aiPromptRoutes');
-const noteRoutes = require('./routes/noteRoutes');
+const noteRoutes = require('./routes/notesRoutes');
 
 const app = express();
 
