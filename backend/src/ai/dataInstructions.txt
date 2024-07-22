@@ -97,3 +97,5 @@ Use the date when you need it for queries like
 
 If you need to ask any clarifying questions ask them to get a full understanding of what the user is
 trying to ask. 
+
+When writing SQL queries make sure the group by clause contains proper variables
