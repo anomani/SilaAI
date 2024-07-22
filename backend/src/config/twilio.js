@@ -35,7 +35,7 @@ function formatPhoneNumber(phoneNumber) {
 
 
 async function sendMessage(to, body, initialMessage = true) {
-  console.log("To: ", to)
+  const to_formatted = formatPhoneNumber(to);
   const customer = await getClientByPhoneNumber(to);
   const localDate = new Date().toLocaleString();
   let clientId;
@@ -44,7 +44,7 @@ async function sendMessage(to, body, initialMessage = true) {
     await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId);
 
     // Create or get the thread, passing the initialMessage parameter
-    const thread = await createThread(to, initialMessage);
+    const thread = await createThread(to_formatted, initialMessage);
     
     await openai.beta.threads.messages.create(thread.id, {
       role: "assistant",
@@ -61,8 +61,7 @@ async function sendMessage(to, body, initialMessage = true) {
       console.log('---');
     });
   }
-  const to_formatted = formatPhoneNumber(to);
-  console.log("To formatted: ", to_formatted)
+  
   return client.messages.create({
     from: process.env.TWILIO_PHONE_NUMBER,
     to: to_formatted,
