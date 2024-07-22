@@ -304,8 +304,8 @@ const tools = [
 ];
 
 
-async function createThread(phoneNumber) {
-  if (!sessions.has(phoneNumber)) {
+async function createThread(phoneNumber, initialMessage = false) {
+  if (initialMessage || !sessions.has(phoneNumber)) {
     const thread = await openai.beta.threads.create();
     sessions.set(phoneNumber, thread);
   }
@@ -371,7 +371,7 @@ async function handleUserInput(userMessage, phoneNumber) {
     let fname, lname, email;
 
     if (client.id == '') {
-      thread = await createThread(phoneNumber); 
+      thread = await createThread(phoneNumber, true); 
       assistant = await createTemporaryAssistant(phoneNumber);
     } else {
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
