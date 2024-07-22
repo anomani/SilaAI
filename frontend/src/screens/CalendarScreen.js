@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput } from 'react-native';
-import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent } from '../services/api';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import Swiper from 'react-native-swiper';
@@ -15,7 +15,6 @@ const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
   const [date, setDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('list');
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [currentAppointmentIndex, setCurrentAppointmentIndex] = useState(0);
   const [previousAppointments, setPreviousAppointments] = useState([]);
   const [currentClientId, setCurrentClientId] = useState(null);
@@ -33,6 +32,10 @@ const CalendarScreen = ({ navigation }) => {
     reason: ''
   });
   const [clientAppointments, setClientAppointments] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [newNote, setNewNote] = useState('');
+  const [showAllNotes, setShowAllNotes] = useState(false);
+  const [isAddNoteModalVisible, setIsAddNoteModalVisible] = useState(false);
 
   const scrollViewRef = useRef(null);
   const messagesScrollViewRef = useRef(null);
@@ -42,21 +45,10 @@ const CalendarScreen = ({ navigation }) => {
   }, [date]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    updateCurrentAppointment();
-  }, [currentTime, appointments]);
-
-  useEffect(() => {
     if (currentClientId) {
       fetchPreviousAppointments(currentClientId);
       fetchMessages(currentClientId);
+      fetchNotes(currentClientId);
     }
   }, [currentClientId]);
 
@@ -71,34 +63,6 @@ const CalendarScreen = ({ navigation }) => {
       fetchClientAppointmentsAroundCurrent(currentClientId, appointments[currentAppointmentIndex].id);
     }
   }, [currentClientId, currentAppointmentIndex, appointments]);
-
-  const updateCurrentAppointment = () => {
-    const now = currentTime;
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeInMinutes = currentHour * 60 + currentMinute;
-
-    let nextAppointmentIndex = appointments.findIndex(appointment => {
-      const [startHour, startMinute] = appointment.startTime.split(':');
-      const startTimeInMinutes = parseInt(startHour) * 60 + parseInt(startMinute);
-      return startTimeInMinutes > currentTimeInMinutes;
-    });
-
-    if (nextAppointmentIndex === -1) {
-      // If no next appointment, show the last appointment
-      nextAppointmentIndex = appointments.length - 1;
-    } else if (nextAppointmentIndex > 0) {
-      // Check if current time is within the previous appointment
-      const prevAppointment = appointments[nextAppointmentIndex - 1];
-      const [endHour, endMinute] = prevAppointment.endTime.split(':');
-      const endTimeInMinutes = parseInt(endHour) * 60 + parseInt(endMinute);
-      if (currentTimeInMinutes < endTimeInMinutes) {
-        nextAppointmentIndex--;
-      }
-    }
-
-    setCurrentAppointmentIndex(Math.max(0, nextAppointmentIndex));
-  };
 
   const fetchAppointments = async () => {
     setIsLoading(true);
@@ -161,6 +125,26 @@ const CalendarScreen = ({ navigation }) => {
     }
   };
 
+  const fetchNotes = async (clientId) => {
+    try {
+      const data = await getNotesByClientId(clientId);
+      setNotes(data);
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+    }
+  };
+
+  const addNote = async () => {
+    try {
+      const data = await createNote(currentClientId, newNote);
+      setNotes([data, ...notes]);
+      setNewNote('');
+      setIsAddNoteModalVisible(false);
+    } catch (error) {
+      console.error('Error adding note:', error);
+    }
+  };
+
   const convertTo12HourFormat = (time) => {
     const [hours, minutes] = time.split(':');
     const period = hours >= 12 ? 'PM' : 'AM';
@@ -169,8 +153,14 @@ const CalendarScreen = ({ navigation }) => {
   };
 
   const formatDate = (date) => {
-    const options = { month: 'long', day: 'numeric', year: 'numeric' };
-    return date.toLocaleDateString('en-US', options);
+    if (!(date instanceof Date) || isNaN(date.getTime())) {
+      console.error('Invalid date object:', date);
+      return 'Invalid Date';
+    }
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
   };
 
   const formatDay = (date) => {
@@ -239,6 +229,33 @@ const CalendarScreen = ({ navigation }) => {
     navigation.navigate('ClientMessages', { clientid: clientId, clientName: clientName });
   };
 
+  const formatNoteDate = (dateString) => {
+    if (!dateString) {
+      console.error('Date string is undefined or null');
+      return 'No date';
+    }
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date string:', dateString);
+      return 'Invalid Date';
+    }
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+
+  const formatAppointmentDate = (dateString) => {
+    // Create date object and adjust for timezone
+    const date = new Date(dateString + 'T00:00:00Z');
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date string:', dateString);
+      return 'Invalid Date';
+    }
+    const options = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+    return date.toLocaleDateString('en-US', options);
+  };
+
   const renderClientCard = (appointment) => {
     // Update the current client ID when rendering a new card
     if (appointment.clientid !== currentClientId) {
@@ -254,7 +271,7 @@ const CalendarScreen = ({ navigation }) => {
               style={styles.clientImage}
             />
             <Text style={styles.cardClientName}>{appointment.clientName}</Text>
-            <Text style={styles.cardDate}>{formatDate(new Date(appointment.date))}</Text>
+            <Text style={styles.cardDate}>{formatAppointmentDate(appointment.date)}</Text>
             <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
             <Text 
               style={styles.cardType} 
@@ -264,10 +281,32 @@ const CalendarScreen = ({ navigation }) => {
               {appointment.appointmenttype}
             </Text>
             <Text style={styles.cardPrice}>${appointment.price}</Text>
-            <Text style={styles.cardNote}>{appointment.note || 'No notes available'}</Text>
-            <TouchableOpacity style={styles.addNoteButton} onPress={() => {/* Add note functionality */}}>
-              <Text style={styles.addNoteButtonText}>Add note</Text>
-            </TouchableOpacity>
+            <View style={styles.notesContainer}>
+              <Text style={styles.notesTitle}>Notes</Text>
+              {notes.length > 0 && (
+                <View style={styles.noteItem}>
+                  <Text style={styles.noteContent}>{notes[0].content}</Text>
+                  <Text style={styles.noteDate}>{formatNoteDate(notes[0].createdat)}</Text>
+                </View>
+              )}
+              <TouchableOpacity 
+                style={styles.addNoteButton} 
+                onPress={() => setIsAddNoteModalVisible(true)}
+              >
+                <Text style={styles.addNoteButtonText}>Add Note</Text>
+              </TouchableOpacity>
+              {notes.length > 1 && (
+                <TouchableOpacity onPress={() => setShowAllNotes(!showAllNotes)}>
+                  <Text style={styles.seeMoreText}>{showAllNotes ? 'See Less' : 'See More'}</Text>
+                </TouchableOpacity>
+              )}
+              {showAllNotes && notes.slice(1).map((note, index) => (
+                <View key={index} style={styles.noteItem}>
+                  <Text style={styles.noteContent}>{note.content}</Text>
+                  <Text style={styles.noteDate}>{formatNoteDate(note.createdat)}</Text>
+                </View>
+              ))}
+            </View>
             
             <View style={styles.clientAppointmentsContainer}>
               <Text style={styles.clientAppointmentsTitle}>Appointments</Text>
@@ -535,12 +574,51 @@ const CalendarScreen = ({ navigation }) => {
     }
   };
 
+  const renderAddNoteModal = () => (
+    <Modal
+      transparent={true}
+      visible={isAddNoteModalVisible}
+      onRequestClose={() => setIsAddNoteModalVisible(false)}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.addNoteModalContent}>
+            <Text style={styles.addNoteModalTitle}>Add New Note</Text>
+            <TextInput
+              style={styles.addNoteModalInput}
+              value={newNote}
+              onChangeText={setNewNote}
+              placeholder="Enter your note here..."
+              placeholderTextColor="#999"
+              multiline
+              numberOfLines={4}
+            />
+            <View style={styles.addNoteModalButtons}>
+              <TouchableOpacity 
+                style={[styles.addNoteModalButton, styles.cancelButton]} 
+                onPress={() => setIsAddNoteModalVisible(false)}
+              >
+                <Text style={styles.addNoteModalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.addNoteModalButton, styles.submitButton]} 
+                onPress={addNote}
+              >
+                <Text style={styles.addNoteModalButtonText}>Add Note</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerDay}>{formatDay(date)}</Text>
         <View style={styles.headerDateContainer}>
-          <Text style={styles.headerDate}>{formatDate(date)}</Text>
+          <Text style={styles.headerDate}>{formatAppointmentDate(date.toISOString().split('T')[0])}</Text>
         </View>
         <TouchableOpacity style={styles.addButton} onPress={handleAddButtonPress}>
           <Ionicons name="add-circle" size={24} color="#007AFF" />
@@ -579,7 +657,7 @@ const CalendarScreen = ({ navigation }) => {
             <>
               {renderClientCard(appointments[currentAppointmentIndex])}
               <View style={styles.cardNavigation}>
-                <TouchableOpacity onPress={goToPreviousAppointment} style={styles.navButton}>
+                <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.max(0, currentAppointmentIndex - 1))} style={styles.navButton}>
                   <Text style={styles.navButtonText}>‹</Text>
                 </TouchableOpacity>
                 <View style={styles.appointmentCounterContainer}>
@@ -587,7 +665,7 @@ const CalendarScreen = ({ navigation }) => {
                     {currentAppointmentIndex + 1} / {appointments.length}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={goToNextAppointment} style={styles.navButton}>
+                <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.min(appointments.length - 1, currentAppointmentIndex + 1))} style={styles.navButton}>
                   <Text style={styles.navButtonText}>›</Text>
                 </TouchableOpacity>
               </View>
@@ -700,6 +778,7 @@ const CalendarScreen = ({ navigation }) => {
           </View>
         </View>
       </Modal>
+      {renderAddNoteModal()}
     </View>
   );
 };
@@ -1213,6 +1292,105 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     width: '20%',
     textAlign: 'right',
+  },
+  notesContainer: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#2c2c2e',
+    borderRadius: 10,
+  },
+  notesTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+  },
+  noteItem: {
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: '#3a3a3c',
+    borderRadius: 5,
+  },
+  noteContent: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  noteDate: {
+    color: '#8e8e93',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  noteInput: {
+    backgroundColor: '#3a3a3c',
+    color: '#fff',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  addNoteButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  addNoteButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  seeMoreText: {
+    color: '#007AFF',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addNoteModalContent: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    maxWidth: 400,
+  },
+  addNoteModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 15,
+  },
+  addNoteModalInput: {
+    backgroundColor: '#3a3a3c',
+    borderRadius: 5,
+    padding: 10,
+    color: '#fff',
+    fontSize: 16,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  addNoteModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  addNoteModalButton: {
+    padding: 10,
+    borderRadius: 5,
+    width: '48%',
+    alignItems: 'center',
+  },
+  submitButton: {
+    backgroundColor: '#007AFF',
+  },
+  cancelButton: {
+    backgroundColor: '#FF3B30',
+  },
+  addNoteModalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
