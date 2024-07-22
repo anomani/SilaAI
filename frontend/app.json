@@ -19,7 +19,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.adam.uzi"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,7 +29,9 @@
       "eas": {
         "projectId": "89102495-37af-438a-aa98-b36be7e81690"
       },
-      "suppressRNWarnings": ["Sending `onAnimatedValueUpdate` with no listeners registered."]
+      "suppressRNWarnings": [
+        "Sending `onAnimatedValueUpdate` with no listeners registered."
+      ]
     },
     "runtimeVersion": "1.0.0",
     "updates": {
