@@ -153,6 +153,7 @@ const CalendarScreen = ({ navigation }) => {
   };
 
   const fetchClientAppointmentsAroundCurrent = async (clientId, currentAppointmentId) => {
+    console.log(clientId, currentAppointmentId)
     try {
       const data = await getClientAppointmentsAroundCurrent(clientId, currentAppointmentId);
       setClientAppointments(data);

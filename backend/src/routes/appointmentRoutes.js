@@ -8,6 +8,6 @@ router.get('/appointments/client/:clientId', getAppointmentsByClientId);
 router.delete('/appointments/:appointmentId', delAppointment);
 router.post('/appointments/acuity', bookAppointmentWithAcuityController);
 router.post('/appointments/blocked-time', createBlockedTimeController);
-router.get('/client/:clientId/around-current/:currentAppointmentId', getClientAppointmentsAroundCurrentController);
+router.get('/appointments/client/:clientId/around-current/:currentAppointmentId', getClientAppointmentsAroundCurrentController);
 
 module.exports = router;
