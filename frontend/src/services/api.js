@@ -358,3 +358,15 @@ export const createNote = async (clientId, content) => {
     throw error;
   }
 };
+
+export const updateAppointmentPayment = async (appointmentId, paid, tipAmount, paymentMethod) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.put(`/appointments/${appointmentId}/payment`, { paid, tipAmount, paymentMethod })
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error updating appointment payment:', error);
+    throw error;
+  }
+};

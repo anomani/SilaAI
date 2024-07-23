@@ -118,16 +118,7 @@ async function findAndUpdateAppointmentByAcuityId(acuityId, updateData) {
         WHERE acuityId = $8
         RETURNING *
     `;
-    const params = [
-        updateData.appointmentType,
-        updateData.date,
-        updateData.startTime,
-        updateData.endTime,
-        updateData.clientId,
-        updateData.details,
-        updateData.price,
-        acuityId
-    ];
+    const params = [updateData.appointmentType, updateData.date, updateData.startTime, updateData.endTime, updateData.clientId, updateData.details, updateData.price, acuityId];
     try {
         const res = await db.query(sql, params);
         if (res.rows.length === 0) {
@@ -212,6 +203,25 @@ async function getClientAppointmentsAroundCurrent(clientId, currentAppointmentId
     }
 }
 
+async function updateAppointmentPayment(appointmentId, paid, tipAmount, paymentMethod) {
+    const db = dbUtils.getDB();
+    const sql = `
+        UPDATE Appointment
+        SET paid = $1, tipAmount = $2, paymentMethod = $3
+        WHERE id = $4
+        RETURNING *
+    `;
+    const values = [paid, tipAmount, paymentMethod, appointmentId];
+    try {
+        const res = await db.query(sql, values);
+        console.log('Appointment payment updated:', res.rows[0]);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error updating appointment payment:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -223,5 +233,6 @@ module.exports = {
     findAndUpdateAppointmentByAcuityId,
     getUpcomingAppointments,
     createBlockedTime,
-    getClientAppointmentsAroundCurrent
+    getClientAppointmentsAroundCurrent,
+    updateAppointmentPayment
 };
