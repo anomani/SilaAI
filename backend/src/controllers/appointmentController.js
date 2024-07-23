@@ -1,4 +1,4 @@
-const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment, getClientAppointmentsAroundCurrent } = require('../model/appointment');
+const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment, getClientAppointmentsAroundCurrent, updateAppointmentPayment } = require('../model/appointment');
 const { createAppointment, createBlockedTime } = require('../model/appointment');
 const dbUtils = require('../model/dbUtils');
 const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
@@ -101,4 +101,20 @@ async function getClientAppointmentsAroundCurrentController(req, res) {
     }
 }
 
-module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController };
+async function updateAppointmentPaymentController(req, res) {
+    try {
+        const { appointmentId } = req.params;
+        const { paid, tipAmount, paymentMethod } = req.body;
+
+        if (paid === undefined || tipAmount === undefined || !paymentMethod) {
+            return res.status(400).send('Missing required fields');
+        }
+
+        const updatedAppointment = await updateAppointmentPayment(appointmentId, paid, tipAmount, paymentMethod);
+        res.status(200).json(updatedAppointment);
+    } catch (error) {
+        res.status(500).send(`Error updating appointment payment: ${error.message}`);
+    }
+}
+
+module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController };
