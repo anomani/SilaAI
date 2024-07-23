@@ -23,6 +23,7 @@ import EditClientScreen from './src/screens/EditClientScreen';
 import ChatDashboard from './src/screens/ChatDashboard';
 import ClientMessagesScreen from './src/screens/ClientMessagesScreen';
 import InitiateConversation from './src/screens/InitiateConversation';
+import UnpaidAppointmentsScreen from './src/screens/UnpaidAppointmentsScreen'; // New screen
 
 const Stack = createStackNavigator();
 
@@ -94,12 +95,17 @@ const AppContent: React.FC = () => {
       const data = response.notification.request.content.data;
       console.log('Notification data:', data);
       
-      if (data && typeof data === 'object' && 'clientId' in data) {
-        const { clientId, clientName } = data;
-        console.log('Navigating to ClientMessages with:', { clientId, clientName });
-        navigation.navigate('ClientMessages', { clientid: clientId, clientName });
+      if (data && typeof data === 'object') {
+        if ('clientId' in data) {
+          const { clientId, clientName } = data;
+          console.log('Navigating to ClientMessages with:', { clientId, clientName });
+          navigation.navigate('ClientMessages', { clientid: clientId, clientName });
+        } else if (data.notificationType === 'unpaid_appointments') {
+          console.log('Navigating to UnpaidAppointments');
+          navigation.navigate('UnpaidAppointments');
+        }
       } else {
-        console.warn('Invalid or missing clientId in notification data:', data);
+        console.warn('Invalid or missing data in notification:', data);
       }
     });
 
@@ -133,6 +139,7 @@ const AppContent: React.FC = () => {
         initialParams={{ clientid: 0, clientName: '' }}
       />
       <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
+      <Stack.Screen name="UnpaidAppointments" component={UnpaidAppointmentsScreen} />
     </Stack.Navigator>
   );
 };

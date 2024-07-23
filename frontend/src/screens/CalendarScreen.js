@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote } from '../services/api';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput, TouchableWithoutFeedback, Keyboard, Switch } from 'react-native';
+import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import Swiper from 'react-native-swiper';
@@ -10,6 +10,7 @@ import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import RescheduleConfirmModal from '../components/RescheduleConfirmModal';
+import { Picker } from '@react-native-picker/picker';
 
 const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
@@ -36,6 +37,12 @@ const CalendarScreen = ({ navigation }) => {
   const [newNote, setNewNote] = useState('');
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [isAddNoteModalVisible, setIsAddNoteModalVisible] = useState(false);
+  const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
+  const [paymentData, setPaymentData] = useState({
+    paid: false,
+    paymentMethod: 'cash',
+    tipAmount: '0',
+  });
 
   const scrollViewRef = useRef(null);
   const messagesScrollViewRef = useRef(null);
@@ -259,11 +266,28 @@ const CalendarScreen = ({ navigation }) => {
       <View style={styles.cardViewContainer}>
         <ScrollView contentContainerStyle={styles.cardScrollViewContent}>
           <View style={styles.cardContainer}>
+            {/* Payment Status and Tip Amount */}
+            {appointment.paid && (
+              <View style={styles.paymentInfoContainer}>
+                <View style={styles.paidStatusContainer}>
+                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                  <Text style={styles.paidStatusText}>Paid</Text>
+                </View>
+                {appointment.tipamount != null && (
+                  <View style={styles.tipContainer}>
+                    <Text style={styles.tipLabel}>Tip:</Text>
+                    <Text style={styles.tipAmount}>${Number(appointment.tipamount).toFixed(2)}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             <Image
               source={avatarImage}
               style={styles.clientImage}
             />
             <Text style={styles.cardClientName}>{appointment.clientName}</Text>
+            
             <Text style={styles.cardDate}>{formatAppointmentDate(appointment.date)}</Text>
             <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
             <Text 
@@ -274,6 +298,17 @@ const CalendarScreen = ({ navigation }) => {
               {appointment.appointmenttype}
             </Text>
             <Text style={styles.cardPrice}>${appointment.price}</Text>
+            
+            {/* Payment Button */}
+            <TouchableOpacity 
+              style={styles.paymentButton} 
+              onPress={() => handlePaymentPress(appointment)}
+            >
+              <Text style={styles.paymentButtonText}>
+                {appointment.paid ? 'Update Payment' : 'Log Payment'}
+              </Text>
+            </TouchableOpacity>
+            
             <View style={styles.notesContainer}>
               <Text style={styles.notesTitle}>Notes</Text>
               {notes.length > 0 && (
@@ -567,6 +602,98 @@ const CalendarScreen = ({ navigation }) => {
     }
   };
 
+  const handlePaymentPress = (appointment) => {
+    setPaymentData({
+      paid: false,
+      paymentMethod: 'cash',
+      tipAmount: '0',
+    });
+    setIsPaymentModalVisible(true);
+  };
+
+  const handlePaymentSubmit = async () => {
+    if (appointments[currentAppointmentIndex]) {
+      try {
+        await updateAppointmentPayment(
+          appointments[currentAppointmentIndex].id,
+          paymentData.paid,
+          paymentData.tipAmount ? parseFloat(paymentData.tipAmount) : 0,
+          paymentData.paymentMethod
+        );
+        // Refresh appointments after updating payment
+        fetchAppointments();
+        setIsPaymentModalVisible(false);
+      } catch (error) {
+        console.error('Error updating payment:', error);
+        Alert.alert('Error', 'Failed to update payment. Please try again.');
+      }
+    }
+  };
+
+  const renderPaymentModal = () => (
+    <Modal
+      transparent={true}
+      visible={isPaymentModalVisible}
+      onRequestClose={() => setIsPaymentModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.paymentModalContent}>
+          <Text style={styles.paymentModalTitle}>Log Payment</Text>
+          
+          <View style={styles.paymentOption}>
+            <Text style={styles.paymentOptionLabel}>Paid:</Text>
+            <Switch
+              value={paymentData.paid}
+              onValueChange={(value) => setPaymentData({ ...paymentData, paid: value })}
+            />
+          </View>
+
+          {paymentData.paid && (
+            <>
+              <View style={styles.paymentOption}>
+                <Text style={styles.paymentOptionLabel}>Payment Method:</Text>
+                <Picker
+                  selectedValue={paymentData.paymentMethod}
+                  style={styles.paymentMethodPicker}
+                  onValueChange={(itemValue) => setPaymentData({ ...paymentData, paymentMethod: itemValue })}
+                >
+                  <Picker.Item label="Cash" value="cash" />
+                  <Picker.Item label="E-Transfer" value="e-transfer" />
+                </Picker>
+              </View>
+
+              <View style={styles.paymentOption}>
+                <Text style={styles.paymentOptionLabel}>Tip Amount:</Text>
+                <TextInput
+                  style={styles.tipInput}
+                  value={paymentData.tipAmount}
+                  onChangeText={(value) => setPaymentData({ ...paymentData, tipAmount: value })}
+                  keyboardType="numeric"
+                  placeholder="0.00"
+                />
+              </View>
+            </>
+          )}
+
+          <View style={styles.paymentModalButtons}>
+            <TouchableOpacity 
+              style={[styles.paymentModalButton, styles.cancelButton]} 
+              onPress={() => setIsPaymentModalVisible(false)}
+            >
+              <Text style={styles.paymentModalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.paymentModalButton, styles.submitButton]} 
+              onPress={handlePaymentSubmit}
+            >
+              <Text style={styles.paymentModalButtonText}>Submit</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   const renderAddNoteModal = () => (
     <Modal
       transparent={true}
@@ -772,6 +899,7 @@ const CalendarScreen = ({ navigation }) => {
         </View>
       </Modal>
       {renderAddNoteModal()}
+      {renderPaymentModal()}
     </View>
   );
 };
@@ -1383,6 +1511,108 @@ const styles = StyleSheet.create({
   addNoteModalButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  paymentButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+    width: '100%',
+  },
+  paymentButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  paymentModalContent: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    maxWidth: 400,
+  },
+  paymentModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 15,
+  },
+  paymentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  paymentOptionLabel: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  paymentMethodPicker: {
+    width: 150,
+    color: '#fff',
+  },
+  tipInput: {
+    backgroundColor: '#3a3a3c',
+    borderRadius: 5,
+    padding: 10,
+    color: '#fff',
+    fontSize: 16,
+    width: 100,
+  },
+  paymentModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  paymentModalButton: {
+    padding: 10,
+    borderRadius: 5,
+    width: '48%',
+    alignItems: 'center',
+  },
+  paymentModalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  paymentInfoContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    alignItems: 'flex-end',
+    zIndex: 1,
+  },
+  paidStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    padding: 5,
+    borderRadius: 15,
+    marginBottom: 5,
+  },
+  paidStatusText: {
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    marginLeft: 5,
+    fontSize: 14,
+  },
+  tipContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    padding: 5,
+    borderRadius: 15,
+  },
+  tipLabel: {
+    color: '#007AFF',
+    fontSize: 14,
+    marginRight: 5,
+  },
+  tipAmount: {
+    color: '#007AFF',
+    fontSize: 14,
     fontWeight: 'bold',
   },
 });
