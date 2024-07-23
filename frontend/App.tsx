@@ -23,7 +23,6 @@ import EditClientScreen from './src/screens/EditClientScreen';
 import ChatDashboard from './src/screens/ChatDashboard';
 import ClientMessagesScreen from './src/screens/ClientMessagesScreen';
 import InitiateConversation from './src/screens/InitiateConversation';
-import UnpaidAppointmentsScreen from './src/screens/UnpaidAppointmentsScreen'; // New screen
 
 const Stack = createStackNavigator();
 
@@ -101,8 +100,8 @@ const AppContent: React.FC = () => {
           console.log('Navigating to ClientMessages with:', { clientId, clientName });
           navigation.navigate('ClientMessages', { clientid: clientId, clientName });
         } else if (data.notificationType === 'unpaid_appointments') {
-          console.log('Navigating to UnpaidAppointments');
-          navigation.navigate('UnpaidAppointments');
+          console.log('Navigating to CalendarScreen');
+          navigation.navigate('Calendar');
         }
       } else {
         console.warn('Invalid or missing data in notification:', data);
@@ -139,7 +138,6 @@ const AppContent: React.FC = () => {
         initialParams={{ clientid: 0, clientName: '' }}
       />
       <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
-      <Stack.Screen name="UnpaidAppointments" component={UnpaidAppointmentsScreen} />
     </Stack.Navigator>
   );
 };
