@@ -155,6 +155,10 @@ async function getUpcomingAppointments(clientId, limit = 5) {
   return res.rows;
 }
 
+async function main() {
+    console.log(await getUpcomingAppointments(2076, 5))
+}
+main()
 
 async function createBlockedTime(date, startTime, endTime, reason) {
     const db = dbUtils.getDB();
