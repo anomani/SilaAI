@@ -342,7 +342,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
       name: `Scheduling Assistant for ${fname} ${lname}`,
       model: "gpt-4o",
       tools: tools,
-      temperature: 0.2
+      temperature: 1
     });
     assistants.set(phone, newAssistant);
   }
