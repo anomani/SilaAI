@@ -246,13 +246,12 @@ const CalendarScreen = ({ navigation }) => {
   };
 
   const formatAppointmentDate = (dateString) => {
-    // Create date object and adjust for timezone
-    const date = new Date(dateString + 'T00:00:00Z');
+    const date = new Date(dateString);
     if (isNaN(date.getTime())) {
       console.error('Invalid date string:', dateString);
       return 'Invalid Date';
     }
-    const options = { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
   };
 
