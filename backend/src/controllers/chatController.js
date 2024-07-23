@@ -69,8 +69,13 @@ const getMessagesByClientIdController = async (req, res) => {
 
 const sendMessageController = async (req, res) => {
   try {
-    const { to, message } = req.body;
-    await sendMessage(to, message);
+    const { to, message, initialMessage } = req.body;
+    if (initialMessage) {
+      await sendMessage(to, message, initialMessage);
+    }
+    else {
+      await sendMessage(to, message);
+    }
     res.status(200).json({ message: 'Message sent' });
   } catch (error) {
     console.error('Error sending message:', error);
