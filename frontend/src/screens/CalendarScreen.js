@@ -153,14 +153,8 @@ const CalendarScreen = ({ navigation }) => {
   };
 
   const formatDate = (date) => {
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
-      console.error('Invalid date object:', date);
-      return 'Invalid Date';
-    }
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
+    const options = { month: 'long', day: 'numeric', year: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
   };
 
   const formatDay = (date) => {
@@ -617,7 +611,7 @@ const CalendarScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.headerDay}>{formatDay(date)}</Text>
         <View style={styles.headerDateContainer}>
-          <Text style={styles.headerDate}>{formatAppointmentDate(date.toISOString().split('T')[0])}</Text>
+          <Text style={styles.headerDate}>{formatDate(date)}</Text>
         </View>
         <TouchableOpacity style={styles.addButton} onPress={handleAddButtonPress}>
           <Ionicons name="add-circle" size={24} color="#007AFF" />
