@@ -222,6 +222,19 @@ async function updateAppointmentPayment(appointmentId, paid, tipAmount, paymentM
     }
 }
 
+async function getUnpaidAppointmentsByDate(date) {
+    const db = dbUtils.getDB();
+    const sql = 'SELECT * FROM Appointment WHERE date = $1 AND paid = false';
+    const values = [date];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows;
+    } catch (err) {
+        console.error('Error fetching unpaid appointments:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -234,5 +247,6 @@ module.exports = {
     getUpcomingAppointments,
     createBlockedTime,
     getClientAppointmentsAroundCurrent,
-    updateAppointmentPayment
+    updateAppointmentPayment,
+    getUnpaidAppointmentsByDate
 };
