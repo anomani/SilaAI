@@ -60,4 +60,3 @@ async function sendUnpaidAppointmentsNotification(recipientName, message) {
     }
 }
 
-// ... any existing cron jobs ...
