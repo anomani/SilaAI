@@ -157,6 +157,8 @@ async function main() {
     console.log(await getUpcomingAppointments(12323, 1))
     //Thursday
     console.log(await getUpcomingAppointments(12367, 1))
+    //Friday
+    console.log(await getUpcomingAppointments(11204, 1))
 }
 main()
 
