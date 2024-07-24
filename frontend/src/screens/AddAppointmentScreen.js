@@ -79,7 +79,9 @@ const AddAppointmentScreen = ({ navigation }) => {
       const formatTime = (date) => {
         return date.toTimeString().split(' ')[0].slice(0, 5);
       };
-
+      if(!selectedClient.email) {
+        selectedClient.email = ''
+      }
       const appointmentData = {
         date: formatDate(appointment.date),
         startTime: formatTime(appointment.startTime),

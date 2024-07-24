@@ -61,7 +61,7 @@ async function bookAppointmentWithAcuityController(req, res) {
   try {
     console.log(req.body)
     const { date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray } = req.body;
-    if (!date || !startTime || !fname || !lname || !phone || !email || !appointmentType || !price) {
+    if (!date || !startTime || !fname || !lname || !phone || !appointmentType || !price) {
       return res.status(400).send('Missing required fields');
     }
 
