@@ -6,7 +6,7 @@ import moment from 'moment';
 
 const AppointmentDetailsScreen = ({ route, navigation }) => {
   const { appointment } = route.params;
-  console.log(appointment.id)
+  console.log(appointment.clientid)
   const [clientName, setClientName] = useState('');
 
   useEffect(() => {
