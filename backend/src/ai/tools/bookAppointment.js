@@ -5,9 +5,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path')
 const {createAppointment} = require ('../../model/appointment')
-const {checkClientExists, getClientByPhoneNumber, createClient} = require ('../../model/clients')
+const {checkClientExists, getClientByPhoneNumber, createClient, getClientById} = require ('../../model/clients')
 const dbUtils = require('../../model/dbUtils')
-const {getAvailability} = require('./getAvailability')
+const {getAvailability, getAvailabilityAdmin} = require('./getAvailability')
 const axios = require('axios');
 const moment = require('moment-timezone');
 const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
@@ -59,6 +59,34 @@ async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, e
     }
 }
 
+async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, addOns = []) {
+  const client = await getClientById(clientId);
+  if (!client) {
+    throw new Error(`Client not found with ID: ${clientId}`);
+  }
+
+  const appointmentTypeInfo = appointmentTypes[appointmentType];
+  if (!appointmentTypeInfo) {
+    throw new Error(`Invalid appointment type: ${appointmentType}`);
+  }
+
+  const addOnInfo = addOns.map(addon => addOns[addon]);
+  const totalPrice = appointmentTypeInfo.price + addOnInfo.reduce((sum, addon) => sum + addon.price, 0);
+  const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
+
+  const endTime = moment(`${date} ${startTime}`).add(totalDuration, 'minutes').format('HH:mm');
+
+  try {
+    const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, client.firstName, client.lastName, client.phoneNumber, client.email, appointmentType, totalPrice, addOns);
+    
+    // await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", totalPrice);
+    
+    return "Appointment booked successfully";
+  } catch (error) {
+    console.error(error);
+    return "Unable to book the appointment";
+  }
+}
 
 // async function main() {
 //     const date = "2024-07-24";
@@ -173,4 +201,4 @@ function isAfter(time1, time2) {
 
 // runTestCases()
 
-module.exports = { bookAppointment, bookAppointmentWithAcuity };
+module.exports = { bookAppointment, bookAppointmentWithAcuity, bookAppointmentAdmin };

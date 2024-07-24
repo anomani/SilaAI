@@ -2,12 +2,16 @@ const { OpenAI } = require('openai');
 const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
 const { getInfo } = require('./tools/getCustomers');
-const {sendMessage, sendMessages} = require('../config/twilio');
+const { sendMessage, sendMessages } = require('../config/twilio');
 const fs = require('fs');
 const path = require('path');
 const { createCustomList, getCustomList } = require('../model/customLists');
 const { analyzeNames, getMuslimClients, analyzeNamesQueue } = require('./tools/analyzeNames');
 const { v4: uuidv4 } = require('uuid');
+const { getClientByName } = require('../model/clients');
+const { bookAppointmentAdmin } = require('./tools/bookAppointment');
+const { appointmentTypes, addOns } = require('../model/appointmentTypes');
+const { getAvailability } = require('./tools/getAvailability');
 
 // Add this object to store queries
 const queryStore = {};
@@ -68,6 +72,99 @@ const tools = [
       type: "object",
       properties: {},
       required: []
+    }
+  }
+},
+{
+  type: "function",
+  function: {
+    name: "bookAppointmentAdmin",
+    description: "Books an appointment with admin privileges, bypassing time restrictions",
+    parameters: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "number",
+          description: "The ID of the client"
+        },
+        date: {
+          type: "string",
+          description: "The date for the appointment (YYYY-MM-DD)"
+        },
+        startTime: {
+          type: "string",
+          description: "The start time for the appointment (HH:MM)"
+        },
+        appointmentType: {
+          type: "string",
+          enum: Object.keys(appointmentTypes),
+          description: "The type of appointment to book"
+        },
+        addOns: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: Object.keys(addOns)
+          },
+          description: "An array of add-ons for the appointment"
+        }
+      },
+      required: ["clientId", "date", "startTime", "appointmentType"]
+    }
+  }
+},
+{
+  type: "function",
+  function: {
+    name: "getClientByName",
+    description: "Retrieves a client by their first and last name",
+    parameters: {
+      type: "object",
+      properties: {
+        firstName: {
+          type: "string",
+          description: "The first name of the client"
+        },
+        lastName: {
+          type: "string",
+          description: "The last name of the client"
+        }
+      },
+      required: ["firstName", "lastName"]
+    }
+  }
+},
+{
+  type: "function",
+  function: {
+    name: "getAvailability",
+    description: "Given the day, appointment type, and add-ons, returns an array of available time slots.",
+    parameters: {
+      type: "object",
+      properties: {
+        day: {
+          type: "string",
+          description: "The day to check availability for, in the format YYYY-MM-DD."
+        },
+        appointmentType: {
+          type: "string",
+          enum: Object.keys(appointmentTypes),
+          description: "The type of appointment they want to book."
+        },
+        addOns: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: Object.keys(addOns)
+          },
+          description: "An array of add-ons for the appointment."
+        },
+        group: {
+          type: "number",
+          description: "The appointment group (1, 2, or 3)."
+        }
+      },
+      required: ["day", "appointmentType", "addOns", "group"]
     }
   }
 }
@@ -172,6 +269,18 @@ async function handleUserInputData(userMessage) {
             const listLink = `/custom-list?id=${queryId}`;
             console.log(listLink);
             output = queryId;
+          } else if (funcName === "bookAppointmentAdmin") {
+            output = await bookAppointmentAdmin(
+              args.clientId,
+              args.date,
+              args.startTime,
+              args.appointmentType,
+              args.addOns || []
+            );
+          } else if (funcName === "getClientByName") {
+            output = await getClientByName(args.firstName, args.lastName);
+          } else if (funcName === "getAvailability") {
+            output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group);
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
