@@ -53,7 +53,6 @@ async function sendMessage(to, body, initialMessage = true) {
 
     // List the messages of the thread and print them out
     const messages = await openai.beta.threads.messages.list(thread.id);
-    console.log("Thread messages:");
     messages.data.forEach((message, index) => {
       console.log(`Message ${index + 1}:`);
       console.log(`Role: ${message.role}`);
