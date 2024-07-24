@@ -154,11 +154,11 @@ async function getUpcomingAppointments(clientId, limit = 5) {
 
 async function main() {
     //Wednesday
-    console.log(await getUpcomingAppointments(12323, 1))
+    console.log(await getUpcomingAppointments(317, 1))
     //Thursday
-    console.log(await getUpcomingAppointments(12367, 1))
+    console.log(await getUpcomingAppointments(1693, 1))
     //Friday
-    console.log(await getUpcomingAppointments(11204, 1))
+    console.log(await getUpcomingAppointments(2814, 1))
 }
 main()
 
