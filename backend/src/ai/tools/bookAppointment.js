@@ -60,6 +60,11 @@ async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, e
 }
 
 async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, addOns = []) {
+    console.log("Client ID:", clientId);
+    console.log("Date:", date);
+    console.log("Start Time:", startTime);
+    console.log("Appointment Type:", appointmentType);
+    console.log("Add-Ons:", addOns);
   const client = await getClientById(clientId);
   if (!client) {
     throw new Error(`Client not found with ID: ${clientId}`);

@@ -230,11 +230,14 @@ async function updateClientOutreachDate(clientId, outreachDate) {
 }
 
 async function getClientByName(firstName, lastName) {
+    console.log("First Name:", firstName);
+    console.log("Last Name:", lastName);
     const db = dbUtils.getDB();
     const sql = 'SELECT * FROM Client WHERE LOWER(firstName) = LOWER($1) AND LOWER(lastName) = LOWER($2)';
     const values = [firstName, lastName];
     try {
         const res = await db.query(sql, values);
+        console.log("Result:", res.rows[0]);
         return res.rows[0];
     } catch (err) {
         console.error('Error fetching client by name:', err.message);
