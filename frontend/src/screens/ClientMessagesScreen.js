@@ -115,14 +115,16 @@ const ClientMessagesScreen = ({ route }) => {
   );
 
   const renderMessage = useCallback((message) => {
-    const client = getClientById(clientid);
     const isAssistant = message.fromtext === '+18446480598';
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
     const senderName = isAssistant ? 'Assistant' : clientName || 'Client';
 
+    // Create a unique key using id if available, or a combination of date and sender
+    const messageKey = message.id || `${message.date}-${message.fromtext}-${Math.random()}`;
+
     return (
       <View 
-        key={`${message.date}-${message.fromtext}`}
+        key={messageKey}
         style={[styles.messageContainer, isAssistant ? styles.assistantMessage : styles.clientMessage]}
       >
         {!isAssistant && <Image source={avatar} style={styles.avatar} />}
@@ -312,4 +314,3 @@ const styles = StyleSheet.create({
 });
 
 export default React.memo(ClientMessagesScreen);
-

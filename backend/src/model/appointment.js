@@ -68,7 +68,11 @@ async function deleteAppointment(appointmentId) {
 
 async function getAppointmentsByDay(date) {
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Appointment WHERE date = $1 ORDER BY startTime';
+    const sql = `
+        SELECT * FROM Appointment 
+        WHERE date = $1 
+        ORDER BY startTime
+    `;
     const values = [date];
     try {
         const res = await db.query(sql, values);
