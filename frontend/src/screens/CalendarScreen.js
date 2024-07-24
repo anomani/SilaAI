@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput, TouchableWithoutFeedback, Keyboard, Switch } from 'react-native';
-import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment } from '../services/api';
+import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, deleteAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import Swiper from 'react-native-swiper';
@@ -78,19 +78,28 @@ const CalendarScreen = ({ navigation }) => {
       const estDate = new Date(date);
       estDate.setHours(estDate.getHours() - 4); // Convert to EST
       const year = estDate.getFullYear();
-      const month = String(estDate.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+      const month = String(estDate.getMonth() + 1).padStart(2, '0');
       const day = String(estDate.getDate()).padStart(2, '0');
       const formattedDate = `${year}-${month}-${day}`;
 
       const response = await getAppointmentsByDay(formattedDate);
       const adjustedAppointments = await Promise.all(response.map(async (appointment) => {
-        const client = await getClientById(appointment.clientid); // Use 'clientid' instead of 'clientId'
-        return {
-          ...appointment,
-          clientName: `${client.firstname} ${client.lastname}`,
-          startTime: convertTo12HourFormat(appointment.starttime), // Use 'starttime' instead of 'startTime'
-          endTime: convertTo12HourFormat(appointment.endtime) // Use 'endtime' instead of 'endTime'
-        };
+        if (appointment.appointmenttype === 'BLOCKED_TIME') {
+          return {
+            ...appointment,
+            clientName: 'Blocked Time',
+            startTime: convertTo12HourFormat(appointment.starttime),
+            endTime: convertTo12HourFormat(appointment.endtime)
+          };
+        } else {
+          const client = await getClientById(appointment.clientid);
+          return {
+            ...appointment,
+            clientName: `${client.firstname} ${client.lastname}`,
+            startTime: convertTo12HourFormat(appointment.starttime),
+            endTime: convertTo12HourFormat(appointment.endtime)
+          };
+        }
       }));
       setAppointments(adjustedAppointments);
     } catch (error) {
@@ -478,17 +487,45 @@ const CalendarScreen = ({ navigation }) => {
       const [startHour, startMinute] = appointment.startTime.split(':');
       const [endHour, endMinute] = appointment.endTime.split(':');
       
-      // Convert 12-hour format to 24-hour format
-      const start = (parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0)) + parseInt(startMinute) / 60;
-      const end = (parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0)) + parseInt(endMinute) / 60;
+      const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
+      const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
       
       const duration = end - start;
       const topPosition = (start - 9) * 100; // 100px per hour
 
+      const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
+
       appointmentBlocks.push(
         <TouchableOpacity
           key={appointment.id}
-          onPress={() => navigation.navigate('AppointmentDetails', { appointment })}
+          onPress={() => {
+            if (isBlockedTime) {
+              Alert.alert(
+                "Delete Blocked Time",
+                "Are you sure you want to delete this blocked time?",
+                [
+                  {
+                    text: "Cancel",
+                    style: "cancel"
+                  },
+                  { 
+                    text: "OK", 
+                    onPress: async () => {
+                      try {
+                        await deleteAppointment(appointment.id);
+                        fetchAppointments(); // Refresh the appointments list
+                      } catch (error) {
+                        console.error('Failed to delete blocked time:', error);
+                        Alert.alert('Error', 'Failed to delete blocked time. Please try again.');
+                      }
+                    }
+                  }
+                ]
+              );
+            } else {
+              navigation.navigate('AppointmentDetails', { appointment });
+            }
+          }}
         >
           <PanGestureHandler
             onGestureEvent={(event) => onGestureEvent(event, appointment)}
@@ -500,6 +537,7 @@ const CalendarScreen = ({ navigation }) => {
                 {
                   top: topPosition,
                   height: Math.max(duration * 100, 50), // Minimum height of 50px
+                  backgroundColor: isBlockedTime ? '#808080' : '#007AFF',
                 },
               ]}
             >
@@ -508,7 +546,7 @@ const CalendarScreen = ({ navigation }) => {
                   {appointment.clientName}
                 </Text>
                 <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
-                  {appointment.appointmenttype}
+                  {isBlockedTime ? appointment.details : appointment.appointmenttype}
                 </Text>
               </View>
               <Text style={styles.appointmentTime}>
@@ -845,58 +883,71 @@ const CalendarScreen = ({ navigation }) => {
         transparent={true}
         visible={isBlockTimeModalVisible}
         onRequestClose={() => setIsBlockTimeModalVisible(false)}
+        animationType="fade"
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.blockTimeModal}>
-            <Text style={styles.modalTitle}>Block Time</Text>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Date:</Text>
-              <TextInput
-                style={styles.input}
-                value={blockedTimeData.date}
-                onChangeText={(value) => handleBlockTimeInputChange('date', value)}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Start Time:</Text>
-              <TextInput
-                style={styles.input}
-                value={blockedTimeData.startTime}
-                onChangeText={(value) => handleBlockTimeInputChange('startTime', value)}
-                placeholder="HH:MM AM/PM"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>End Time:</Text>
-              <TextInput
-                style={styles.input}
-                value={blockedTimeData.endTime}
-                onChangeText={(value) => handleBlockTimeInputChange('endTime', value)}
-                placeholder="HH:MM AM/PM"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Reason:</Text>
-              <TextInput
-                style={styles.input}
-                value={blockedTimeData.reason}
-                onChangeText={(value) => handleBlockTimeInputChange('reason', value)}
-                placeholder="Reason for blocking time"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <TouchableOpacity style={styles.submitButton} onPress={handleBlockTimeSubmit}>
-              <Text style={styles.submitButtonText}>Submit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setIsBlockTimeModalVisible(false)}>
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={() => setIsBlockTimeModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.blockTimeModal}>
+                <Text style={styles.blockTimeModalTitle}>Block Time</Text>
+                <View style={styles.blockTimeInputContainer}>
+                  <Text style={styles.blockTimeInputLabel}>Date:</Text>
+                  <TextInput
+                    style={styles.blockTimeInput}
+                    value={blockedTimeData.date}
+                    onChangeText={(value) => handleBlockTimeInputChange('date', value)}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={styles.blockTimeInputContainer}>
+                  <Text style={styles.blockTimeInputLabel}>Start Time:</Text>
+                  <TextInput
+                    style={styles.blockTimeInput}
+                    value={blockedTimeData.startTime}
+                    onChangeText={(value) => handleBlockTimeInputChange('startTime', value)}
+                    placeholder="HH:MM AM/PM"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={styles.blockTimeInputContainer}>
+                  <Text style={styles.blockTimeInputLabel}>End Time:</Text>
+                  <TextInput
+                    style={styles.blockTimeInput}
+                    value={blockedTimeData.endTime}
+                    onChangeText={(value) => handleBlockTimeInputChange('endTime', value)}
+                    placeholder="HH:MM AM/PM"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={styles.blockTimeInputContainer}>
+                  <Text style={styles.blockTimeInputLabel}>Reason:</Text>
+                  <TextInput
+                    style={styles.blockTimeInput}
+                    value={blockedTimeData.reason}
+                    onChangeText={(value) => handleBlockTimeInputChange('reason', value)}
+                    placeholder="Reason for blocking time"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+                <View style={styles.blockTimeModalButtons}>
+                  <TouchableOpacity 
+                    style={[styles.blockTimeModalButton, styles.blockTimeCancelButton]} 
+                    onPress={() => setIsBlockTimeModalVisible(false)}
+                  >
+                    <Text style={styles.blockTimeModalButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.blockTimeModalButton, styles.blockTimeSubmitButton]} 
+                    onPress={handleBlockTimeSubmit}
+                  >
+                    <Text style={styles.blockTimeModalButtonText}>Submit</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
       {renderAddNoteModal()}
       {renderPaymentModal()}
@@ -1096,9 +1147,8 @@ const styles = StyleSheet.create({
     right: 2,
     padding: 6,
     borderRadius: 6,
-    backgroundColor: '#007AFF',
     borderWidth: 1,
-    borderColor: '#0056b3', // A slightly darker shade of blue for the border
+    borderColor: '#0056b3',
   },
   appointmentHeader: {
     flexDirection: 'row',
@@ -1322,97 +1372,57 @@ const styles = StyleSheet.create({
   },
   blockTimeModal: {
     backgroundColor: '#2c2c2e',
-    borderRadius: 10,
+    borderRadius: 15,
     padding: 20,
-    width: '80%',
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
   },
-  modalTitle: {
+  blockTimeModalTitle: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  blockTimeInputContainer: {
+    width: '100%',
     marginBottom: 15,
   },
-  submitButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    backgroundColor: '#FF3B30',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  cancelButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  inputContainer: {
-    marginBottom: 15,
-  },
-  inputLabel: {
+  blockTimeInputLabel: {
     color: '#fff',
     fontSize: 16,
     marginBottom: 5,
   },
-  input: {
-    backgroundColor: '#333',
-    borderRadius: 5,
-    padding: 10,
+  blockTimeInput: {
+    backgroundColor: '#3a3a3c',
+    borderRadius: 10,
+    padding: 12,
     color: '#fff',
-  },
-  clientAppointmentsContainer: {
+    fontSize: 16,
     width: '100%',
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#444',
-    paddingTop: 10,
   },
-  clientAppointmentsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 10,
-  },
-  clientAppointmentItem: {
+  blockTimeModalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
     width: '100%',
+    marginTop: 20,
   },
-  currentAppointment: {
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    borderRadius: 5,
+  blockTimeModalButton: {
+    padding: 12,
+    borderRadius: 10,
+    width: '48%',
+    alignItems: 'center',
   },
-  appDate: {
-    color: '#aaa',
-    fontSize: 14,
-    width: '30%',
+  blockTimeCancelButton: {
+    backgroundColor: '#FF3B30',
   },
-  appType: {
-    color: '#aaa',
-    fontSize: 14,
-    flex: 1,
-    marginHorizontal: 5,
+  blockTimeSubmitButton: {
+    backgroundColor: '#007AFF',
   },
-  appPrice: {
-    color: '#007AFF',
-    fontSize: 14,
+  blockTimeModalButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: 'bold',
-    width: '20%',
-    textAlign: 'right',
   },
   notesContainer: {
     marginTop: 20,
