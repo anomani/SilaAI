@@ -372,6 +372,7 @@ export const updateAppointmentPayment = async (appointmentId, paid, tipAmount, p
 };
 
 export const rescheduleAppointment = async (appointmentId, newDate, newStartTime, newEndTime) => {
+  console.log(appointmentId, newDate, newStartTime, newEndTime)
   try {
     const response = await retryRequest(() => throttledRequest(() => 
       api.put(`/appointments/${appointmentId}/reschedule`, { newDate, newStartTime, newEndTime })
