@@ -28,7 +28,9 @@ async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, e
     const datetime = moment.tz(`${date} ${startTime}`, timezone).format();
 
     const addonIDs = addOnArray.map(addon => addOns[addon].id).filter(id => id !== undefined);
-    
+    if (!email) {
+        email = ''
+    }
     const appointmentData = {
         datetime: datetime,
         appointmentTypeID: appointmentTypeInfo.id,
