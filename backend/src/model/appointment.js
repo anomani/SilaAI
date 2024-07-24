@@ -140,6 +140,7 @@ async function findAndUpdateAppointmentByAcuityId(acuityId, updateData) {
 async function getUpcomingAppointments(clientId, limit = 5) {
     const db = dbUtils.getDB();
     const currentDate = new Date().toISOString().split('T')[0];
+    console.log(currentDate)
     const query = `
         SELECT * FROM Appointment
         WHERE clientid = $1 AND date >= $2
@@ -152,7 +153,10 @@ async function getUpcomingAppointments(clientId, limit = 5) {
 }
 
 async function main() {
-    console.log(await getUpcomingAppointments(2076, 5))
+    //Wednesday
+    console.log(await getUpcomingAppointments(12323, 1))
+    //Thursday
+    console.log(await getUpcomingAppointments(12367, 1))
 }
 main()
 
