@@ -100,6 +100,7 @@ async function createThread() {
 async function handleUserInputData(userMessage) {
   try {
     const date = new Date();
+    console.log(date)
     const assistant = await createAssistant(date);
     const thread = await createThread();
 
