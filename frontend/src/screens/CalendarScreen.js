@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput, TouchableWithoutFeedback, Keyboard, Switch } from 'react-native';
-import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, deleteAppointment } from '../services/api';
+import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, deleteAppointment, rescheduleAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import Swiper from 'react-native-swiper';
@@ -426,7 +426,11 @@ const CalendarScreen = ({ navigation }) => {
 
   const onGestureEvent = (event, appointment) => {
     const { translationY } = event.nativeEvent;
-    const newStartTime = calculateNewTime(appointment.startTime, translationY);
+    console.log(appointment.startTime);
+    const [time, period] = appointment.startTime.split(' ');
+    const [hours, minutes] = time.split(':');
+    const startTimeIn24 = `${period === 'PM' && hours !== '12' ? parseInt(hours) + 12 : hours}:${minutes}`;
+    const newStartTime = calculateNewTime(startTimeIn24, translationY);
     setNewAppointmentTime(newStartTime);
   };
 
@@ -443,21 +447,78 @@ const CalendarScreen = ({ navigation }) => {
     const newMinutes = totalMinutes + Math.round(translationY / (100 / 60)); // 100px per hour
     const newHours = Math.floor(newMinutes / 60);
     const newMinutesRemainder = newMinutes % 60;
+    console.log(`${newHours.toString().padStart(2, '0')}:${newMinutesRemainder.toString().padStart(2, '0')}`)
     return `${newHours.toString().padStart(2, '0')}:${newMinutesRemainder.toString().padStart(2, '0')}`;
   };
 
   const confirmReschedule = async () => {
-    // Implement the API call to update the appointment time
-    // For now, we'll just update the local state
-    const updatedAppointments = appointments.map(app => 
-      app.id === draggedAppointment.id 
-        ? { ...app, startTime: newAppointmentTime, endTime: calculateEndTime(newAppointmentTime, app.endTime) }
-        : app
-    );
-    setAppointments(updatedAppointments);
-    setIsRescheduleModalVisible(false);
-    setDraggedAppointment(null);
-    setNewAppointmentTime(null);
+    if (!draggedAppointment || !newAppointmentTime) {
+      console.error('No appointment or new time set for rescheduling');
+      return;
+    }
+
+    try {
+      // Convert 12-hour time to 24-hour time
+      const convertTo24Hour = (time12h) => {
+        const [time, modifier] = time12h.split(' ');
+        let [hours, minutes] = time.split(':');
+        if (hours === '12') {
+          hours = '00';
+        }
+        if (modifier === 'PM') {
+          hours = parseInt(hours, 10) + 12;
+        }
+        return `${hours.toString().padStart(2, '0')}:${minutes}`;
+      };
+
+      // newAppointmentTime is already in HH:MM format, so we don't need to convert it
+      const formattedStartTime = newAppointmentTime;
+      const originalStartTime = convertTo24Hour(draggedAppointment.startTime);
+      const originalEndTime = convertTo24Hour(draggedAppointment.endTime);
+      
+      // Calculate duration in minutes
+      const getDurationMinutes = (start, end) => {
+        const [startHours, startMinutes] = start.split(':').map(Number);
+        const [endHours, endMinutes] = end.split(':').map(Number);
+        return (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
+      };
+
+      const durationMinutes = getDurationMinutes(originalStartTime, originalEndTime);
+
+      // Calculate new end time
+      const addMinutes = (time, minutes) => {
+        const [hours, mins] = time.split(':').map(Number);
+        const totalMinutes = hours * 60 + mins + minutes;
+        const newHours = Math.floor(totalMinutes / 60) % 24;
+        const newMinutes = totalMinutes % 60;
+        return `${newHours.toString().padStart(2, '0')}:${newMinutes.toString().padStart(2, '0')}`;
+      };
+
+      const formattedEndTime = addMinutes(formattedStartTime, durationMinutes);
+
+      console.log(`Rescheduling appointment ${draggedAppointment.id} to ${formattedStartTime} - ${formattedEndTime}`);
+
+      // Uncomment this line when ready to actually reschedule
+      await rescheduleAppointment(
+        draggedAppointment.id,
+        draggedAppointment.date, // Keep the original date
+        formattedStartTime,
+        formattedEndTime
+      );
+
+      // Refresh appointments after rescheduling
+      await fetchAppointments();
+
+      setIsRescheduleModalVisible(false);
+      setDraggedAppointment(null);
+      setNewAppointmentTime(null);
+
+      // Show a success message
+      Alert.alert('Success', 'Appointment rescheduled successfully');
+    } catch (error) {
+      console.error('Error rescheduling appointment:', error);
+      Alert.alert('Error', 'Failed to reschedule appointment. Please try again.');
+    }
   };
 
   const calculateEndTime = (newStartTime, oldEndTime) => {
