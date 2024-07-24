@@ -8,7 +8,8 @@ const {
     bookAppointmentWithAcuityController, 
     createBlockedTimeController, 
     getClientAppointmentsAroundCurrentController,
-    updateAppointmentPaymentController
+    updateAppointmentPaymentController,
+    rescheduleAppointmentController
 } = require('../controllers/appointmentController');
 
 router.get('/appointments/:date', getAppointmentsByDate);
@@ -19,5 +20,6 @@ router.post('/appointments/acuity', bookAppointmentWithAcuityController);
 router.post('/appointments/blocked-time', createBlockedTimeController);
 router.get('/appointments/client/:clientId/around-current/:currentAppointmentId', getClientAppointmentsAroundCurrentController);
 router.put('/appointments/:appointmentId/payment', updateAppointmentPaymentController);
+router.put('/appointments/:appointmentId/reschedule', rescheduleAppointmentController);
 
 module.exports = router;
