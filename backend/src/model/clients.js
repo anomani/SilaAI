@@ -135,6 +135,7 @@ async function getClientByPhoneNumber(phoneNumber) {
         throw err;
     }
 }
+
 async function followUp(days) {
     const db = dbUtils.getDB();
 
@@ -228,6 +229,19 @@ async function updateClientOutreachDate(clientId, outreachDate) {
     }
 }
 
+async function getClientByName(firstName, lastName) {
+    const db = dbUtils.getDB();
+    const sql = 'SELECT * FROM Client WHERE LOWER(firstName) = LOWER($1) AND LOWER(lastName) = LOWER($2)';
+    const values = [firstName, lastName];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error fetching client by name:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createClient,
     getClientById,
@@ -239,6 +253,7 @@ module.exports = {
     followUp,
     searchForClients,
     getDaysSinceLastAppointment,
-    createAltClient,    
-    updateClientOutreachDate
+    createAltClient,
+    updateClientOutreachDate,
+    getClientByName
 };
