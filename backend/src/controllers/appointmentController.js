@@ -1,4 +1,4 @@
-const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment, getClientAppointmentsAroundCurrent, updateAppointmentPayment } = require('../model/appointment');
+const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment, getClientAppointmentsAroundCurrent, updateAppointmentPayment, rescheduleAppointment } = require('../model/appointment');
 const { createAppointment, createBlockedTime } = require('../model/appointment');
 const dbUtils = require('../model/dbUtils');
 const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
@@ -117,4 +117,25 @@ async function updateAppointmentPaymentController(req, res) {
     }
 }
 
-module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController };
+async function rescheduleAppointmentController(req, res) {
+    try {
+        const { appointmentId } = req.params;
+        const { newDate, newStartTime, newEndTime } = req.body;
+
+        if (!newDate || !newStartTime || !newEndTime) {
+            return res.status(400).send('Missing required fields');
+        }
+
+        const updatedAppointment = await rescheduleAppointment(appointmentId, newDate, newStartTime, newEndTime);
+        
+        if (!updatedAppointment) {
+            return res.status(404).send('Appointment not found');
+        }
+
+        res.status(200).json(updatedAppointment);
+    } catch (error) {
+        res.status(500).send(`Error rescheduling appointment: ${error.message}`);
+    }
+}
+
+module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController, rescheduleAppointmentController };

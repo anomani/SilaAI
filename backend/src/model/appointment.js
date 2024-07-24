@@ -239,6 +239,29 @@ async function getUnpaidAppointmentsByDate(date) {
     }
 }
 
+async function rescheduleAppointment(appointmentId, newDate, newStartTime, newEndTime) {
+    const db = dbUtils.getDB();
+    const sql = `
+        UPDATE Appointment
+        SET date = $1, startTime = $2, endTime = $3
+        WHERE id = $4
+        RETURNING *
+    `;
+    const values = [newDate, newStartTime, newEndTime, appointmentId];
+    try {
+        const res = await db.query(sql, values);
+        if (res.rows.length === 0) {
+            console.log(`No appointment found with ID: ${appointmentId}`);
+            return null;
+        }
+        console.log(`Appointment Rescheduled: ID ${appointmentId}`);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error rescheduling appointment:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -252,5 +275,6 @@ module.exports = {
     createBlockedTime,
     getClientAppointmentsAroundCurrent,
     updateAppointmentPayment,
-    getUnpaidAppointmentsByDate
+    getUnpaidAppointmentsByDate,
+    rescheduleAppointment
 };

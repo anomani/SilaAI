@@ -370,3 +370,15 @@ export const updateAppointmentPayment = async (appointmentId, paid, tipAmount, p
     throw error;
   }
 };
+
+export const rescheduleAppointment = async (appointmentId, newDate, newStartTime, newEndTime) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.put(`/appointments/${appointmentId}/reschedule`, { newDate, newStartTime, newEndTime })
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error rescheduling appointment:', error);
+    throw error;
+  }
+};
