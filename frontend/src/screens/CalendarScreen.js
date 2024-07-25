@@ -505,7 +505,6 @@ const CalendarScreen = ({ navigation }) => {
         formattedStartTime,
         formattedEndTime
       );
-
       // Refresh appointments after rescheduling
       await fetchAppointments();
 

@@ -13,9 +13,13 @@ const { getUserByPhoneNumber } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const Queue = require('bull');
 
 // Initialize the Expo SDK
 let expo = new Expo();
+
+// Initialize a Bull queue
+const messageQueue = new Queue('message-queue', process.env.REDIS_URL);
 
 function formatPhoneNumber(phoneNumber) {
   // Remove all non-digit characters
@@ -119,24 +123,30 @@ async function handleIncomingMessage(req, res) {
         console.log('Duplicate message detected, skipping save');
       }
     }
-    // const areeb = '+16478985997'
     const responseMessage = await handleUserInput(Body, Author);
     if (responseMessage === "user" || responseMessage === "User")  {
       await toggleLastMessageReadStatus(clientId);
-      await sendNotificationToUser(client.firstname, Body, clientId);  // Pass clientId here
+      await sendNotificationToUser(client.firstname, Body, clientId);
     } else {
-      await sendMessage(Author, responseMessage, false);
+      // Add the message to a queue instead of waiting
+      await messageQueue.add(
+        { to: Author, body: responseMessage },
+        { delay: 120000 } // 2 minute delay
+      );
     }
 
-    res.status(200).send('Message sent');
+    res.status(200).send('Message received');
   } catch (error) {
     console.error('Error handling incoming message:', error);
     res.status(500).send('Error processing message');
   }
 };
 
-
-
+// Process the queue
+messageQueue.process(async (job) => {
+  const { to, body } = job.data;
+  await sendMessage(to, body, false);
+});
 
 async function sendNotificationToUser(clientName, message, clientId) {
   const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
@@ -178,5 +188,6 @@ module.exports = {
   handleIncomingMessage,
   sendMessages,
   sendNotificationToUser,
-  formatPhoneNumber
+  formatPhoneNumber,
+  messageQueue
 };
