@@ -4,7 +4,7 @@ dotenv.config({path : '../../../.env'})
 const fs = require('fs');
 const os = require('os');
 const path = require('path')
-const {getClientByPhoneNumber} = require ('../../model/clients') 
+const {getClientByPhoneNumber, getClientById} = require ('../../model/clients') 
 const {deleteAppointment, getAppointmentsByDay} = require ('../../model/appointment')
 const dbUtils = require('../../model/dbUtils')
 const axios = require('axios');
@@ -63,5 +63,34 @@ async function cancelAppointment(phoneNumber, date) {
     } 
 }
 
+async function cancelAppointmentById(clientId, date) {
+    try {
+        const client = await getClientById(clientId);
+        if (!client) {
+            return "Client not found";
+        }
 
-module.exports = {cancelAppointment, cancelAcuityAppointment}
+        const appointmentsForDay = await getAppointmentsByDay(date);
+        console.log(appointmentsForDay);
+        const appointment = appointmentsForDay.find(appointment => appointment.clientid === clientId);
+        if (!appointment) {
+            return "Appointment not found";
+        }
+
+        const acuity_id = appointment.acuityid;
+        
+        const acuityCancelled = await cancelAcuityAppointment(acuity_id);
+
+        if (acuityCancelled) {
+            // await deleteAppointment(appointment.id);
+            return appointment;
+        } else {
+            throw new Error('Failed to cancel appointment in Acuity');
+        }
+    } catch (error) {
+        console.log(error);
+        return "Unable to cancel the appointment";
+    } 
+}
+
+module.exports = {cancelAppointment, cancelAcuityAppointment, cancelAppointmentById}

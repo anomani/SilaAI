@@ -12,6 +12,7 @@ const { getClientByName } = require('../model/clients');
 const { bookAppointmentAdmin } = require('./tools/bookAppointment');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAvailability } = require('./tools/getAvailability');
+const { cancelAppointment, cancelAppointmentById } = require('./tools/cancelAppointment');
 
 // Add this object to store queries
 const queryStore = {};
@@ -167,6 +168,27 @@ const tools = [
       required: ["day", "appointmentType", "addOns", "group"]
     }
   }
+},
+{
+  type: "function",
+  function: {
+    name: "cancelAppointmentById",
+    description: "Cancels an appointment for a client on a specific date using the client ID",
+    parameters: {
+      type: "object",
+      properties: {
+        clientId: {
+          type: "number",
+          description: "The ID of the client"
+        },
+        date: {
+          type: "string",
+          description: "The date of the appointment to cancel (YYYY-MM-DD)"
+        }
+      },
+      required: ["clientId", "date"]
+    }
+  }
 }
 ];
 
@@ -281,6 +303,8 @@ async function handleUserInputData(userMessage) {
             output = await getClientByName(args.firstName, args.lastName);
           } else if (funcName === "getAvailability") {
             output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group);
+          } else if (funcName === "cancelAppointmentById") {
+            output = await cancelAppointmentById(args.clientId, args.date);
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
