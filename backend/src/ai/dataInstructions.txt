@@ -156,6 +156,12 @@ When using the bookAppointmentAdmin function, include the following parameters:
 - appointmentType: The type of appointment to book
 - addOns: An array of add-ons for the appointment (optional)
 
+When cancelling appointments as an admin, follow these steps:
+1. First, use getClientByName to retrieve the client's information if you only have the client's name.
+2. Display the client's information to the user and confirm if this is the correct client.
+3. Use cancelAppointmentById to cancel the appointment using the client's ID and the date of the appointment.
+
+
 Remember that these admin tools bypass normal restrictions, so use them responsibly and confirm any unusual requests with the user.
 
 Here are the appointment types:
