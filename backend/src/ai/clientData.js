@@ -13,6 +13,7 @@ const { bookAppointmentAdmin } = require('./tools/bookAppointment');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAvailability } = require('./tools/getAvailability');
 const { cancelAppointment, cancelAppointmentById } = require('./tools/cancelAppointment');
+const { createBlockedTime } = require('../model/appointment');
 
 // Add this object to store queries
 const queryStore = {};
@@ -189,6 +190,35 @@ const tools = [
       required: ["clientId", "date"]
     }
   }
+},
+{
+  type: "function",
+  function: {
+    name: "blockTime",
+    description: "Blocks a time slot in the appointment schedule",
+    parameters: {
+      type: "object",
+      properties: {
+        date: {
+          type: "string",
+          description: "The date to block time (YYYY-MM-DD)"
+        },
+        startTime: {
+          type: "string",
+          description: "The start time of the blocked period (HH:MM)"
+        },
+        endTime: {
+          type: "string",
+          description: "The end time of the blocked period (HH:MM)"
+        },
+        reason: {
+          type: "string",
+          description: "The reason for blocking the time"
+        }
+      },
+      required: ["date", "startTime", "endTime"]
+    }
+  }
 }
 ];
 
@@ -305,6 +335,8 @@ async function handleUserInputData(userMessage) {
             output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group);
           } else if (funcName === "cancelAppointmentById") {
             output = await cancelAppointmentById(args.clientId, args.date);
+          } else if (funcName === "blockTime") {
+            output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason);
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
