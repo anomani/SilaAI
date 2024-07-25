@@ -237,7 +237,6 @@ async function createAssistant(date) {
   return assistant;
 }
 
-
 async function createThread() {
   if (!thread) {
     thread = await openai.beta.threads.create();
