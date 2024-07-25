@@ -11,7 +11,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getClientByName } = require('../model/clients');
 const { bookAppointmentAdmin } = require('./tools/bookAppointment');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
-const { getAvailability } = require('./tools/getAvailability');
+const { getAvailability, getCurrentDate } = require('./tools/getAvailability');
 const { cancelAppointment, cancelAppointmentById } = require('./tools/cancelAppointment');
 const { createBlockedTime } = require('../model/appointment');
 
@@ -248,11 +248,12 @@ async function createThread() {
 
 async function handleUserInputData(userMessage) {
   try {
-    const date = new Date();
+    const date = getCurrentDate();
     console.log(date)
     const assistant = await createAssistant(date);
     const thread = await createThread();
 
+    
     // Check if there's an active run
     const runs = await openai.beta.threads.runs.list(thread.id);
     const activeRun = runs.data.find(run => ['in_progress', 'queued'].includes(run.status));

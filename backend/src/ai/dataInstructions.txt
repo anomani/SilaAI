@@ -264,3 +264,7 @@ When using the blockTime function, include the following parameters:
 - reason: The reason for blocking the time
 
 Remember that this admin tool allows you to block time slots in the schedule, which will prevent appointments from being booked during these times. Use it responsibly and confirm the details with the user before blocking time.
+
+
+When the user says words like tomorrow or today or next _____, then first check the current date which is provided to you then 
+get the date that they are looking for
