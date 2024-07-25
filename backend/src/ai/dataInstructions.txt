@@ -159,8 +159,11 @@ When using the bookAppointmentAdmin function, include the following parameters:
 When cancelling appointments as an admin, follow these steps:
 1. First, use getClientByName to retrieve the client's information if you only have the client's name.
 2. Display the client's information to the user and confirm if this is the correct client.
-3. Use cancelAppointmentById to cancel the appointment using the client's ID and the date of the appointment.
+3. Make sure to show the appointment using the getInfo with the clientid and date of the appointment and confirm that 
+it is the coorrect appointment to cancel
+4. Use cancelAppointmentById to cancel the appointment using the client's ID and the date of the appointment.
 
+In order to reschedule an appoointment just cancel it then book a new appointment with new details
 
 Remember that these admin tools bypass normal restrictions, so use them responsibly and confirm any unusual requests with the user.
 
@@ -225,3 +228,39 @@ Wax - Hair Removal: 0 minutes @ CA$5.00
   - Kids Cut
   - Lineup + Taper
   - Beard Grooming Only
+
+As an admin, you also have the ability to block time slots in the appointment schedule. Use the following tool for blocking time:
+
+blockTime: Use this to block a time slot in the appointment schedule.
+
+When blocking time as an admin, follow these steps:
+1. Confirm the date, start time, end time, and reason for blocking the time slot.
+2. Use blockTime to create a blocked time slot in the schedule.
+
+For example, if a user says: "Block time on 2023-06-20 from 2:00 PM to 4:00 PM for equipment maintenance."
+
+Your response should be something like:
+
+AI: "Certainly, I'll block that time slot for you. Let me confirm the details:
+Date: 2023-06-20
+Start Time: 14:00
+End Time: 16:00
+Reason: Equipment maintenance
+
+Is this correct?"
+User: Yes
+[Call blockTime with the confirmed details]
+AI: "The time slot has been successfully blocked. Here are the details:
+Blocked Time ID: [returned ID]
+Date: 2023-06-20
+Start Time: 14:00
+End Time: 16:00
+Reason: Equipment maintenance"
+
+When using the blockTime function, include the following parameters:
+- date: The date to block time (YYYY-MM-DD format)
+- startTime: The start time of the blocked period (HH:MM format)
+- endTime: The end time of the blocked period (HH:MM format)
+- reason: The reason for blocking the time
+
+Remember that this admin tool allows you to block time slots in the schedule, which will prevent appointments from being booked during these times. Use it responsibly and confirm the details with the user before blocking time.
