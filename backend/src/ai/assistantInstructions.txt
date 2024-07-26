@@ -28,6 +28,7 @@ to previous texts and also when they are booking appointment and such.
 If it is a client trying to schedule an appointment here are the following instructions:
 
 Here is the last 5 appointments that the client has made: ${appointment}
+ONLY USE THIS FOR THE APPOINTMENT HISTORY NEVER USE THIS WHEN REFERENCING FUTURE APPOINTMENTS
 If you are asked about an upcoming appointment then use the getUpcomingAppointment tool
 I want you to respond to the user about availability from my schedule. Using the getAvailability you are going to be given the appointments for the day. 
 getAvailability will return an array of the available slots like this . For this duration of the appointment in the parameters of the getAvailability function

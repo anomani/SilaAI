@@ -12,6 +12,7 @@ import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import RescheduleConfirmModal from '../components/RescheduleConfirmModal';
 import { Picker } from '@react-native-picker/picker';
 
+
 const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
   const [date, setDate] = useState(new Date());
@@ -254,9 +255,15 @@ const CalendarScreen = ({ navigation }) => {
     const year = date.getFullYear();
     return `${month}/${day}/${year}`;
   };
+  const convertToEST = (dateString) => {
+    const date = new Date(dateString);
+    date.setHours(date.getHours()); // Convert to EST
+    date.setDate(date.getDate() + 1);
+    return date;
+  };
 
   const formatAppointmentDate = (dateString) => {
-    const date = new Date(dateString);
+    const date = convertToEST(dateString);
     if (isNaN(date.getTime())) {
       console.error('Invalid date string:', dateString);
       return 'Invalid Date';
@@ -352,7 +359,7 @@ const CalendarScreen = ({ navigation }) => {
                   styles.clientAppointmentItem,
                   app.id === appointment.id ? styles.currentAppointment : null
                 ]}>
-                  <Text style={styles.appDate}>{formatDate(new Date(app.date))}</Text>
+                  <Text style={styles.appDate}>{formatAppointmentDate(app.date)}</Text>
                   <Text 
                     style={styles.appType} 
                     numberOfLines={1} 
@@ -1207,8 +1214,9 @@ const styles = StyleSheet.create({
     right: 2,
     padding: 6,
     borderRadius: 6,
+    backgroundColor: '#007AFF',
     borderWidth: 1,
-    borderColor: '#0056b3',
+    borderColor: '#0056b3', // A slightly darker shade of blue for the border
   },
   appointmentHeader: {
     flexDirection: 'row',
@@ -1432,57 +1440,97 @@ const styles = StyleSheet.create({
   },
   blockTimeModal: {
     backgroundColor: '#2c2c2e',
-    borderRadius: 15,
+    borderRadius: 10,
     padding: 20,
-    width: '90%',
-    maxWidth: 400,
-    alignItems: 'center',
+    width: '80%',
   },
-  blockTimeModalTitle: {
+  modalTitle: {
     color: '#fff',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  blockTimeInputContainer: {
-    width: '100%',
     marginBottom: 15,
   },
-  blockTimeInputLabel: {
+  submitButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cancelButton: {
+    backgroundColor: '#FF3B30',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  inputContainer: {
+    marginBottom: 15,
+  },
+  inputLabel: {
     color: '#fff',
     fontSize: 16,
     marginBottom: 5,
   },
-  blockTimeInput: {
-    backgroundColor: '#3a3a3c',
-    borderRadius: 10,
-    padding: 12,
+  input: {
+    backgroundColor: '#333',
+    borderRadius: 5,
+    padding: 10,
     color: '#fff',
-    fontSize: 16,
-    width: '100%',
   },
-  blockTimeModalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  clientAppointmentsContainer: {
     width: '100%',
     marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#444',
+    paddingTop: 10,
   },
-  blockTimeModalButton: {
-    padding: 12,
-    borderRadius: 10,
-    width: '48%',
-    alignItems: 'center',
-  },
-  blockTimeCancelButton: {
-    backgroundColor: '#FF3B30',
-  },
-  blockTimeSubmitButton: {
-    backgroundColor: '#007AFF',
-  },
-  blockTimeModalButtonText: {
-    color: '#fff',
-    fontSize: 16,
+  clientAppointmentsTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#007AFF',
+    marginBottom: 10,
+  },
+  clientAppointmentItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    width: '100%',
+  },
+  currentAppointment: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 5,
+  },
+  appDate: {
+    color: '#aaa',
+    fontSize: 14,
+    width: '30%',
+  },
+  appType: {
+    color: '#aaa',
+    fontSize: 14,
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  appPrice: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    width: '20%',
+    textAlign: 'right',
   },
   notesContainer: {
     marginTop: 20,

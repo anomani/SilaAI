@@ -6,6 +6,8 @@ const { getCustomList } = require('../model/customLists');
 const { getClientById } = require('../model/clients');
 const { getStoredQuery } = require('../ai/clientData');
 
+const messageQueue = new Map();
+
 const handleChatRequest = async (req, res) => {
   try {
     const { message } = req.body;
@@ -14,9 +16,28 @@ const handleChatRequest = async (req, res) => {
     const localDate = new Date().toLocaleString();
     await saveMessage(number, twilio, message, localDate, 3367);
 
-    const responseMessage = await handleUserInput(message, number);
-    await saveMessage(twilio, number, responseMessage, localDate, 3367);
-    res.json({ message: responseMessage });
+    // Add message to queue
+    if (!messageQueue.has(number)) {
+      messageQueue.set(number, []);
+      // Set timeout for this number
+      setTimeout(async () => {
+        try {
+          const messages = messageQueue.get(number);
+          const combinedMessage = messages.join(' ');
+          const responseMessage = await handleUserInput(combinedMessage, number);
+          await saveMessage(twilio, number, responseMessage, new Date().toLocaleString(), 3367);
+          // Clear the queue for this number
+          messageQueue.delete(number);
+        } catch (error) {
+          console.error('Error handling delayed chat request:', error);
+        }
+      }, 60000); // 60000 milliseconds = 1 minute
+    }
+    messageQueue.get(number).push(message);
+
+    // Respond immediately to the client
+    res.json({ message: "Message received. A response will be sent shortly." });
+
   } catch (error) {
     console.error('Error handling chat request:', error);
     res.status(500).json({ error: 'Error processing request' });

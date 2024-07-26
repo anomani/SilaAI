@@ -38,6 +38,13 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ScheduleScreen')}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Schedule</Text>
+            <Text style={styles.menuSubtitle}>Manage your daily schedule and tasks</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
       <Footer navigation={navigation} />
     </View>
