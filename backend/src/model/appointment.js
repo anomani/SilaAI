@@ -18,6 +18,22 @@ async function createAppointment(appointmentType, acuityId, date, startTime, end
     }
 }
 
+// async function main() {
+//     await createAppointment('Adult Cut', 0, '2024-07-27', '14:00', '15:00', 3367, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2023-07-27', '14:00', '15:00', 3367, 'test', 55);
+
+//     await createAppointment('Adult Cut', 0, '2022-07-27', '14:00', '15:00', 3367, 'test', 55);
+
+//     await createAppointment('Adult Cut', 0, '2021-07-27', '14:00', '15:00', 3367, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2020-07-27', '14:00', '15:00', 3367, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2019-07-27', '14:00', '15:00', 3367, 'test', 55);
+
+//     await createAppointment('Adult Cut', 0, '2018-07-27', '14:00', '15:00', 3367, 'test', 55);
+
+// }
+
+// main();
+
 async function getAppointmentById(appointmentId) {
     const db = dbUtils.getDB();
     const sql = 'SELECT * FROM Appointment WHERE id = $1';
@@ -148,6 +164,12 @@ async function getUpcomingAppointments(clientId, limit = 5) {
   console.log(res.rows)
   return res.rows;
 }
+
+// async function main() {
+//     await getUpcomingAppointments(2379,1);
+// }
+
+// main();
 
 
 async function createBlockedTime(date, startTime, endTime, reason) {
