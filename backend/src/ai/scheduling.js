@@ -376,7 +376,7 @@ async function handleUserInput(userMessage, phoneNumber) {
     } else {
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
-      console.log(appointment)
+      console.log(appointment[0].appointmenttype)
       let appointmentDuration = appointment.length > 0 ? getAppointmentDuration(appointment) : 30;
       
       const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
@@ -385,7 +385,7 @@ async function handleUserInput(userMessage, phoneNumber) {
       email = client.email;
       const phone = client.phonenumber;   
       thread = await createThread(phoneNumber); 
-      assistant = await createAssistant(fname, lname, phone, messages, appointment[0], appointmentDuration, daysSinceLastAppointment, currentDate, client);
+      assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, appointmentDuration, daysSinceLastAppointment, currentDate, client);
     }
 
     const message = await openai.beta.threads.messages.create(thread.id, {
