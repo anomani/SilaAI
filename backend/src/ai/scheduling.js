@@ -475,46 +475,23 @@ async function handleToolCalls(requiredActions, client) {
   return toolOutputs;
 }
 
-async function handleUserInput(userMessage, phoneNumber) {
-  try {
-    await rPush(`queue:${phoneNumber}`, userMessage);
-
-    const processingKey = `processing:${phoneNumber}`;
-    const isProcessing = await get(processingKey);
-
-    if (!isProcessing) {
-      await set(processingKey, 'true', { EX: Math.ceil(DELAY_TIME / 1000) });
-      setTimeout(() => processQueue(phoneNumber), DELAY_TIME);
-    }
-
-    return "queued"; // Indicate that the message has been queued
-  } catch (error) {
-    console.error('Error in handleUserInput:', error);
-    throw error; // or handle it as appropriate for your application
-  }
-}
-
-async function processQueue(phoneNumber) {
-  const queueKey = `queue:${phoneNumber}`;
-  const messages = await lRange(queueKey, 0, -1);
+async function processMessage(job) {
+  const { Body, Author } = job.data;
   
-  if (!messages || messages.length === 0) return;
-
-  const combinedMessage = messages.join(" ");
-  await del(queueKey); // Clear the queue
-  console.log(combinedMessage);
   try {
-    const client = await getClientByPhoneNumber(phoneNumber);
-    let thread = await createThread(phoneNumber);
+    const client = await getClientByPhoneNumber(Author);
+    let thread = await createThread(Author);
 
-    // Add combined user message to the thread
+    // Add user message to the thread
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
-      content: combinedMessage,
+      content: Body,
     });
 
-    const shouldRespond = await shouldAIRespond(combinedMessage, thread);
+    const shouldRespond = await shouldAIRespond(Body, thread);
     if (!shouldRespond) {
+      // Don't send a message, just log it
+      console.log(`AI decided not to respond to message from ${Author}`);
       return "user"; // Indicate that human attention is required
     }
 
@@ -524,8 +501,8 @@ async function processQueue(phoneNumber) {
     let fname, lname, email;
 
     if (client.id == '') {
-      thread = await createThread(phoneNumber, true); 
-      assistant = await createTemporaryAssistant(phoneNumber);
+      thread = await createThread(Author, true); 
+      assistant = await createTemporaryAssistant(Author);
     } else {
       const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1))[0];
       let upcomingAppointment = '';
@@ -543,7 +520,7 @@ async function processQueue(phoneNumber) {
       lname = client.lastname;
       email = client.email;
       const phone = client.phonenumber;   
-      thread = await createThread(phoneNumber); 
+      thread = await createThread(Author); 
       assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, currentDate, client, upcomingAppointment);
     }
 
@@ -564,7 +541,7 @@ async function processQueue(phoneNumber) {
         if (assistantMessage) {
           // Add verification step here with the thread
           const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
-          await sendMessage(phoneNumber, verifiedResponse);
+          await sendMessage(Author, verifiedResponse);
           return verifiedResponse;
         }
       } else if (runStatus.status === "requires_action") {
@@ -580,10 +557,10 @@ async function processQueue(phoneNumber) {
     }
   } catch (error) {
     console.error('Error processing message:', error);
-    await sendMessage(phoneNumber, "I'm sorry, there was an error processing your message. Please try again later or contact support.");
+    // Don't send an error message to the user
     return "Error processing request";
   } finally {
-    await del(`processing:${phoneNumber}`);
+    await del(`processing:${Author}`);
   }
 }
 
@@ -684,4 +661,14 @@ async function shouldAIRespond(userMessage, thread) {
   }
 }
 
-module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, processQueue };
+// Set up the queue processor
+messageQueue.process(async (job) => {
+  await processMessage(job);
+});
+
+module.exports = {
+  createAssistant,
+  createThread,
+  shouldAIRespond,
+  processMessage
+};

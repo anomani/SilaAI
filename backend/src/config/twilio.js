@@ -1,19 +1,19 @@
 const twilio = require('twilio');
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
-const { handleUserInput, processQueue } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus } = require('../model/messages');
 const { getClientByPhoneNumber } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = twilio(accountSid, authToken);
 const { getUserPushToken } = require('../model/pushToken');
 const { getUserByPhoneNumber } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const Queue = require('bull');
+
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const client = twilio(accountSid, authToken);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Initialize the Expo SDK
 let expo = new Expo();
@@ -122,15 +122,12 @@ async function handleIncomingMessage(req, res) {
         console.log('Duplicate message detected, skipping save');
       }
     }
-    const queueStatus = await handleUserInput(Body, Author);
-    if (queueStatus === "queued") {
-      // Message has been queued, no immediate response needed
-      res.status(200).send('Message queued');
-    } else {
-      // This case should not happen with the new system, but keep it for safety
-      console.error('Unexpected queue status:', queueStatus);
-      res.status(500).send('Unexpected error');
-    }
+    
+    // Queue the message for processing
+    await messageQueue.add({ Body, Author });
+    
+    // Send a 200 OK response to Twilio
+    res.status(200).send('Message received and queued for processing');
   } catch (error) {
     console.error('Error handling incoming message:', error);
     res.status(500).send('Error processing message');
