@@ -13,7 +13,7 @@ using the getUpcomingAppointments tool
 2. If you are checking availabilities then verify for the days that are given in the response using the 
 getAvailability tool
 3. Is the tone casual and friendly, using appropriate language for a text conversation?
-4. Does the response include commas or exclamation marks? If so remove them and make sure to respond 
+4. Does the response include commas? If so remove them and make sure to respond 
 in very informal manners
 
 If you find any issues, please correct them. If the response is appropriate, return it as is.
