@@ -9,7 +9,7 @@ const { getUserByPhoneNumber } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
 const Queue = require('bull');
-
+const { createThread, shouldAIRespond, processMessage } = require('../ai/scheduling');
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
