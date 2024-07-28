@@ -1,7 +1,7 @@
 const twilio = require('twilio');
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
-const { handleUserInput, createThread } = require('../ai/scheduling');
+const { handleUserInput, processQueue } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus } = require('../model/messages');
 const { getClientByPhoneNumber } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
@@ -83,9 +83,8 @@ async function sendMessage(to, body, initialMessage = true) {
 async function sendMessages(clients, message) {
   for (const client of clients) {
     await sendMessage(client, message);
-  }
-};
-
+  };
+}
 
 async function handleIncomingMessage(req, res) {
   if (!req.body) {
@@ -123,33 +122,20 @@ async function handleIncomingMessage(req, res) {
         console.log('Duplicate message detected, skipping save');
       }
     }
-    const responseMessage = await handleUserInput(Body, Author);
-    if (responseMessage === "user" || responseMessage === "User")  {
-      await toggleLastMessageReadStatus(clientId);
-      // await sendNotificationToUser(client.firstname, Body, clientId);
-      console.log("Sending notification to user");
+    const queueStatus = await handleUserInput(Body, Author);
+    if (queueStatus === "queued") {
+      // Message has been queued, no immediate response needed
+      res.status(200).send('Message queued');
     } else {
-      // Send the message immediately instead of queueing
-      await sendMessage(Author, responseMessage, false);
-      // Comment out or remove the following lines:
-      // await messageQueue.add(
-      //   { to: Author, body: responseMessage },
-      //   { delay: 120000 } // 2 minute delay
-      // );
+      // This case should not happen with the new system, but keep it for safety
+      console.error('Unexpected queue status:', queueStatus);
+      res.status(500).send('Unexpected error');
     }
-
-    res.status(200).send('Message received');
   } catch (error) {
     console.error('Error handling incoming message:', error);
     res.status(500).send('Error processing message');
   }
-};
-
-// You can also remove or comment out the queue processing function if it's no longer needed:
-// messageQueue.process(async (job) => {
-//   const { to, body } = job.data;
-//   await sendMessage(to, body, false);
-// });
+}
 
 async function sendNotificationToUser(clientName, message, clientId) {
   const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
@@ -183,8 +169,6 @@ async function sendNotificationToUser(clientName, message, clientId) {
     console.error('Error sending push notification:', error);
   }
 }
-
-
 
 module.exports = {
   sendMessage,
