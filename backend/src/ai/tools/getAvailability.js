@@ -20,7 +20,6 @@ async function getAvailability(day, appointmentType, addOnArray, group, clientId
     try {
         const date = new Date(day);
         const dayOfWeek = date.getDay();
-        console.log(dayOfWeek)
         if (dayOfWeek === 0 || dayOfWeek === 1) {
             return []
         }
@@ -66,8 +65,8 @@ async function getAvailability(day, appointmentType, addOnArray, group, clientId
                 if (currentTime >= endOfSlot) break;
             }
         }
-
-        return availableSlots;
+        console.log({date: day, availableSlots: availableSlots});
+        return {date: day, availableSlots: availableSlots};
     } catch (error) {
         console.error("Error:", error);
         return [];
@@ -148,5 +147,11 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, gro
 
   return availableSlots;
 }
+
+// async function main() {
+//     await getAvailability('2024-07-27', 'Adult Cut', [], 1);
+// }
+
+// main();
 
 module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots}
