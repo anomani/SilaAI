@@ -13,9 +13,14 @@ const { createRecurringAppointments } = require('./tools/recurringAppointments')
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt } = require('../model/aiPrompt');
+const { Anthropic } = require('@anthropic-ai/sdk');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+});
+
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -312,8 +317,8 @@ async function createThread(phoneNumber, initialMessage = false) {
   return sessions.get(phoneNumber);
 }
 
-async function createAssistant(fname, lname, phone, messages, appointment, appointmentDuration, daysSinceLastAppointment, day, client) {
-  const instructionsPath = path.join(__dirname, 'assistantInstructions.txt');
+async function createAssistant(fname, lname, phone, messages, appointment, day, client, upcomingAppointment) {
+  const instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
   
   // Get the AI prompt for this client
@@ -328,13 +333,12 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
   let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
   fullInstructions = fullInstructions
     .replace('${appointment}', JSON.stringify(appointment, null, 2))
-    .replace('${appointmentDuration}', appointmentDuration)
     .replace('${fname}', fname)
     .replace('${lname}', lname)
     .replace('${phone}', phone)
     .replace('${messages}', formattedMessages)
-    .replace('${daysSinceLastAppointment}', daysSinceLastAppointment)
-    .replace('${day}', day);
+    .replace('${day}', day)
+    .replace('${upcomingAppointment}', upcomingAppointment);
 
   if (!assistants.has(phone)) {
     const newAssistant = await openai.beta.assistants.create({
@@ -342,7 +346,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, appoi
       name: `Scheduling Assistant for ${fname} ${lname}`,
       model: "gpt-4o",
       tools: tools,
-      temperature: 1
+      temperature: 0
     });
     assistants.set(phone, newAssistant);
   }
@@ -355,16 +359,120 @@ async function createTemporaryAssistant(phoneNumber) {
     name: `Assistant to get name of the client`,
     model: "gpt-4o",
     tools: tools,
-    temperature: 0.2
+    temperature: 0
   });
   return newAssistant;
 }
 
+async function handleToolCalls(requiredActions, client) {
+  const toolOutputs = [];
+
+  for (const action of requiredActions.tool_calls) {
+    const funcName = action.function.name;
+    const args = JSON.parse(action.function.arguments);
+
+    let output;
+    let totalDuration;
+    switch (funcName) {
+      case "getAvailability":
+        const appointmentTypeInfo = appointmentTypes[args.appointmentType];
+        if (!appointmentTypeInfo) {
+          throw new Error(`Invalid appointment type: ${args.appointmentType}`);
+        }
+        totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
+        output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group, totalDuration);
+        if (output.length === 0) {
+          output = {
+            requestedDay: args.day,
+            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, args.group)
+          };
+        }
+        break;
+      case "bookAppointment":
+        const appointmentInfo = appointmentTypes[args.appointmentType];
+        const addOnInfo = args.addOns.map(addon => addOns[addon]);
+        const totalPrice = appointmentInfo.price + addOnInfo.reduce((sum, addon) => sum + addon.price, 0);
+        totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
+        output = await bookAppointment(
+          args.date,
+          args.startTime,
+          client.firstname,
+          client.lastname,
+          client.phonenumber,
+          client.email,
+          args.appointmentType,
+          totalDuration,
+          args.group,
+          totalPrice,
+          args.addOns
+        );
+        break;
+      case "cancelAppointment":
+        output = await cancelAppointment(client.phonenumber, args.date);
+        break;
+      case "getAllAppointmentsByClientId":
+        output = await getAllAppointmentsByClientId(client.id);
+        break;
+      case "createClient":
+        output = await createClient(args.firstName, args.lastName, client.phonenumber);
+        break;
+      case "findRecurringAvailability":
+        output = await findRecurringAvailability(
+          args.initialDate,
+          args.appointmentDuration,
+          args.group,
+          args.recurrenceRule,
+          client.id
+        );
+        break;
+      case "createRecurringAppointments":
+        output = await createRecurringAppointments(
+          args.initialDate,
+          args.startTime,
+          client.firstname,
+          client.lastname,
+          client.phonenumber,
+          client.email,
+          args.appointmentType,
+          args.appointmentDuration,
+          args.group,
+          args.price,
+          args.addOnArray,
+          args.recurrenceRule
+        );
+        break;
+      case "getUpcomingAppointments":
+        output = await getUpcomingAppointments(client.id, args.limit);
+        break;
+      default:
+        throw new Error(`Unknown function: ${funcName}`);
+    }
+
+    toolOutputs.push({
+      tool_call_id: action.id,
+      output: JSON.stringify(output)
+    });
+  }
+
+  return toolOutputs;
+}
 
 async function handleUserInput(userMessage, phoneNumber) {
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
-    let thread;
+    let thread = await createThread(phoneNumber);
+
+    // Add user message to the thread
+    await openai.beta.threads.messages.create(thread.id, {
+      role: "user",
+      content: userMessage,
+    });
+
+    const shouldRespond = await shouldAIRespond(userMessage, thread);
+    if (!shouldRespond) {
+      return "user"; // Indicate that human attention is required
+    }
+
     let assistant;
     const currentDate = new Date(getCurrentDate());
     const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
@@ -374,9 +482,15 @@ async function handleUserInput(userMessage, phoneNumber) {
       thread = await createThread(phoneNumber, true); 
       assistant = await createTemporaryAssistant(phoneNumber);
     } else {
+      const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1))[0];
+      let upcomingAppointment = '';
+      if (upcomingAppointmentJSON) {
+        const appointmentDate = upcomingAppointmentJSON.date;
+        const appointmentTime = upcomingAppointmentJSON.starttime;
+        upcomingAppointment = `Date: ${appointmentDate} Time: ${appointmentTime}`;
+      }
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
-      console.log(appointment[0].appointmenttype)
       let appointmentDuration = appointment.length > 0 ? getAppointmentDuration(appointment) : 30;
       
       const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
@@ -385,13 +499,9 @@ async function handleUserInput(userMessage, phoneNumber) {
       email = client.email;
       const phone = client.phonenumber;   
       thread = await createThread(phoneNumber); 
-      assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, appointmentDuration, daysSinceLastAppointment, currentDate, client);
+      assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, currentDate, client, upcomingAppointment);
     }
 
-    const message = await openai.beta.threads.messages.create(thread.id, {
-      role: "user",
-      content: userMessage,
-    });
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
       additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate +"and the day of the week is"+ day,
@@ -407,126 +517,17 @@ async function handleUserInput(userMessage, phoneNumber) {
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
         if (assistantMessage) {
-          return assistantMessage.content[0].text.value;
+          // Add verification step here with the thread
+          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
+          return verifiedResponse;
         }
       } else if (runStatus.status === "requires_action") {
         const requiredActions = runStatus.required_action.submit_tool_outputs;
-
-        const toolOutputs = [];
-
-        for (const action of requiredActions.tool_calls) {
-          const funcName = action.function.name;
-          const args = JSON.parse(action.function.arguments);
-
-          if (funcName === "getAvailability") {
-            const appointmentTypeInfo = appointmentTypes[args.appointmentType];
-            if (!appointmentTypeInfo) {
-              throw new Error(`Invalid appointment type: ${args.appointmentType}`);
-            }
-
-            const totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
-
-            let output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group, totalDuration);
-            if (output.length === 0) {
-              // If no availability, find the next available slots
-              const nextAvailableSlots = await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, args.group);
-              output = {
-                requestedDay: args.day,
-                nextAvailableSlots: nextAvailableSlots
-              };
-            }
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } else if (funcName === "bookAppointment") {
-            const appointmentTypeInfo = appointmentTypes[args.appointmentType];
-            const addOnInfo = args.addOns.map(addon => addOns[addon]);
-            const totalPrice = appointmentTypeInfo.price + addOnInfo.reduce((sum, addon) => sum + addon.price, 0);
-            const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
-
-            const output = await bookAppointment(
-              args.date,
-              args.startTime,
-              fname,
-              lname,
-              phoneNumber,
-              email,
-              args.appointmentType,
-              totalDuration,
-              args.group,
-              totalPrice,
-              args.addOns
-            );
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } else if (funcName === "cancelAppointment") {
-            const output = await cancelAppointment(phoneNumber, args.date);
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } else if (funcName === "getAllAppointmentsByClientId") {
-            const output = await getAllAppointmentsByClientId(client.id);
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } else if (funcName === "createClient") {
-            const output = await createClient(args.firstName, args.lastName, phoneNumber);
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } else if (funcName === "findRecurringAvailability") {
-            const output = await findRecurringAvailability(
-              args.initialDate,
-              args.appointmentDuration,
-              args.group,
-              args.recurrenceRule,
-              client.id
-            );
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } else if (funcName === "createRecurringAppointments") {
-            const output = await createRecurringAppointments(
-              args.initialDate,
-              args.startTime,
-              fname,
-              lname,
-              phoneNumber,
-              email,
-              args.appointmentType,
-              args.appointmentDuration,
-              args.group,
-              args.price,
-              args.addOnArray,
-              args.recurrenceRule
-            );
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } else if (funcName === "getUpcomingAppointments") {
-            const output = await getUpcomingAppointments(client.id, args.limit);
-            console.log(output)
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } else {
-            throw new Error(`Unknown function: ${funcName}`);
-          }
-        }
+        const toolOutputs = await handleToolCalls(requiredActions, client);
 
         await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
           tool_outputs: toolOutputs
         });
-
       } else {
         await delay(1000);
       }
@@ -543,4 +544,101 @@ function calculateTotalDuration(appointmentType, addOnArray) {
   return appointmentDuration + addOnsDuration;
 }
 
-module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread };
+async function verifyResponse(response, client, thread) {
+  console.log("Verifying response: " + response);
+  const verificationPromptPath = path.join(__dirname, 'Prompts', 'verificationPrompt.txt');
+  let verificationPrompt = fs.readFileSync(verificationPromptPath, 'utf8');
+
+  // Replace placeholders with actual values
+  verificationPrompt = verificationPrompt
+    .replace('${client.firstname}', client.firstname)
+    .replace('${client.lastname}', client.lastname)
+    .replace('${client.phonenumber}', client.phonenumber)
+    .replace('${response}', response);
+
+  // Add verification prompt to the existing thread
+  await openai.beta.threads.messages.create(thread.id, {
+    role: "user",
+    content: verificationPrompt,
+  });
+
+  const assistant = await openai.beta.assistants.create({
+    instructions: "Verify the response for the client. Use the tools provided to check appointment details.",
+    name: "Response Verification Assistant",
+    model: "gpt-4o",
+    tools: tools,
+    temperature: 0
+  });
+
+  const run = await openai.beta.threads.runs.create(thread.id, {
+    assistant_id: assistant.id,
+  });
+
+  while (true) {
+    await delay(1000);
+    const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+
+    if (runStatus.status === "completed") {
+      const messages = await openai.beta.threads.messages.list(thread.id);
+      const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+      if (assistantMessage) {
+        return assistantMessage.content[0].text.value;
+      }
+    } else if (runStatus.status === "requires_action") {
+      const requiredActions = runStatus.required_action.submit_tool_outputs;
+      const toolOutputs = await handleToolCalls(requiredActions, client);
+
+      await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+        tool_outputs: toolOutputs
+      });
+    } else {
+      await delay(1000);
+    }
+  }
+}
+
+async function shouldAIRespond(userMessage, thread) {
+  try {
+    const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
+    const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
+
+    // Create a new message in the thread
+    await openai.beta.threads.messages.create(thread.id, {
+      role: "user",
+      content: `Should the AI respond to this message? Answer only with 'true' or 'false': "${userMessage}"`,
+    });
+
+    const assistant = await openai.beta.assistants.create({
+      instructions: initialScreeningInstructions,
+      name: "Initial Screening Assistant",
+      model: "gpt-4o",
+      temperature: 0
+    });
+
+    const run = await openai.beta.threads.runs.create(thread.id, {
+      assistant_id: assistant.id,
+    });
+
+    while (true) {
+      await delay(1000);
+      const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+
+      if (runStatus.status === "completed") {
+        const messages = await openai.beta.threads.messages.list(thread.id);
+        const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+        if (assistantMessage) {
+          const aiDecision = assistantMessage.content[0].text.value.trim().toLowerCase();
+          console.log(aiDecision);
+          return aiDecision === 'true';
+        }
+      } else {
+        await delay(1000);
+      }
+    }
+  } catch (error) {
+    console.error("Error in shouldAIRespond:", error);
+    return false; // Default to human attention if there's an error
+  }
+}
+
+module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };

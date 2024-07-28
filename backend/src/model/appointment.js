@@ -19,16 +19,16 @@ async function createAppointment(appointmentType, acuityId, date, startTime, end
 }
 
 // async function main() {
-//     await createAppointment('Adult Cut', 0, '2024-07-27', '14:00', '15:00', 3367, 'test', 55);
-//     await createAppointment('Adult Cut', 0, '2023-07-27', '14:00', '15:00', 3367, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2024-07-29', '14:00', '15:00', 3367, 'test', 55);
+//     // await createAppointment('Adult Cut', 0, '2023-07-27', '14:00', '15:00', 3367, 'test', 55);
 
-//     await createAppointment('Adult Cut', 0, '2022-07-27', '14:00', '15:00', 3367, 'test', 55);
+//     // await createAppointment('Adult Cut', 0, '2022-07-27', '14:00', '15:00', 3367, 'test', 55);
 
-//     await createAppointment('Adult Cut', 0, '2021-07-27', '14:00', '15:00', 3367, 'test', 55);
-//     await createAppointment('Adult Cut', 0, '2020-07-27', '14:00', '15:00', 3367, 'test', 55);
-//     await createAppointment('Adult Cut', 0, '2019-07-27', '14:00', '15:00', 3367, 'test', 55);
+//     // await createAppointment('Adult Cut', 0, '2021-07-27', '14:00', '15:00', 3367, 'test', 55);
+//     // await createAppointment('Adult Cut', 0, '2020-07-27', '14:00', '15:00', 3367, 'test', 55);
+//     // await createAppointment('Adult Cut', 0, '2019-07-27', '14:00', '15:00', 3367, 'test', 55);
 
-//     await createAppointment('Adult Cut', 0, '2018-07-27', '14:00', '15:00', 3367, 'test', 55);
+//     // await createAppointment('Adult Cut', 0, '2018-07-27', '14:00', '15:00', 3367, 'test', 55);
 
 // }
 
@@ -161,7 +161,6 @@ async function getUpcomingAppointments(clientId, limit = 5) {
     LIMIT $3
     `;
   const res = await db.query(query, [clientId, currentDate, limit]);
-  console.log(res.rows)
   return res.rows;
 }
 
