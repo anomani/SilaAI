@@ -27,4 +27,27 @@ app.use('/webhook', webhookRoutes);
 app.use('/api/ai-prompt', aiPromptRoutes);
 app.use('/api/notes', noteRoutes);
 
+const { redisClient } = require('./config/redis');
+
+const port = process.env.PORT || 3000;
+
+async function startServer() {
+  try {
+    // Wait for Redis to connect
+    await redisClient.connect();
+    console.log('Connected to Redis');
+
+    // Start your Express server
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to connect to Redis:', error);
+    console.error('Redis URL:', process.env.REDIS_URL);
+    process.exit(1);
+  }
+}
+
+startServer();
+
 module.exports = app;

@@ -14,8 +14,7 @@ const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt } = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
-const redis = require('redis');
-const { promisify } = require('util');
+const { rPush, lRange, del, set, get } = require('../config/redis');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -322,20 +321,6 @@ const tools = [
     }
 ];
 
-// Create Redis client
-const redisClient = redis.createClient({
-  url: process.env.REDIS_URL // Make sure to set this in your .env file
-});
-
-redisClient.on('error', (err) => console.log('Redis Client Error', err));
-
-// Promisify Redis commands
-const rPush = promisify(redisClient.rPush).bind(redisClient);
-const lRange = promisify(redisClient.lRange).bind(redisClient);
-const del = promisify(redisClient.del).bind(redisClient);
-const set = promisify(redisClient.set).bind(redisClient);
-const get = promisify(redisClient.get).bind(redisClient);
-
 const DELAY_TIME = 120000; // 2 minutes in milliseconds
 
 async function createThread(phoneNumber, initialMessage = false) {
@@ -490,17 +475,22 @@ async function handleToolCalls(requiredActions, client) {
 }
 
 async function handleUserInput(userMessage, phoneNumber) {
-  await rPush(`queue:${phoneNumber}`, userMessage);
+  try {
+    await rPush(`queue:${phoneNumber}`, userMessage);
 
-  const processingKey = `processing:${phoneNumber}`;
-  const isProcessing = await get(processingKey);
+    const processingKey = `processing:${phoneNumber}`;
+    const isProcessing = await get(processingKey);
 
-  if (!isProcessing) {
-    await set(processingKey, 'true', 'EX', Math.ceil(DELAY_TIME / 1000));
-    setTimeout(() => processQueue(phoneNumber), DELAY_TIME);
+    if (!isProcessing) {
+      await set(processingKey, 'true', { EX: Math.ceil(DELAY_TIME / 1000) });
+      setTimeout(() => processQueue(phoneNumber), DELAY_TIME);
+    }
+
+    return "queued"; // Indicate that the message has been queued
+  } catch (error) {
+    console.error('Error in handleUserInput:', error);
+    throw error; // or handle it as appropriate for your application
   }
-
-  return "queued"; // Indicate that the message has been queued
 }
 
 async function processQueue(phoneNumber) {
