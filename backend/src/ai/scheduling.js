@@ -16,6 +16,7 @@ const { getAIPrompt } = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { rPush, lRange, del, set, get } = require('../config/redis');
 const { sendMessage } = require('../config/twilio');
+const { messageQueue } = require('../config/twilio');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
