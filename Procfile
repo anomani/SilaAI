@@ -1,2 +1,2 @@
-web: node backend/api/index.js
-worker: node backend/src/config/worker.js
+web: cd backend && npm install && node api/index.js
+worker: cd backend && npm install && node src/config/worker.js
