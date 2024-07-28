@@ -303,9 +303,21 @@ const tools = [
           }
         },
         required: ["clientId"]
+      },
+  },
+  },
+  {
+    type: "function",
+    function: {
+      name: "getCurrentDate",
+      description: "Gets the current date and time",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
       }
     }
-  }
+    }
 ];
 
 
@@ -443,6 +455,9 @@ async function handleToolCalls(requiredActions, client) {
         break;
       case "getUpcomingAppointments":
         output = await getUpcomingAppointments(client.id, args.limit);
+        break;
+      case "getCurrentDate":
+        output = await getCurrentDate();
         break;
       default:
         throw new Error(`Unknown function: ${funcName}`);
