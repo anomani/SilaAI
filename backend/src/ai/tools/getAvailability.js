@@ -66,7 +66,7 @@ async function getAvailability(day, appointmentType, addOnArray, group, clientId
             }
         }
         console.log({date: day, availableSlots: availableSlots});
-        return {date: day, availableSlots: availableSlots};
+        return availableSlots;
     } catch (error) {
         console.error("Error:", error);
         return [];
