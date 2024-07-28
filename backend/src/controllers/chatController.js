@@ -5,7 +5,7 @@ const { sendMessage } = require('../config/twilio');
 const { getCustomList } = require('../model/customLists');
 const { getClientById } = require('../model/clients');
 const { getStoredQuery } = require('../ai/clientData');
-
+const { handleUserInputClaude } = require('../ai/claude-chat');
 const messageQueue = new Map();
 
 const handleChatRequest = async (req, res) => {
@@ -36,6 +36,7 @@ const handleChatRequest = async (req, res) => {
     */
 
     // Process the message immediately
+    // const responseMessage = await handleUserInputClaude(message, number);
     const responseMessage = await handleUserInput(message, number);
     await saveMessage(twilio, number, responseMessage, new Date().toLocaleString(), 3367);
 
