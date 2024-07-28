@@ -128,11 +128,13 @@ async function handleIncomingMessage(req, res) {
       await toggleLastMessageReadStatus(clientId);
       await sendNotificationToUser(client.firstname, Body, clientId);
     } else {
-      // Add the message to a queue instead of waiting
-      await messageQueue.add(
-        { to: Author, body: responseMessage },
-        { delay: 120000 } // 2 minute delay
-      );
+      // Send the message immediately instead of queueing
+      await sendMessage(Author, responseMessage, false);
+      // Comment out or remove the following lines:
+      // await messageQueue.add(
+      //   { to: Author, body: responseMessage },
+      //   { delay: 120000 } // 2 minute delay
+      // );
     }
 
     res.status(200).send('Message received');
@@ -142,11 +144,11 @@ async function handleIncomingMessage(req, res) {
   }
 };
 
-// Process the queue
-messageQueue.process(async (job) => {
-  const { to, body } = job.data;
-  await sendMessage(to, body, false);
-});
+// You can also remove or comment out the queue processing function if it's no longer needed:
+// messageQueue.process(async (job) => {
+//   const { to, body } = job.data;
+//   await sendMessage(to, body, false);
+// });
 
 async function sendNotificationToUser(clientName, message, clientId) {
   const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
