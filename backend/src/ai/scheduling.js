@@ -14,6 +14,8 @@ const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt } = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
+const { createClient } = require('redis');
+const { promisify } = require('util');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -320,6 +322,21 @@ const tools = [
     }
 ];
 
+// Create Redis client
+const redisClient = createClient({
+  url: process.env.REDIS_URL // Make sure to set this in your .env file
+});
+
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
+
+// Promisify Redis commands
+const rPush = promisify(redisClient.rPush).bind(redisClient);
+const lRange = promisify(redisClient.lRange).bind(redisClient);
+const del = promisify(redisClient.del).bind(redisClient);
+const set = promisify(redisClient.set).bind(redisClient);
+const get = promisify(redisClient.get).bind(redisClient);
+
+const DELAY_TIME = 120000; // 2 minutes in milliseconds
 
 async function createThread(phoneNumber, initialMessage = false) {
   if (initialMessage || !sessions.has(phoneNumber)) {
@@ -473,17 +490,39 @@ async function handleToolCalls(requiredActions, client) {
 }
 
 async function handleUserInput(userMessage, phoneNumber) {
+  await rPush(`queue:${phoneNumber}`, userMessage);
+
+  const processingKey = `processing:${phoneNumber}`;
+  const isProcessing = await get(processingKey);
+
+  if (!isProcessing) {
+    await set(processingKey, 'true', 'EX', Math.ceil(DELAY_TIME / 1000));
+    setTimeout(() => processQueue(phoneNumber), DELAY_TIME);
+  }
+
+  return "queued"; // Indicate that the message has been queued
+}
+
+async function processQueue(phoneNumber) {
+  const queueKey = `queue:${phoneNumber}`;
+  const messages = await lRange(queueKey, 0, -1);
+  
+  if (!messages || messages.length === 0) return;
+
+  const combinedMessage = messages.join(" ");
+  await del(queueKey); // Clear the queue
+
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
     let thread = await createThread(phoneNumber);
 
-    // Add user message to the thread
+    // Add combined user message to the thread
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
-      content: userMessage,
+      content: combinedMessage,
     });
 
-    const shouldRespond = await shouldAIRespond(userMessage, thread);
+    const shouldRespond = await shouldAIRespond(combinedMessage, thread);
     if (!shouldRespond) {
       return "user"; // Indicate that human attention is required
     }
@@ -549,7 +588,9 @@ async function handleUserInput(userMessage, phoneNumber) {
     }
   } catch (error) {
     console.error(error);
-    throw new Error('Error processing request');
+    return "Error processing request";
+  } finally {
+    await del(`processing:${phoneNumber}`);
   }
 }
 
@@ -650,4 +691,4 @@ async function shouldAIRespond(userMessage, thread) {
   }
 }
 
-module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
+module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, processQueue };
