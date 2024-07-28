@@ -1,12 +1,23 @@
 const app = require('../src/app');
 const port = process.env.PORT || 3000;
 
-const bodyParser = require('body-parser');
-app.get("/", (req, res) => res.send("Uzi Barber App"));
+const { connectRedis } = require('../src/config/redis');
 
-app.use(bodyParser.json());
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-});
+async function startServer() {
+  try {
+    // Wait for Redis to connect
+    await connectRedis();
+    console.log('Connected to Redis');
 
-module.exports = app;
+    // Start your Express server
+    app.listen(port, () => {
+      console.log(`Server is running at http://localhost:${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to connect to Redis:', error);
+    console.error('Redis URL:', process.env.REDIS_URL);
+    process.exit(1);
+  }
+}
+
+startServer();

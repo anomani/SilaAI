@@ -1,28 +1,31 @@
 const redis = require('redis');
 
-const redisClient = redis.createClient({
-  url: process.env.REDIS_URL
-});
+let redisClient;
 
-redisClient.on('error', (err) => console.log('Redis Client Error', err));
+function createRedisClient() {
+  if (!redisClient) {
+    redisClient = redis.createClient({
+      url: process.env.REDIS_URL || 'redis://localhost:6379'
+    });
 
-// Connect to Redis
-(async () => {
-  await redisClient.connect();
-})();
+    redisClient.on('error', (err) => console.log('Redis Client Error', err));
+  }
+  return redisClient;
+}
 
-// Promisify Redis commands
-const rPush = redisClient.rPush.bind(redisClient);
-const lRange = redisClient.lRange.bind(redisClient);
-const del = redisClient.del.bind(redisClient);
-const set = redisClient.set.bind(redisClient);
-const get = redisClient.get.bind(redisClient);
+async function connectRedis() {
+  const client = createRedisClient();
+  if (!client.isOpen) {
+    await client.connect();
+  }
+  return client;
+}
 
 module.exports = {
-  redisClient,
-  rPush,
-  lRange,
-  del,
-  set,
-  get
+  connectRedis,
+  rPush: (...args) => createRedisClient().rPush(...args),
+  lRange: (...args) => createRedisClient().lRange(...args),
+  del: (...args) => createRedisClient().del(...args),
+  set: (...args) => createRedisClient().set(...args),
+  get: (...args) => createRedisClient().get(...args)
 };

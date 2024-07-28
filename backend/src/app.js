@@ -27,14 +27,14 @@ app.use('/webhook', webhookRoutes);
 app.use('/api/ai-prompt', aiPromptRoutes);
 app.use('/api/notes', noteRoutes);
 
-const { redisClient } = require('./config/redis');
+const { connectRedis } = require('./config/redis');
 
 const port = process.env.PORT || 3000;
 
 async function startServer() {
   try {
     // Wait for Redis to connect
-    await redisClient.connect();
+    await connectRedis();
     console.log('Connected to Redis');
 
     // Start your Express server
