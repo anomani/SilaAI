@@ -126,7 +126,8 @@ async function handleIncomingMessage(req, res) {
     const responseMessage = await handleUserInput(Body, Author);
     if (responseMessage === "user" || responseMessage === "User")  {
       await toggleLastMessageReadStatus(clientId);
-      await sendNotificationToUser(client.firstname, Body, clientId);
+      // await sendNotificationToUser(client.firstname, Body, clientId);
+      console.log("Sending notification to user");
     } else {
       // Send the message immediately instead of queueing
       await sendMessage(Author, responseMessage, false);

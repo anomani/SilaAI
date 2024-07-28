@@ -556,14 +556,8 @@ async function verifyResponse(response, client, thread) {
     .replace('${client.phonenumber}', client.phonenumber)
     .replace('${response}', response);
 
-  // Add verification prompt to the existing thread
-  await openai.beta.threads.messages.create(thread.id, {
-    role: "user",
-    content: verificationPrompt,
-  });
-
   const assistant = await openai.beta.assistants.create({
-    instructions: "Verify the response for the client. Use the tools provided to check appointment details.",
+    instructions: verificationPrompt,
     name: "Response Verification Assistant",
     model: "gpt-4o",
     tools: tools,
