@@ -14,9 +14,6 @@ const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt } = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
-const { rPush, lRange, del, set, get } = require('../config/redis');
-const { sendMessage } = require('../config/twilio');
-const { messageQueue } = require('../config/queueConfig');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -306,24 +303,11 @@ const tools = [
           }
         },
         required: ["clientId"]
-      },
-  },
-  },
-  {
-    type: "function",
-    function: {
-      name: "getCurrentDate",
-      description: "Gets the current date and time",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: []
       }
     }
-    }
+  }
 ];
 
-const DELAY_TIME = 120000; // 2 minutes in milliseconds
 
 async function createThread(phoneNumber, initialMessage = false) {
   if (initialMessage || !sessions.has(phoneNumber)) {
@@ -460,9 +444,6 @@ async function handleToolCalls(requiredActions, client) {
       case "getUpcomingAppointments":
         output = await getUpcomingAppointments(client.id, args.limit);
         break;
-      case "getCurrentDate":
-        output = await getCurrentDate();
-        break;
       default:
         throw new Error(`Unknown function: ${funcName}`);
     }
@@ -476,27 +457,19 @@ async function handleToolCalls(requiredActions, client) {
   return toolOutputs;
 }
 
-async function processMessage(job) {
-  const { Body, Author } = job.data;
-  
+async function handleUserInput(userMessage, phoneNumber) {
   try {
-    if (!Body || Body.trim() === '') {
-      console.log(`Received empty message from ${Author}`);
-      return "Empty message";
-    }
-
-    const client = await getClientByPhoneNumber(Author);
-    let thread = await createThread(Author);
+    const client = await getClientByPhoneNumber(phoneNumber);
+    let thread = await createThread(phoneNumber);
 
     // Add user message to the thread
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
-      content: Body
+      content: userMessage,
     });
 
-    const shouldRespond = await shouldAIRespond(Body, thread);
+    const shouldRespond = await shouldAIRespond(userMessage, thread);
     if (!shouldRespond) {
-      console.log(`AI decided not to respond to message from ${Author}`);
       return "user"; // Indicate that human attention is required
     }
 
@@ -506,8 +479,8 @@ async function processMessage(job) {
     let fname, lname, email;
 
     if (client.id == '') {
-      thread = await createThread(Author, true); 
-      assistant = await createTemporaryAssistant(Author);
+      thread = await createThread(phoneNumber, true); 
+      assistant = await createTemporaryAssistant(phoneNumber);
     } else {
       const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1))[0];
       let upcomingAppointment = '';
@@ -525,7 +498,7 @@ async function processMessage(job) {
       lname = client.lastname;
       email = client.email;
       const phone = client.phonenumber;   
-      thread = await createThread(Author); 
+      thread = await createThread(phoneNumber); 
       assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, currentDate, client, upcomingAppointment);
     }
 
@@ -546,12 +519,7 @@ async function processMessage(job) {
         if (assistantMessage) {
           // Add verification step here with the thread
           const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
-          if (verifiedResponse && verifiedResponse.trim() !== '') {
-            await sendMessage(Author, verifiedResponse);
-          } else {
-            console.log(`Empty AI response for message from ${Author}`);
-          }
-          return verifiedResponse || "Empty AI response";
+          return verifiedResponse;
         }
       } else if (runStatus.status === "requires_action") {
         const requiredActions = runStatus.required_action.submit_tool_outputs;
@@ -565,10 +533,8 @@ async function processMessage(job) {
       }
     }
   } catch (error) {
-    console.error('Error processing message:', error);
-    return "Error processing request";
-  } finally {
-    await del(`processing:${Author}`);
+    console.error(error);
+    throw new Error('Error processing request');
   }
 }
 
@@ -590,8 +556,14 @@ async function verifyResponse(response, client, thread) {
     .replace('${client.phonenumber}', client.phonenumber)
     .replace('${response}', response);
 
+  // Add verification prompt to the existing thread
+  await openai.beta.threads.messages.create(thread.id, {
+    role: "user",
+    content: verificationPrompt,
+  });
+
   const assistant = await openai.beta.assistants.create({
-    instructions: verificationPrompt,
+    instructions: "Verify the response for the client. Use the tools provided to check appointment details.",
     name: "Response Verification Assistant",
     model: "gpt-4o",
     tools: tools,
@@ -669,15 +641,4 @@ async function shouldAIRespond(userMessage, thread) {
   }
 }
 
-// Set up the queue processor
-messageQueue.process(async (job) => {
-  console.log('Processing job:', job.data);
-  await processMessage(job);
-});
-
-module.exports = {
-  createAssistant,
-  createThread,
-  shouldAIRespond,
-  processMessage
-};
+module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };

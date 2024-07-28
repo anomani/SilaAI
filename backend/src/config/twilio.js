@@ -1,22 +1,25 @@
 const twilio = require('twilio');
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
+const { handleUserInput, createThread } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus } = require('../model/messages');
 const { getClientByPhoneNumber } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const client = twilio(accountSid, authToken);
 const { getUserPushToken } = require('../model/pushToken');
 const { getUserByPhoneNumber } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
-const { messageQueue } = require('./queueConfig');
-const { createThread, shouldAIRespond, processMessage } = require('../ai/scheduling');
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = twilio(accountSid, authToken);
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const Queue = require('bull');
 
 // Initialize the Expo SDK
 let expo = new Expo();
+
+// Initialize a Bull queue
+const messageQueue = new Queue('message-queue', process.env.REDIS_URL);
 
 function formatPhoneNumber(phoneNumber) {
   // Remove all non-digit characters
@@ -80,8 +83,9 @@ async function sendMessage(to, body, initialMessage = true) {
 async function sendMessages(clients, message) {
   for (const client of clients) {
     await sendMessage(client, message);
-  };
-}
+  }
+};
+
 
 async function handleIncomingMessage(req, res) {
   if (!req.body) {
@@ -119,17 +123,30 @@ async function handleIncomingMessage(req, res) {
         console.log('Duplicate message detected, skipping save');
       }
     }
-    
-    // Queue the message for processing
-    await messageQueue.add({ Body, Author });
-    
-    // Send a 200 OK response to Twilio
-    res.status(200).send('Message received and queued for processing');
+    const responseMessage = await handleUserInput(Body, Author);
+    if (responseMessage === "user" || responseMessage === "User")  {
+      await toggleLastMessageReadStatus(clientId);
+      await sendNotificationToUser(client.firstname, Body, clientId);
+    } else {
+      // Add the message to a queue instead of waiting
+      await messageQueue.add(
+        { to: Author, body: responseMessage },
+        { delay: 120000 } // 2 minute delay
+      );
+    }
+
+    res.status(200).send('Message received');
   } catch (error) {
     console.error('Error handling incoming message:', error);
     res.status(500).send('Error processing message');
   }
-}
+};
+
+// Process the queue
+messageQueue.process(async (job) => {
+  const { to, body } = job.data;
+  await sendMessage(to, body, false);
+});
 
 async function sendNotificationToUser(clientName, message, clientId) {
   const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
@@ -164,10 +181,13 @@ async function sendNotificationToUser(clientName, message, clientId) {
   }
 }
 
+
+
 module.exports = {
   sendMessage,
   handleIncomingMessage,
   sendMessages,
   sendNotificationToUser,
-  formatPhoneNumber
+  formatPhoneNumber,
+  messageQueue
 };
