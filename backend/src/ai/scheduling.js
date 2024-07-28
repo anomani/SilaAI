@@ -480,18 +480,22 @@ async function processMessage(job) {
   const { Body, Author } = job.data;
   
   try {
+    if (!Body || Body.trim() === '') {
+      console.log(`Received empty message from ${Author}`);
+      return "Empty message";
+    }
+
     const client = await getClientByPhoneNumber(Author);
     let thread = await createThread(Author);
 
     // Add user message to the thread
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
-      content: Body,
+      content: Body
     });
 
     const shouldRespond = await shouldAIRespond(Body, thread);
     if (!shouldRespond) {
-      // Don't send a message, just log it
       console.log(`AI decided not to respond to message from ${Author}`);
       return "user"; // Indicate that human attention is required
     }
@@ -542,8 +546,12 @@ async function processMessage(job) {
         if (assistantMessage) {
           // Add verification step here with the thread
           const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
-          await sendMessage(Author, verifiedResponse);
-          return verifiedResponse;
+          if (verifiedResponse && verifiedResponse.trim() !== '') {
+            await sendMessage(Author, verifiedResponse);
+          } else {
+            console.log(`Empty AI response for message from ${Author}`);
+          }
+          return verifiedResponse || "Empty AI response";
         }
       } else if (runStatus.status === "requires_action") {
         const requiredActions = runStatus.required_action.submit_tool_outputs;
@@ -558,7 +566,6 @@ async function processMessage(job) {
     }
   } catch (error) {
     console.error('Error processing message:', error);
-    // Don't send an error message to the user
     return "Error processing request";
   } finally {
     await del(`processing:${Author}`);
