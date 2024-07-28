@@ -14,7 +14,7 @@ const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt } = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
-const { createClient } = require('redis');
+const redis = require('redis');
 const { promisify } = require('util');
 
 const openai = new OpenAI({
@@ -323,7 +323,7 @@ const tools = [
 ];
 
 // Create Redis client
-const redisClient = createClient({
+const redisClient = redis.createClient({
   url: process.env.REDIS_URL // Make sure to set this in your .env file
 });
 
