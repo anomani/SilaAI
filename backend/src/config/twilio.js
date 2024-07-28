@@ -8,7 +8,7 @@ const { getUserPushToken } = require('../model/pushToken');
 const { getUserByPhoneNumber } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
-const Queue = require('bull');
+const { messageQueue } = require('./queueConfig');
 const { createThread, shouldAIRespond, processMessage } = require('../ai/scheduling');
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -17,9 +17,6 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Initialize the Expo SDK
 let expo = new Expo();
-
-// Initialize a Bull queue
-const messageQueue = new Queue('message-queue', process.env.REDIS_URL);
 
 function formatPhoneNumber(phoneNumber) {
   // Remove all non-digit characters
@@ -172,6 +169,5 @@ module.exports = {
   handleIncomingMessage,
   sendMessages,
   sendNotificationToUser,
-  formatPhoneNumber,
-  messageQueue
+  formatPhoneNumber
 };
