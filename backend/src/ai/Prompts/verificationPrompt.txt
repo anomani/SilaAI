@@ -14,7 +14,7 @@ using the getUpcomingAppointments tool
 getAvailability tool
 3. Is the tone casual and friendly, using appropriate language for a text conversation?
 4. Does the response include commas? If so remove them and make sure to respond 
-in very informal manners
+in very informal manners. You can still use periods and question marks.
 
 If you find any issues, please correct them. If the response is appropriate, return it as is.
 Dont tell me why the response is incorrect just correct it, replacing the incorrect information 
