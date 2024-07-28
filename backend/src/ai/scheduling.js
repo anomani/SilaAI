@@ -15,6 +15,7 @@ const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt } = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { rPush, lRange, del, set, get } = require('../config/redis');
+const { sendMessage } = require('../config/twilio');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -501,7 +502,7 @@ async function processQueue(phoneNumber) {
 
   const combinedMessage = messages.join(" ");
   await del(queueKey); // Clear the queue
-
+  console.log(combinedMessage);
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
     let thread = await createThread(phoneNumber);
@@ -563,6 +564,7 @@ async function processQueue(phoneNumber) {
         if (assistantMessage) {
           // Add verification step here with the thread
           const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
+          await sendMessage(phoneNumber, verifiedResponse);
           return verifiedResponse;
         }
       } else if (runStatus.status === "requires_action") {
@@ -577,7 +579,8 @@ async function processQueue(phoneNumber) {
       }
     }
   } catch (error) {
-    console.error(error);
+    console.error('Error processing message:', error);
+    await sendMessage(phoneNumber, "I'm sorry, there was an error processing your message. Please try again later or contact support.");
     return "Error processing request";
   } finally {
     await del(`processing:${phoneNumber}`);
