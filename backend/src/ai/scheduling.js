@@ -16,7 +16,7 @@ const { getAIPrompt } = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { rPush, lRange, del, set, get } = require('../config/redis');
 const { sendMessage } = require('../config/twilio');
-const { messageQueue } = require('../config/twilio');
+const { messageQueue } = require('../config/queueConfig');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -671,6 +671,7 @@ async function shouldAIRespond(userMessage, thread) {
 
 // Set up the queue processor
 messageQueue.process(async (job) => {
+  console.log('Processing job:', job.data);
   await processMessage(job);
 });
 
