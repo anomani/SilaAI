@@ -44,7 +44,7 @@ async function sendMessage(to, body, initialMessage = true, manual = true) {
   let clientId;
   if (customer.id != '') {
     clientId = customer.id
-    await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId, !manual);
+    await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId, true, !manual);
 
     // Create or get the thread, passing the initialMessage parameter
     const thread = await createThread(to_formatted, initialMessage);
