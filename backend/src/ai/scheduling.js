@@ -635,11 +635,8 @@ async function shouldAIRespond(userMessages) {
       model: 'claude-3-5-sonnet-20240620',
       max_tokens: 100,
       temperature: 0,
+      system: initialScreeningInstructions,
       messages: [
-        {
-          role: "system",
-          content: initialScreeningInstructions
-        },
         {
           role: "user",
           content: `Should the AI respond to these messages? Answer only with 'true' or 'false':\n${screeningMessage}`
@@ -656,11 +653,4 @@ async function shouldAIRespond(userMessages) {
   }
 }
 
-// async function main() {
-//   const userMessage = "Hey bro hope alls well, I just had something come up for me td, was just wondering is there any. Way we could push my 2pm later. (Maybe switch with another client). Ill be free anytime 3 pm onwards and no worries if rescheduling is difficult I can schedule for another day";
-//   const thread = await createThread("+12038324011", true); // Replace with actual phone number
-//   const shouldRespond = await shouldAIRespond([userMessage], thread);
-//   console.log(`AI should respond: ${shouldRespond}`);
-// }
-// main()
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
