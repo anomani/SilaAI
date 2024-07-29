@@ -13,9 +13,13 @@ const { getUserByPhoneNumber } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const Queue = require('bull'); // You'll need to install this package
 
 // Initialize the Expo SDK
 let expo = new Expo();
+
+// Create a new queue
+const messageQueue = new Queue('message-processing');
 
 function formatPhoneNumber(phoneNumber) {
   // Remove all non-digit characters
@@ -101,6 +105,17 @@ async function handleIncomingMessage(req, res) {
     return res.status(400).send('Unsupported EventType');
   }
 
+  // Add the job to the queue
+  await messageQueue.add({ Author, Body });
+
+  // Respond immediately
+  res.status(200).send('Message received and queued for processing');
+}
+
+// Process jobs from the queue
+messageQueue.process(async (job) => {
+  const { Author, Body } = job.data;
+  
   try {
     console.log(Author)
     const client = await getClientByPhoneNumber(Author);
@@ -127,14 +142,11 @@ async function handleIncomingMessage(req, res) {
       // Send the message immediately instead of queueing
       await sendMessage(Author, responseMessage, false);
     }
-
-    res.status(200).send('Message received');
   } catch (error) {
     await sendNotificationToUser(client.firstname, Body, clientId);
     console.error('Error handling incoming message:', error);
-    res.status(500).send('Error processing message');
   }
-};
+});
 
 async function sendNotificationToUser(clientName, message, clientId) {
   const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
