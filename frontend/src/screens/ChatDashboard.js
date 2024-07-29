@@ -16,18 +16,20 @@ const ChatDashboard = ({ navigation }) => {
     try {
       const data = await getAllMessagesGroupedByClient();
       setGroupedMessages(data);
-      fetchClientNames(data);
+      fetchClientNames(Object.keys(data));
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
   };
 
-  const fetchClientNames = async (groupedMessages) => {
-    const names = {};
-    for (const clientid of Object.keys(groupedMessages)) { 
-      const client = await getClientById(clientid); 
-      names[clientid] = `${client.firstname} ${client.lastname}`;
-    }
+  const fetchClientNames = async (clientIds) => {
+    const namePromises = clientIds.map(async (clientId) => {
+      const client = await getClientById(clientId);
+      return [clientId, `${client.firstname} ${client.lastname}`];
+    });
+
+    const namesArray = await Promise.all(namePromises);
+    const names = Object.fromEntries(namesArray);
     setClientNames(names);
   };
 

@@ -45,7 +45,7 @@ const ClientMessagesScreen = ({ route }) => {
     try {
       const lastMessage = messages[messages.length - 1];
       const recipient = lastMessage.fromtext === '+18446480598' ? lastMessage.totext : lastMessage.fromtext;
-      await sendMessage(recipient, newMessage);
+      await sendMessage(recipient, newMessage, false, true);
       setNewMessage('');
       setMessagesRead(clientid);
       fetchMessages(clientid);
@@ -132,6 +132,7 @@ const ClientMessagesScreen = ({ route }) => {
     const isAssistant = message.fromtext === '+18446480598';
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
     const senderName = isAssistant ? 'Assistant' : clientName || 'Client';
+    const isAI = message.is_ai;
 
     const messageKey = message.id || `${message.date}-${message.fromtext}-${Math.random()}`;
 
@@ -147,7 +148,16 @@ const ClientMessagesScreen = ({ route }) => {
             <Text style={[styles.messageText, isAssistant ? styles.assistantText : styles.clientText]}>
               {message.body}
             </Text>
-            <Text style={styles.timestamp}>{formatTimestamp(message.date)}</Text>
+            <View style={styles.timestampContainer}>
+              <Text style={styles.timestamp}>
+                {formatTimestamp(message.date)}
+              </Text>
+              {isAssistant && (
+                <Text style={styles.aiIndicator}>
+                  {isAI ? 'AI' : 'Manual'}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
         {isAssistant && <Image source={avatar} style={styles.avatar} />}
@@ -266,11 +276,20 @@ const styles = StyleSheet.create({
   clientText: {
     color: 'white',
   },
+  timestampContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   timestamp: {
     fontSize: 10,
     color: '#9da6b8',
-    alignSelf: 'flex-end',
-    marginTop: 4,
+  },
+  aiIndicator: {
+    fontSize: 10,
+    color: 'white',
+    fontWeight: 'bold',
   },
   autoRespondContainer: {
     flexDirection: 'row',
