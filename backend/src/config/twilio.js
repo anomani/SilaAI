@@ -17,6 +17,9 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // Initialize the Expo SDK
 let expo = new Expo();
 
+// Add this near the top of the file, with other imports and global variables
+const pendingMessages = new Map();
+
 function formatPhoneNumber(phoneNumber) {
   // Remove all non-digit characters
   let cleaned = phoneNumber.replace(/\D/g, '');
@@ -79,9 +82,8 @@ async function sendMessage(to, body, initialMessage = true) {
 async function sendMessages(clients, message) {
   for (const client of clients) {
     await sendMessage(client, message);
-  }
+  };
 };
-
 
 async function handleIncomingMessage(req, res) {
   if (!req.body) {
@@ -102,39 +104,64 @@ async function handleIncomingMessage(req, res) {
   }
 
   try {
-    console.log(Author)
     const client = await getClientByPhoneNumber(Author);
-    console.log(client)
-    let clientId;
+    let clientId = '';
     const localDate = new Date().toLocaleString();
     if (client.id != '') {
-      clientId = client.id
+      clientId = client.id;
       try {
         await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
       } catch (saveError) {
-        if (saveError.code !== '23505') {  // If it's not a duplicate key error, rethrow
-          throw saveError;
+        if (saveError.code !== '23505') {
+          console.error('Error saving message:', saveError);
+        } else {
+          console.log('Duplicate message detected, skipping save');
         }
-        // If it's a duplicate key error, log it and continue
-        console.log('Duplicate message detected, skipping save');
       }
     }
-    const responseMessage = await handleUserInput(Body, Author);
-    if (responseMessage === "user" || responseMessage === "User")  {
-      await toggleLastMessageReadStatus(clientId);
-      // await sendNotificationToUser(client.firstname, Body, clientId);
-    } else {
-      // Send the message immediately instead of queueing
-      await sendMessage(Author, responseMessage, false);
-    }
 
+    // Add message to pending messages
+    if (!pendingMessages.has(Author)) {
+      pendingMessages.set(Author, []);
+      // Schedule processing after 2 minutes
+      setTimeout(() => processDelayedResponse(Author), 120000);
+    }
+    pendingMessages.get(Author).push(Body);
+
+    // Immediately respond to Twilio
     res.status(200).send('Message received');
+
   } catch (error) {
-    await sendNotificationToUser(client.firstname, Body, clientId);
     console.error('Error handling incoming message:', error);
     res.status(500).send('Error processing message');
   }
-};
+}
+
+async function processDelayedResponse(phoneNumber) {
+  try {
+    const messages = pendingMessages.get(phoneNumber);
+    pendingMessages.delete(phoneNumber);
+
+    if (messages && messages.length > 0) {
+      const combinedMessage = messages.join(' ');
+      const responseMessage = await handleUserInput(combinedMessage, phoneNumber);
+      
+      if (responseMessage === "user" || responseMessage === "User") {
+        const client = await getClientByPhoneNumber(phoneNumber);
+        await toggleLastMessageReadStatus(client.id);
+      } else {
+        await sendMessage(phoneNumber, responseMessage, false);
+      }
+    }
+  } catch (error) {
+    console.error('Error processing delayed response:', error);
+    try {
+      await sendMessage(phoneNumber, "I'm sorry, but I encountered an error while processing your message. Please try again later or contact support if the problem persists.", false);
+    } catch (sendError) {
+      console.error('Failed to send error message:', sendError);
+    }
+  }
+}
 
 async function sendNotificationToUser(clientName, message, clientId) {
   const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;

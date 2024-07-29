@@ -476,11 +476,14 @@ async function handleUserInput(userMessage, phoneNumber) {
     const client = await getClientByPhoneNumber(phoneNumber);
     let thread = await createThread(phoneNumber);
 
-    // Add user message to the thread
-    await openai.beta.threads.messages.create(thread.id, {
-      role: "user",
-      content: userMessage,
-    });
+    // Add all user messages to the thread
+    const messages = userMessage.split(' ');
+    for (const message of messages) {
+      await openai.beta.threads.messages.create(thread.id, {
+        role: "user",
+        content: message,
+      });
+    }
 
     const shouldRespond = await shouldAIRespond(userMessage, thread);
     if (!shouldRespond) {
