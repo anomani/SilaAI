@@ -41,7 +41,7 @@ async function getMessagesByClientId(clientid) {
     throw new Error('Invalid clientid');
   }
   const db = dbUtils.getDB();
-  const sql = 'SELECT * FROM Messages WHERE clientid = $1 ORDER BY date ASC';
+  const sql = 'SELECT * FROM Messages WHERE clientid = $1 ORDER BY id ASC';
   const values = [clientid];
   try {
     const res = await db.query(sql, values);

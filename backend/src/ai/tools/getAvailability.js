@@ -106,7 +106,6 @@ function getGroupAvailability(group, dayOfWeek) {
     return availabilityMap[group] ? availabilityMap[group][dayOfWeek] : null;
 }
 
-
 function getCurrentDate() {
     const now = new Date();
     now.setHours(now.getHours() - 4);
