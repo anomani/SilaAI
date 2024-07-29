@@ -170,7 +170,6 @@ const ClientMessagesScreen = ({ route }) => {
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
     const senderName = isAssistant ? 'Assistant' : clientName || 'Client';
     const isAI = message.is_ai;
-    console.log(message.is_ai)
     const messageKey = message.id || `${message.date}-${message.fromtext}-${Math.random()}`;
 
     return (

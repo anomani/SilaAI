@@ -223,7 +223,7 @@ const tools = [
 ];
 
 async function createAssistant(date) {
-  const instructionsPath = path.join(__dirname, 'dataInstructions.txt');
+  const instructionsPath = path.join(__dirname, 'Prompts', 'dataInstructions.txt');
   const assistantInstructions = fs.readFileSync(instructionsPath, 'utf8');
   if (!assistant) {
     assistant = await openai.beta.assistants.create({
