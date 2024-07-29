@@ -37,14 +37,14 @@ function formatPhoneNumber(phoneNumber) {
 }
 
 
-async function sendMessage(to, body, initialMessage = true) {
+async function sendMessage(to, body, initialMessage = true, manual = true) {
   const to_formatted = formatPhoneNumber(to);
   const customer = await getClientByPhoneNumber(to);
   const localDate = new Date().toLocaleString();
   let clientId;
   if (customer.id != '') {
     clientId = customer.id
-    await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId);
+    await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId, !manual);
 
     // Create or get the thread, passing the initialMessage parameter
     const thread = await createThread(to_formatted, initialMessage);
@@ -110,7 +110,8 @@ async function handleIncomingMessage(req, res) {
     if (client.id != '') {
       clientId = client.id;
       try {
-        await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId);
+        // Set isAI to true for incoming messages
+        await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId, true);
       } catch (saveError) {
         if (saveError.code !== '23505') {
           console.error('Error saving message:', saveError);
@@ -156,7 +157,7 @@ async function processDelayedResponse(phoneNumber) {
         const client = await getClientByPhoneNumber(phoneNumber);
         await toggleLastMessageReadStatus(client.id);
       } else {
-        await sendMessage(phoneNumber, responseMessage, false);
+        await sendMessage(phoneNumber, responseMessage, false, false);
       }
     }
   } catch (error) {

@@ -1,17 +1,17 @@
 const dbUtils = require('./dbUtils');
 
-async function saveMessage(from, to, body, date, clientid) {
+async function saveMessage(from, to, body, date, clientid, isAI = false) {
   if (!clientid) {
     throw new Error('Invalid clientid');
   }
   const db = dbUtils.getDB();
 
   const sql = `
-    INSERT INTO Messages (fromText, toText, body, date, clientid)
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO Messages (fromText, toText, body, date, clientid, is_ai)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING id
   `;
-  const values = [from, to, body, date, clientid];
+  const values = [from, to, body, date, clientid, isAI];
   try {
     const res = await db.query(sql, values);
     const newId = res.rows[0].id;
@@ -118,7 +118,8 @@ async function getAllMessagesGroupedByClient() {
           'toText', toText,
           'body', body,
           'date', date,
-          'read', read
+          'read', read,
+          'is_ai', is_ai
         ) ORDER BY date ASC
       ) AS messages
     FROM Messages
