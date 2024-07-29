@@ -245,6 +245,32 @@ async function getClientByName(firstName, lastName) {
     }
 }
 
+async function getClientAutoRespond(clientId) {
+    const db = dbUtils.getDB();
+    const sql = 'SELECT auto_respond FROM Client WHERE id = $1';
+    const values = [clientId];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows[0].auto_respond;
+    } catch (err) {
+        console.error('Error fetching client auto_respond status:', err.message);
+        throw err;
+    }
+}
+
+async function updateClientAutoRespond(clientId, autoRespond) {
+    const db = dbUtils.getDB();
+    const sql = 'UPDATE Client SET auto_respond = $1 WHERE id = $2 RETURNING *';
+    const values = [autoRespond, clientId];
+    try {
+        const res = await db.query(sql, values);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error updating client auto_respond status:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createClient,
     getClientById,
@@ -258,5 +284,7 @@ module.exports = {
     getDaysSinceLastAppointment,
     createAltClient,
     updateClientOutreachDate,
-    getClientByName
+    getClientByName,
+    getClientAutoRespond,
+    updateClientAutoRespond
 };
