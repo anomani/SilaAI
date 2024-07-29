@@ -1,26 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
 import { getAllMessagesGroupedByClient, getClientById } from '../services/api';
 import Footer from '../components/Footer'; 
+import { useIsFocused } from '@react-navigation/native';
 
 const ChatDashboard = ({ navigation }) => {
   const [groupedMessages, setGroupedMessages] = useState({});
   const [clientNames, setClientNames] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [polling, setPolling] = useState(null);
+  const isFocused = useIsFocused();
 
   useEffect(() => {
-    fetchMessages();
-  }, []);
+    if (isFocused) {
+      fetchMessages();
+      
+      // Start polling when the screen is focused
+      const pollInterval = setInterval(fetchMessages, 5000); // Poll every 5 seconds
+      setPolling(pollInterval);
+    } else {
+      // Stop polling when the screen is not focused
+      if (polling) {
+        clearInterval(polling);
+        setPolling(null);
+      }
+    }
 
-  const fetchMessages = async () => {
+    return () => {
+      if (polling) {
+        clearInterval(polling);
+      }
+    };
+  }, [isFocused]);
+
+  const fetchMessages = useCallback(async () => {
     try {
       const data = await getAllMessagesGroupedByClient();
-      setGroupedMessages(data);
-      fetchClientNames(Object.keys(data));
+      setGroupedMessages(prevMessages => {
+        // Only update if there are changes
+        if (JSON.stringify(prevMessages) !== JSON.stringify(data)) {
+          fetchClientNames(Object.keys(data));
+          return data;
+        }
+        return prevMessages;
+      });
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
-  };
+  }, []);
 
   const fetchClientNames = async (clientIds) => {
     const namePromises = clientIds.map(async (clientId) => {
@@ -105,6 +132,10 @@ const ChatDashboard = ({ navigation }) => {
     );
   };
 
+  const handleRefresh = useCallback(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -120,8 +151,8 @@ const ChatDashboard = ({ navigation }) => {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
-        <TouchableOpacity onPress={fetchMessages} style={styles.refreshButton}>
-          <Text style={styles.refreshIcon}>🔄</Text>
+        <TouchableOpacity onPress={handleRefresh} style={styles.refreshButton}>
+          <Text style={styles.refreshIcon}>⟳</Text>
         </TouchableOpacity>
       </View>
       <FlatList
@@ -218,4 +249,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ChatDashboard;
+export default React.memo(ChatDashboard);
