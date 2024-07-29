@@ -625,16 +625,17 @@ async function verifyResponse(response, client) {
   }
 }
 
-async function shouldAIRespond(userMessages, thread) {
+async function shouldAIRespond(userMessages) {
   try {
-
     const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
 
-    // Create a new message in the thread for screening
-    const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
+    // Create a new thread for screening
+    const screeningThread = await openai.beta.threads.create();
 
-    await openai.beta.threads.messages.create(thread.id, {
+    // Add the screening message to the new thread
+    const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
+    await openai.beta.threads.messages.create(screeningThread.id, {
       role: "user",
       content: `Should the AI respond to these messages? Answer only with 'true' or 'false':\n${screeningMessage}`,
     });
@@ -646,16 +647,16 @@ async function shouldAIRespond(userMessages, thread) {
       temperature: 0
     });
 
-    const run = await openai.beta.threads.runs.create(thread.id, {
+    const run = await openai.beta.threads.runs.create(screeningThread.id, {
       assistant_id: assistant.id,
     });
 
     while (true) {
       await delay(1000);
-      const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+      const runStatus = await openai.beta.threads.runs.retrieve(screeningThread.id, run.id);
 
       if (runStatus.status === "completed") {
-        const messages = await openai.beta.threads.messages.list(thread.id);
+        const messages = await openai.beta.threads.messages.list(screeningThread.id);
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
         if (assistantMessage) {
           const aiDecision = assistantMessage.content[0].text.value.trim().toLowerCase();
