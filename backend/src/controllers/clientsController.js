@@ -88,6 +88,16 @@ async function updateClientOutreachDateController(req, res) {
     res.status(200).send(`Client outreach date updated: ${id}`);
 }
 
+async function getClientAutoRespondController(req, res) {
+    const { id } = req.params;
+    try {
+        const autoRespond = await getClientAutoRespond(id);
+        res.status(200).json({ autoRespond });
+    } catch (error) {
+        res.status(500).send(`Error fetching client auto_respond status: ${error.message}`);
+    }
+}
+
 async function updateClientAutoRespondController(req, res) {
     const { id } = req.params;
     const { autoRespond } = req.body;
@@ -99,4 +109,4 @@ async function updateClientAutoRespondController(req, res) {
     }
 }
 
-module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment, updateClientOutreachDateController, updateClientAutoRespondController };
+module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment, updateClientOutreachDateController, getClientAutoRespondController, updateClientAutoRespondController };
