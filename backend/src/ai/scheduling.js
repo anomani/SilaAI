@@ -625,14 +625,6 @@ async function verifyResponse(response, client) {
 }
 
 async function shouldAIRespond(userMessages, thread) {
-  console.log(userMessages)
-  const messages = await openai.beta.threads.messages.list(thread.id);
-  messages.data.forEach((message, index) => {
-    console.log(`Message ${index + 1}:`);
-    console.log(`Role: ${message.role}`);
-    console.log(`Content: ${message.content[0].text.value}`);
-    console.log('---');
-  });
   try {
     const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
@@ -654,7 +646,13 @@ async function shouldAIRespond(userMessages, thread) {
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
     });
-
+    const messages = await openai.beta.threads.messages.list(thread.id);
+    messages.data.forEach((message, index) => {
+      console.log(`Message ${index + 1}:`);
+      console.log(`Role: ${message.role}`);
+      console.log(`Content: ${message.content[0].text.value}`);
+      console.log('---');
+    });
     while (true) {
       await delay(1000);
       const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
