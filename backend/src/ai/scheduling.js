@@ -488,7 +488,7 @@ async function handleUserInput(userMessages, phoneNumber) {
       });
     }
 
-    const shouldRespond = await shouldAIRespond(userMessages, thread);
+    const shouldRespond = await shouldAIRespond(userMessages);
     if (!shouldRespond) {
       return "user"; // Indicate that human attention is required
     }
@@ -537,11 +537,10 @@ async function handleUserInput(userMessages, phoneNumber) {
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
         if (assistantMessage) {
-          // Comment out the verification step
-          // const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client);
-          // return verifiedResponse;
-
-          // Instead, return the assistant's message directly
+          // If you want to re-enable verification, uncomment the next line
+          // return await verifyResponse(assistantMessage.content[0].text.value, client);
+          
+          // For now, return the assistant's message directly
           return assistantMessage.content[0].text.value;
         }
       } else if (runStatus.status === "requires_action") {
@@ -630,49 +629,27 @@ async function shouldAIRespond(userMessages) {
     const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
 
-    // Create a new thread for screening
-    const screeningThread = await openai.beta.threads.create();
-
-    // Add the screening message to the new thread
     const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
-    await openai.beta.threads.messages.create(screeningThread.id, {
-      role: "user",
-      content: `Should the AI respond to these messages? Answer only with 'true' or 'false':\n${screeningMessage}`,
-    });
 
-    const assistant = await openai.beta.assistants.create({
-      instructions: initialScreeningInstructions,
-      name: "Initial Screening Assistant",
-      model: "gpt-4o",
-      temperature: 0
-    });
-
-    const run = await openai.beta.threads.runs.create(screeningThread.id, {
-      assistant_id: assistant.id,
-    });
-
-    while (true) {
-      await delay(1000);
-      const runStatus = await openai.beta.threads.runs.retrieve(screeningThread.id, run.id);
-
-      if (runStatus.status === "completed") {
-        const messages = await openai.beta.threads.messages.list(screeningThread.id);
-        const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
-        if (assistantMessage) {
-          const aiDecision = assistantMessage.content[0].text.value.trim().toLowerCase();
-          console.log("AI decision on whether to respond:", aiDecision);
-          return aiDecision === 'true';
-        } else {
-          console.log("No assistant message found");
-          return false;
+    const response = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20240620',
+      max_tokens: 100,
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: initialScreeningInstructions
+        },
+        {
+          role: "user",
+          content: `Should the AI respond to these messages? Answer only with 'true' or 'false':\n${screeningMessage}`
         }
-      } else if (runStatus.status === "failed") {
-        console.error("Screening run failed:", runStatus.last_error);
-        return false; // Default to human attention if screening fails
-      } else {
-        await delay(1000);
-      }
-    }
+      ]
+    });
+
+    const aiDecision = response.content[0].text.trim().toLowerCase();
+    console.log("AI decision on whether to respond:", aiDecision);
+    return aiDecision === 'true';
   } catch (error) {
     console.error("Error in shouldAIRespond:", error);
     return false; // Default to human attention if there's an error
