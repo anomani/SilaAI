@@ -123,8 +123,8 @@ async function handleIncomingMessage(req, res) {
     // Add message to pending messages
     if (!pendingMessages.has(Author)) {
       pendingMessages.set(Author, []);
-      // Schedule processing after 2 minutes
-      setTimeout(() => processDelayedResponse(Author), 120000);
+      // Schedule processing after 30 seconds
+      setTimeout(() => processDelayedResponse(Author), 30000);
     }
     pendingMessages.get(Author).push(Body);
 

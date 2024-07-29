@@ -488,7 +488,7 @@ async function handleUserInput(userMessages, phoneNumber) {
       });
     }
 
-    const shouldRespond = await shouldAIRespond(userMessages[userMessages.length - 1], thread);
+    const shouldRespond = await shouldAIRespond(userMessages, thread);
     if (!shouldRespond) {
       return "user"; // Indicate that human attention is required
     }
@@ -622,15 +622,16 @@ async function verifyResponse(response, client) {
   }
 }
 
-async function shouldAIRespond(userMessage, thread) {
+async function shouldAIRespond(userMessages, thread) {
   try {
     const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
 
-    // Create a new message in the thread
+    // Create a new message in the thread for screening
+    const screeningMessage = userMessages.join('\n');
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
-      content: `Should the AI respond to this message? Answer only with 'true' or 'false': "${userMessage}"`,
+      content: `Should the AI respond to these messages? Answer only with 'true' or 'false':\n${screeningMessage}`,
     });
 
     const assistant = await openai.beta.assistants.create({
@@ -653,9 +654,12 @@ async function shouldAIRespond(userMessage, thread) {
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
         if (assistantMessage) {
           const aiDecision = assistantMessage.content[0].text.value.trim().toLowerCase();
-          console.log(aiDecision);
+          console.log("AI decision on whether to respond:", aiDecision);
           return aiDecision === 'true';
         }
+      } else if (runStatus.status === "failed") {
+        console.error("Screening run failed:", runStatus.last_error);
+        return false; // Default to human attention if screening fails
       } else {
         await delay(1000);
       }
