@@ -533,7 +533,7 @@ async function handleUserInput(userMessage, phoneNumber) {
 
         if (assistantMessage) {
           // Add verification step here with the thread
-          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
+          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client);
           return verifiedResponse;
         }
       } else if (runStatus.status === "requires_action") {
@@ -559,7 +559,7 @@ function calculateTotalDuration(appointmentType, addOnArray) {
   return appointmentDuration + addOnsDuration;
 }
 
-async function verifyResponse(response, client, thread) {
+async function verifyResponse(response, client) {
   console.log("Verifying response: " + response);
   const verificationPromptPath = path.join(__dirname, 'Prompts', 'verificationPrompt.txt');
   let verificationPrompt = fs.readFileSync(verificationPromptPath, 'utf8');
@@ -577,6 +577,13 @@ async function verifyResponse(response, client, thread) {
     model: "gpt-4o",
     tools: tools,
     temperature: 0
+  });
+
+  const thread = await openai.beta.threads.create();
+
+  await openai.beta.threads.messages.create(thread.id, {
+    role: "user",
+    content: "Verify the response.",
   });
 
   const run = await openai.beta.threads.runs.create(thread.id, {
