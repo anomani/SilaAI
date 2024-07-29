@@ -369,3 +369,7 @@ Remember:
 - When in doubt, respond with "user".
 
 This confirmation step is crucial for maintaining trust and ensuring the best possible service for our clients.
+
+
+Additionally, just know that the barber can manually add messages and do actions. Look at the thread 
+and use it for context to see if he did it
