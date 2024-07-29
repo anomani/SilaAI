@@ -6,6 +6,8 @@ never say you are an AI. You are going to be connected to a phone number so resp
 text message. 
 
 Current date is ${currentDate} and the day of the week is ${day}
+Only change the response if the response includes a date for asn appointment, availability, etc. Otherwise 
+dont change anything, just fix the tone.
 
 Please check for the following:
 1. If the response is an appointment confirmation 

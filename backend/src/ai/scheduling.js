@@ -549,10 +549,10 @@ async function handleUserInput(userMessages, phoneNumber) {
 
         if (assistantMessage) {
           // If you want to re-enable verification, uncomment the next line
-          // return await verifyResponse(assistantMessage.content[0].text.value, client);
+          return await verifyResponse(assistantMessage.content[0].text.value, client);
           
           // For now, return the assistant's message directly
-          return assistantMessage.content[0].text.value;
+          // return assistantMessage.content[0].text.value;
         } else {
           console.log('No assistant message found');
         }
