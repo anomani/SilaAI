@@ -626,15 +626,22 @@ async function verifyResponse(response, client) {
 
 async function shouldAIRespond(userMessages, thread) {
   try {
+    console.log("Entering shouldAIRespond function");
+    console.log("User messages:", userMessages);
+
     const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
+    console.log("Screening instructions loaded");
 
     // Create a new message in the thread for screening
-    const screeningMessage = userMessages.join('\n');
+    const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
+    console.log("Screening message:", screeningMessage);
+
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
       content: `Should the AI respond to these messages? Answer only with 'true' or 'false':\n${screeningMessage}`,
     });
+    console.log("Screening message added to thread");
 
     const assistant = await openai.beta.assistants.create({
       instructions: initialScreeningInstructions,
@@ -642,20 +649,17 @@ async function shouldAIRespond(userMessages, thread) {
       model: "gpt-4o",
       temperature: 0
     });
+    console.log("Screening assistant created");
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
     });
-    const messages = await openai.beta.threads.messages.list(thread.id);
-    messages.data.forEach((message, index) => {
-      console.log(`Message ${index + 1}:`);
-      console.log(`Role: ${message.role}`);
-      console.log(`Content: ${message.content[0].text.value}`);
-      console.log('---');
-    });
+    console.log("Run created for screening");
+
     while (true) {
       await delay(1000);
       const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+      console.log("Run status:", runStatus.status);
 
       if (runStatus.status === "completed") {
         const messages = await openai.beta.threads.messages.list(thread.id);
@@ -663,8 +667,10 @@ async function shouldAIRespond(userMessages, thread) {
         if (assistantMessage) {
           const aiDecision = assistantMessage.content[0].text.value.trim().toLowerCase();
           console.log("AI decision on whether to respond:", aiDecision);
-          console.log(aiDecision === 'true');
           return aiDecision === 'true';
+        } else {
+          console.log("No assistant message found");
+          return false;
         }
       } else if (runStatus.status === "failed") {
         console.error("Screening run failed:", runStatus.last_error);
@@ -679,4 +685,11 @@ async function shouldAIRespond(userMessages, thread) {
   }
 }
 
+// async function main() {
+//   const userMessage = "Hey bro hope alls well, I just had something come up for me td, was just wondering is there any. Way we could push my 2pm later. (Maybe switch with another client). Ill be free anytime 3 pm onwards and no worries if rescheduling is difficult I can schedule for another day";
+//   const thread = await createThread("+12038324011", true); // Replace with actual phone number
+//   const shouldRespond = await shouldAIRespond([userMessage], thread);
+//   console.log(`AI should respond: ${shouldRespond}`);
+// }
+// main()
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
