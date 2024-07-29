@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config({ path: '../../.env' });
 const { handleUserInput, createThread } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus } = require('../model/messages');
-const { getClientByPhoneNumber } = require('../model/clients');
+const { getClientByPhoneNumber, getClientAutoRespond } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -117,6 +117,14 @@ async function handleIncomingMessage(req, res) {
         } else {
           console.log('Duplicate message detected, skipping save');
         }
+      }
+
+      // Check auto_respond status
+      const autoRespond = await getClientAutoRespond(clientId);
+      if (!autoRespond) {
+        // If auto_respond is false, don't process the message with AI
+        await toggleLastMessageReadStatus(clientId);
+        return res.status(200).send('Message received');
       }
     }
 

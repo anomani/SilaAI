@@ -1,6 +1,6 @@
 const { getAllClients, createClient, searchForClients, 
     deleteClient, followUp, getClientById, updateClient, getDaysSinceLastAppointment, 
-    updateClientOutreachDate } = require('../model/clients');
+    updateClientOutreachDate, getClientAutoRespond, updateClientAutoRespond } = require('../model/clients');
 const dbUtils = require('../model/dbUtils');
 
 
@@ -87,4 +87,16 @@ async function updateClientOutreachDateController(req, res) {
     await updateClientOutreachDate(id, outreachDate);
     res.status(200).send(`Client outreach date updated: ${id}`);
 }
-module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment, updateClientOutreachDateController };
+
+async function updateClientAutoRespondController(req, res) {
+    const { id } = req.params;
+    const { autoRespond } = req.body;
+    try {
+        const updatedClient = await updateClientAutoRespond(id, autoRespond);
+        res.status(200).json(updatedClient);
+    } catch (error) {
+        res.status(500).send(`Error updating client auto_respond status: ${error.message}`);
+    }
+}
+
+module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment, updateClientOutreachDateController, updateClientAutoRespondController };
