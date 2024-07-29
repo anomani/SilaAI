@@ -14,7 +14,6 @@ const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt } = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -533,7 +532,7 @@ async function handleUserInput(userMessage, phoneNumber) {
 
         if (assistantMessage) {
           // Add verification step here with the thread
-          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client);
+          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
           return verifiedResponse;
         }
       } else if (runStatus.status === "requires_action") {
@@ -559,7 +558,7 @@ function calculateTotalDuration(appointmentType, addOnArray) {
   return appointmentDuration + addOnsDuration;
 }
 
-async function verifyResponse(response, client) {
+async function verifyResponse(response, client, thread) {
   console.log("Verifying response: " + response);
   const verificationPromptPath = path.join(__dirname, 'Prompts', 'verificationPrompt.txt');
   let verificationPrompt = fs.readFileSync(verificationPromptPath, 'utf8');
@@ -577,13 +576,6 @@ async function verifyResponse(response, client) {
     model: "gpt-4o",
     tools: tools,
     temperature: 0
-  });
-
-  const thread = await openai.beta.threads.create();
-
-  await openai.beta.threads.messages.create(thread.id, {
-    role: "user",
-    content: "Verify the response.",
   });
 
   const run = await openai.beta.threads.runs.create(thread.id, {

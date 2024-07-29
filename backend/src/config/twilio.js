@@ -13,7 +13,6 @@ const { getUserByPhoneNumber } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const { createDelayedResponseHandler } = require('../ai/delayedResponse');
 
 // Initialize the Expo SDK
 let expo = new Expo();
@@ -84,8 +83,6 @@ async function sendMessages(clients, message) {
 };
 
 
-const handleDelayedResponse = createDelayedResponseHandler(sendMessage);
-
 async function handleIncomingMessage(req, res) {
   if (!req.body) {
     return res.status(400).send('No request body!');
@@ -122,9 +119,14 @@ async function handleIncomingMessage(req, res) {
         console.log('Duplicate message detected, skipping save');
       }
     }
-
-    // Use the handleDelayedResponse function
-    handleDelayedResponse(Author, Body, clientId);
+    const responseMessage = await handleUserInput(Body, Author);
+    if (responseMessage === "user" || responseMessage === "User")  {
+      await toggleLastMessageReadStatus(clientId);
+      // await sendNotificationToUser(client.firstname, Body, clientId);
+    } else {
+      // Send the message immediately instead of queueing
+      await sendMessage(Author, responseMessage, false);
+    }
 
     res.status(200).send('Message received');
   } catch (error) {
