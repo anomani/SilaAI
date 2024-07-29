@@ -532,7 +532,7 @@ async function handleUserInput(userMessage, phoneNumber) {
 
         if (assistantMessage) {
           // Add verification step here with the thread
-          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
+          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client);
           return verifiedResponse;
         }
       } else if (runStatus.status === "requires_action") {
@@ -558,7 +558,7 @@ function calculateTotalDuration(appointmentType, addOnArray) {
   return appointmentDuration + addOnsDuration;
 }
 
-async function verifyResponse(response, client, thread) {
+async function verifyResponse(response, client) {
   console.log("Verifying response: " + response);
   const verificationPromptPath = path.join(__dirname, 'Prompts', 'verificationPrompt.txt');
   let verificationPrompt = fs.readFileSync(verificationPromptPath, 'utf8');
@@ -578,16 +578,25 @@ async function verifyResponse(response, client, thread) {
     temperature: 0
   });
 
-  const run = await openai.beta.threads.runs.create(thread.id, {
+  // Create a new thread for verification
+  const verificationThread = await openai.beta.threads.create();
+
+  // Add the response to be verified to the new thread
+  await openai.beta.threads.messages.create(verificationThread.id, {
+    role: "user",
+    content: response,
+  });
+
+  const run = await openai.beta.threads.runs.create(verificationThread.id, {
     assistant_id: assistant.id,
   });
 
   while (true) {
     await delay(1000);
-    const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+    const runStatus = await openai.beta.threads.runs.retrieve(verificationThread.id, run.id);
 
     if (runStatus.status === "completed") {
-      const messages = await openai.beta.threads.messages.list(thread.id);
+      const messages = await openai.beta.threads.messages.list(verificationThread.id);
       const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
       if (assistantMessage) {
         return assistantMessage.content[0].text.value;
@@ -596,7 +605,7 @@ async function verifyResponse(response, client, thread) {
       const requiredActions = runStatus.required_action.submit_tool_outputs;
       const toolOutputs = await handleToolCalls(requiredActions, client);
 
-      await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+      await openai.beta.threads.runs.submitToolOutputs(verificationThread.id, run.id, {
         tool_outputs: toolOutputs
       });
     } else {
