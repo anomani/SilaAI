@@ -625,6 +625,14 @@ async function verifyResponse(response, client) {
 }
 
 async function shouldAIRespond(userMessages, thread) {
+  console.log(userMessages)
+  const messages = await openai.beta.threads.messages.list(thread.id);
+  messages.data.forEach((message, index) => {
+    console.log(`Message ${index + 1}:`);
+    console.log(`Role: ${message.role}`);
+    console.log(`Content: ${message.content[0].text.value}`);
+    console.log('---');
+  });
   try {
     const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
@@ -672,5 +680,11 @@ async function shouldAIRespond(userMessages, thread) {
     return false; // Default to human attention if there's an error
   }
 }
-
+async function main() {
+  const userMessage = "Hey bro hope alls well, I just had something come up for me td, was just wondering is there any. Way we could push my 2pm later. (Maybe switch with another client). Ill be free anytime 3 pm onwards and no worries if rescheduling is difficult I can schedule for another day";
+  const thread = await createThread("+12038324011", true); // Replace with actual phone number
+  const shouldRespond = await shouldAIRespond([userMessage], thread);
+  console.log(`AI should respond: ${shouldRespond}`);
+}
+main()
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
