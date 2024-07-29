@@ -303,21 +303,9 @@ const tools = [
           }
         },
         required: ["clientId"]
-      },
-  },
-  },
-  {
-    type: "function",
-    function: {
-      name: "getCurrentDate",
-      description: "Gets the current date and time",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: []
       }
     }
-    }
+  }
 ];
 
 
@@ -456,9 +444,6 @@ async function handleToolCalls(requiredActions, client) {
       case "getUpcomingAppointments":
         output = await getUpcomingAppointments(client.id, args.limit);
         break;
-      case "getCurrentDate":
-        output = await getCurrentDate();
-        break;
       default:
         throw new Error(`Unknown function: ${funcName}`);
     }
@@ -571,8 +556,14 @@ async function verifyResponse(response, client, thread) {
     .replace('${client.phonenumber}', client.phonenumber)
     .replace('${response}', response);
 
+  // Add verification prompt to the existing thread
+  await openai.beta.threads.messages.create(thread.id, {
+    role: "user",
+    content: verificationPrompt,
+  });
+
   const assistant = await openai.beta.assistants.create({
-    instructions: verificationPrompt,
+    instructions: "Verify the response for the client. Use the tools provided to check appointment details.",
     name: "Response Verification Assistant",
     model: "gpt-4o",
     tools: tools,
