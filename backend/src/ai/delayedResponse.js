@@ -1,27 +1,29 @@
 const { handleUserInput } = require('./scheduling');
-const { sendMessage } = require('../config/twilio');
+const { toggleLastMessageReadStatus } = require('../model/messages');
 
 const messageQueue = new Map();
 const DELAY_TIME = 120000; // 2 minutes in milliseconds
 
-function handleDelayedResponse(phoneNumber, message, clientId) {
-  if (messageQueue.has(phoneNumber)) {
-    // If there's already a queued message, clear the existing timeout
-    clearTimeout(messageQueue.get(phoneNumber).timeout);
-    
-    // Concatenate the new message with the existing one
-    const existingMessage = messageQueue.get(phoneNumber).message;
-    message = `${existingMessage}\n${message}`;
-  }
+function createDelayedResponseHandler(sendMessageFunc) {
+  return function handleDelayedResponse(phoneNumber, message, clientId) {
+    if (messageQueue.has(phoneNumber)) {
+      // If there's already a queued message, clear the existing timeout
+      clearTimeout(messageQueue.get(phoneNumber).timeout);
+      
+      // Concatenate the new message with the existing one
+      const existingMessage = messageQueue.get(phoneNumber).message;
+      message = `${existingMessage}\n${message}`;
+    }
 
-  // Set a new timeout
-  const timeout = setTimeout(() => processQueuedMessage(phoneNumber, clientId), DELAY_TIME);
+    // Set a new timeout
+    const timeout = setTimeout(() => processQueuedMessage(phoneNumber, clientId, sendMessageFunc), DELAY_TIME);
 
-  // Store the new message and timeout in the queue
-  messageQueue.set(phoneNumber, { message, timeout });
+    // Store the new message and timeout in the queue
+    messageQueue.set(phoneNumber, { message, timeout });
+  };
 }
 
-async function processQueuedMessage(phoneNumber, clientId) {
+async function processQueuedMessage(phoneNumber, clientId, sendMessageFunc) {
   if (messageQueue.has(phoneNumber)) {
     const { message } = messageQueue.get(phoneNumber);
     messageQueue.delete(phoneNumber);
@@ -30,9 +32,9 @@ async function processQueuedMessage(phoneNumber, clientId) {
       const responseMessage = await handleUserInput(message, phoneNumber);
       if (responseMessage === "user" || responseMessage === "User") {
         await toggleLastMessageReadStatus(clientId);
-        // await sendNotificationToUser(client.firstname, message, clientId);
+        // You might want to handle user notification here
       } else {
-        await sendMessage(phoneNumber, responseMessage, false);
+        await sendMessageFunc(phoneNumber, responseMessage, false);
       }
     } catch (error) {
       console.error('Error processing queued message:', error);
@@ -41,4 +43,4 @@ async function processQueuedMessage(phoneNumber, clientId) {
   }
 }
 
-module.exports = { handleDelayedResponse };
+module.exports = { createDelayedResponseHandler };

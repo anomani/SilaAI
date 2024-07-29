@@ -13,9 +13,7 @@ const { getUserByPhoneNumber } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// Add this new import
-const { handleDelayedResponse } = require('../ai/delayedResponse');
+const { createDelayedResponseHandler } = require('../ai/delayedResponse');
 
 // Initialize the Expo SDK
 let expo = new Expo();
@@ -86,6 +84,8 @@ async function sendMessages(clients, message) {
 };
 
 
+const handleDelayedResponse = createDelayedResponseHandler(sendMessage);
+
 async function handleIncomingMessage(req, res) {
   if (!req.body) {
     return res.status(400).send('No request body!');
@@ -123,7 +123,7 @@ async function handleIncomingMessage(req, res) {
       }
     }
 
-    // Replace the immediate response with a delayed response
+    // Use the handleDelayedResponse function
     handleDelayedResponse(Author, Body, clientId);
 
     res.status(200).send('Message received');
