@@ -14,6 +14,9 @@ const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Add this new import
+const { handleDelayedResponse } = require('../ai/delayedResponse');
+
 // Initialize the Expo SDK
 let expo = new Expo();
 
@@ -119,14 +122,9 @@ async function handleIncomingMessage(req, res) {
         console.log('Duplicate message detected, skipping save');
       }
     }
-    const responseMessage = await handleUserInput(Body, Author);
-    if (responseMessage === "user" || responseMessage === "User")  {
-      await toggleLastMessageReadStatus(clientId);
-      // await sendNotificationToUser(client.firstname, Body, clientId);
-    } else {
-      // Send the message immediately instead of queueing
-      await sendMessage(Author, responseMessage, false);
-    }
+
+    // Replace the immediate response with a delayed response
+    handleDelayedResponse(Author, Body, clientId);
 
     res.status(200).send('Message received');
   } catch (error) {
