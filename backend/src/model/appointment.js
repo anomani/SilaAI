@@ -161,11 +161,12 @@ async function getUpcomingAppointments(clientId, limit = 5) {
     LIMIT $3
     `;
   const res = await db.query(query, [clientId, currentDate, limit]);
+  console.log(res.rows)
   return res.rows;
 }
 
 // async function main() {
-//     await getUpcomingAppointments(2379,1);
+//     await getUpcomingAppointments(3367,1);
 // }
 
 // main();

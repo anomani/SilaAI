@@ -77,7 +77,6 @@ const getAllMessagesGroupedByClientController = async (req, res) => {
 const getMessagesByClientIdController = async (req, res) => {
   try {
     const { clientId } = req.params;
-    console.log(clientId)
     const messages = await getMessagesByClientId(clientId);
     res.status(200).json(messages);
   } catch (error) {
