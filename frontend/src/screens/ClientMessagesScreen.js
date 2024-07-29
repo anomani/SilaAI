@@ -5,6 +5,7 @@ import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, get
 import Icon from 'react-native-vector-icons/FontAwesome';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
+import { useIsFocused } from '@react-navigation/native';
 
 const ClientMessagesScreen = ({ route }) => {
   const { clientid, clientName } = route.params;
@@ -14,12 +15,35 @@ const ClientMessagesScreen = ({ route }) => {
   const navigation = useNavigation();
   const flatListRef = useRef(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const isFocused = useIsFocused();
+  const [polling, setPolling] = useState(null);
 
   useEffect(() => {
-    fetchMessages(clientid);
-    fetchClientDetails(clientid);
-    scrollToBottom();
-  }, [clientid]);
+    if (isFocused) {
+      fetchMessages(clientid);
+      fetchClientDetails(clientid);
+      scrollToBottom();
+      setMessagesAsRead();
+      
+      // Start polling when the screen is focused
+      const pollInterval = setInterval(() => {
+        fetchMessages(clientid);
+      }, 5000); // Poll every 5 seconds
+      setPolling(pollInterval);
+    } else {
+      // Stop polling when the screen is not focused
+      if (polling) {
+        clearInterval(polling);
+        setPolling(null);
+      }
+    }
+
+    return () => {
+      if (polling) {
+        clearInterval(polling);
+      }
+    };
+  }, [clientid, isFocused]);
 
   const fetchClientDetails = async (clientId) => {
     try {
@@ -34,9 +58,23 @@ const ClientMessagesScreen = ({ route }) => {
     try {
       const data = await getMessagesByClientId(clientid);
       const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
-      setMessages(sortedMessages);
+      setMessages(prevMessages => {
+        // Only update if there are new messages
+        if (JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages)) {
+          return sortedMessages;
+        }
+        return prevMessages;
+      });
     } catch (error) {
       console.error('Error fetching messages:', error);
+    }
+  };
+
+  const setMessagesAsRead = async () => {
+    try {
+      await setMessagesRead(clientid);
+    } catch (error) {
+      console.error('Error setting messages as read:', error);
     }
   };
 
@@ -45,9 +83,8 @@ const ClientMessagesScreen = ({ route }) => {
     try {
       const lastMessage = messages[messages.length - 1];
       const recipient = lastMessage.fromtext === '+18446480598' ? lastMessage.totext : lastMessage.fromtext;
-      await sendMessage(recipient, newMessage, false, true);
+      await sendMessage(recipient, newMessage, false);
       setNewMessage('');
-      setMessagesRead(clientid);
       fetchMessages(clientid);
     } catch (error) {
       console.error('Error sending message:', error);
