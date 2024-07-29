@@ -148,6 +148,7 @@ async function handleIncomingMessage(req, res) {
 }
 
 async function processDelayedResponse(phoneNumber) {
+  console.log(`Processing delayed response for ${phoneNumber}`);
   try {
     const messages = pendingMessages.get(phoneNumber);
     pendingMessages.delete(phoneNumber);
