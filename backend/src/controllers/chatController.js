@@ -1,6 +1,6 @@
 const { handleUserInput } = require('../ai/scheduling');
 const {handleUserInputData} = require('../ai/clientData');
-const { getMessagesByClientId, getAllMessages, saveMessage,setMessagesRead } = require('../model/messages');
+const { getMessagesByClientId, getAllMessages, saveMessage, setMessagesRead, getAllMessagesGroupedByClient } = require('../model/messages');
 const { sendMessage } = require('../config/twilio');
 const { getCustomList } = require('../model/customLists');
 const { getClientById } = require('../model/clients');
@@ -64,19 +64,12 @@ const handleUserInputDataController = async (req, res) => {
   }
 };
 
-const getAllMessagesGroupedByClient = async (req, res) => {
+const getAllMessagesGroupedByClientController = async (req, res) => {
   try {
-    const messages = await getAllMessages();
-    const groupedMessages = messages.reduce((acc, message) => {
-      if (!acc[message.clientid]) {
-        acc[message.clientid] = [];
-      }
-      acc[message.clientid].push(message);
-      return acc;
-    }, {});
+    const groupedMessages = await getAllMessagesGroupedByClient();
     res.status(200).json(groupedMessages);
   } catch (error) {
-    console.log(error)
+    console.error('Error fetching grouped messages:', error);
     res.status(500).json({ error: 'Error fetching messages' });
   }
 };
@@ -172,4 +165,4 @@ const sendMessagesToSelectedClients = async (req, res) => {
     res.status(500).json({ error: 'Error sending messages' });
   }
 }
-module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClient, sendMessageController, setMessagesReadController, getCustomListController, sendMessagesToSelectedClients };
+module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClientController, sendMessageController, setMessagesReadController, getCustomListController, sendMessagesToSelectedClients };

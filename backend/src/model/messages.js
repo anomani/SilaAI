@@ -106,11 +106,49 @@ async function setMessagesRead(clientid) {
   }
 }
 
+async function getAllMessagesGroupedByClient() {
+  const db = dbUtils.getDB();
+  const sql = `
+    SELECT 
+      clientid,
+      json_agg(
+        json_build_object(
+          'id', id,
+          'fromText', fromText,
+          'toText', toText,
+          'body', body,
+          'date', date,
+          'read', read
+        ) ORDER BY date ASC
+      ) AS messages
+    FROM Messages
+    GROUP BY clientid
+  `;
+  try {
+    const res = await db.query(sql);
+    return res.rows.reduce((acc, row) => {
+      acc[row.clientid] = row.messages;
+      return acc;
+    }, {});
+  } catch (err) {
+    console.error('Error fetching grouped messages:', err.message);
+    throw err;
+  }
+}
+
+async function main() {
+  const messages = await getAllMessagesGroupedByClient();
+  console.log(messages);
+}
+
+main();
+
 module.exports = {
   saveMessage,
   getAllMessages,
   getMessagesByClientId,
   deleteMessagesByClientId,
   toggleLastMessageReadStatus,
-  setMessagesRead
+  setMessagesRead,
+  getAllMessagesGroupedByClient
 };
