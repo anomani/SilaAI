@@ -471,21 +471,24 @@ async function handleToolCalls(requiredActions, client) {
   return toolOutputs;
 }
 
-async function handleUserInput(userMessage, phoneNumber) {
+async function handleUserInput(userMessages, phoneNumber) {
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
+    if (!client) {
+      throw new Error(`No client found for phone number ${phoneNumber}`);
+    }
+
     let thread = await createThread(phoneNumber);
 
     // Add all user messages to the thread
-    const messages = userMessage.split(' ');
-    for (const message of messages) {
+    for (const message of userMessages) {
       await openai.beta.threads.messages.create(thread.id, {
         role: "user",
         content: message,
       });
     }
 
-    const shouldRespond = await shouldAIRespond(userMessage, thread);
+    const shouldRespond = await shouldAIRespond(userMessages[userMessages.length - 1], thread);
     if (!shouldRespond) {
       return "user"; // Indicate that human attention is required
     }
@@ -550,7 +553,7 @@ async function handleUserInput(userMessage, phoneNumber) {
       }
     }
   } catch (error) {
-    console.error(error);
+    console.error(`Error in handleUserInput for ${phoneNumber}:`, error);
     throw new Error('Error processing request');
   }
 }
