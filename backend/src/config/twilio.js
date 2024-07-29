@@ -130,6 +130,7 @@ async function handleIncomingMessage(req, res) {
 
     res.status(200).send('Message received');
   } catch (error) {
+    await sendNotificationToUser(client.firstname, Body, clientId);
     console.error('Error handling incoming message:', error);
     res.status(500).send('Error processing message');
   }

@@ -12,6 +12,7 @@ using the getUpcomingAppointments tool
     If the appointment is incorrect then simply replace the incorrect information with the correct date and time
 2. If you are checking availabilities then verify for the days that are given in the response using the 
 getAvailability tool
+    - You have access to the getCurrentDate tool if you need the current date and time
 3. Is the tone casual and friendly, using appropriate language for a text conversation?
 4. Does the response include commas? If so remove them and make sure to respond 
 in very informal manners. You can still use periods and question marks.
