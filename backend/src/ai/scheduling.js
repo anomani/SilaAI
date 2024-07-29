@@ -537,9 +537,12 @@ async function handleUserInput(userMessages, phoneNumber) {
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
         if (assistantMessage) {
-          // Add verification step here with the thread
-          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client);
-          return verifiedResponse;
+          // Comment out the verification step
+          // const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client);
+          // return verifiedResponse;
+
+          // Instead, return the assistant's message directly
+          return assistantMessage.content[0].text.value;
         }
       } else if (runStatus.status === "requires_action") {
         const requiredActions = runStatus.required_action.submit_tool_outputs;
@@ -565,12 +568,10 @@ function calculateTotalDuration(appointmentType, addOnArray) {
 }
 
 async function verifyResponse(response, client) {
-  console.log("Verifying response: " + response);
   const verificationPromptPath = path.join(__dirname, 'Prompts', 'verificationPrompt.txt');
   let verificationPrompt = fs.readFileSync(verificationPromptPath, 'utf8');
   const currentDate = new Date(getCurrentDate());
   const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
-  console.log(currentDate)
   // Replace placeholders with actual values
   verificationPrompt = verificationPrompt
     .replace('${client.firstname}', client.firstname)
@@ -626,22 +627,17 @@ async function verifyResponse(response, client) {
 
 async function shouldAIRespond(userMessages, thread) {
   try {
-    console.log("Entering shouldAIRespond function");
-    console.log("User messages:", userMessages);
 
     const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
-    console.log("Screening instructions loaded");
 
     // Create a new message in the thread for screening
     const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
-    console.log("Screening message:", screeningMessage);
 
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
       content: `Should the AI respond to these messages? Answer only with 'true' or 'false':\n${screeningMessage}`,
     });
-    console.log("Screening message added to thread");
 
     const assistant = await openai.beta.assistants.create({
       instructions: initialScreeningInstructions,
@@ -649,17 +645,14 @@ async function shouldAIRespond(userMessages, thread) {
       model: "gpt-4o",
       temperature: 0
     });
-    console.log("Screening assistant created");
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
     });
-    console.log("Run created for screening");
 
     while (true) {
       await delay(1000);
       const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-      console.log("Run status:", runStatus.status);
 
       if (runStatus.status === "completed") {
         const messages = await openai.beta.threads.messages.list(thread.id);
