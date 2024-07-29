@@ -134,7 +134,7 @@ async function handleIncomingMessage(req, res) {
     if (!pendingMessages.has(Author)) {
       pendingMessages.set(Author, []);
       // Schedule processing after 30 seconds
-      setTimeout(() => processDelayedResponse(Author), 10001);
+      setTimeout(() => processDelayedResponse(Author), 1);
     }
     pendingMessages.get(Author).push(Body);
 
