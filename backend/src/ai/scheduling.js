@@ -562,7 +562,8 @@ async function verifyResponse(response, client) {
   console.log("Verifying response: " + response);
   const verificationPromptPath = path.join(__dirname, 'Prompts', 'verificationPrompt.txt');
   let verificationPrompt = fs.readFileSync(verificationPromptPath, 'utf8');
-
+  const currentDate = new Date(getCurrentDate());
+  const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
   // Replace placeholders with actual values
   verificationPrompt = verificationPrompt
     .replace('${client.firstname}', client.firstname)
@@ -589,6 +590,7 @@ async function verifyResponse(response, client) {
 
   const run = await openai.beta.threads.runs.create(verificationThread.id, {
     assistant_id: assistant.id,
+    additional_instructions: "The current date and time is" + currentDate +"and the day of the week is"+ day,
   });
 
   while (true) {
