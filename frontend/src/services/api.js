@@ -383,3 +383,23 @@ export const rescheduleAppointment = async (appointmentId, newDate, newStartTime
     throw error;
   }
 };
+
+export const getClientAutoRespond = async (clientId) => {
+  try {
+    const response = await axios.get(`${API_URL}/clients/auto-respond/${clientId}`);
+    return response.data.autoRespond;
+  } catch (error) {
+    console.error('Error fetching client auto-respond:', error);
+    throw error;
+  }
+};
+
+export const updateClientAutoRespond = async (clientId, autoRespond) => {
+  try {
+    const response = await axios.put(`${API_URL}/clients/auto-respond/${clientId}`, { autoRespond });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating client auto-respond:', error);
+    throw error;
+  }
+};

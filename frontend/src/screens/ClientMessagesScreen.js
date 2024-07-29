@@ -1,30 +1,38 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getMessagesByClientId, sendMessage, setMessagesRead } from '../services/api';
+import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
-import { getClientById } from '../services/api';
 
 const ClientMessagesScreen = ({ route }) => {
-  const { clientid, clientName} = route.params;
+  const { clientid, clientName } = route.params;
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [autoRespond, setAutoRespond] = useState(true);
   const navigation = useNavigation();
   const flatListRef = useRef(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
   useEffect(() => {
     fetchMessages(clientid);
-    // Add this new effect to scroll to bottom when the screen loads
+    fetchClientDetails(clientid);
     scrollToBottom();
   }, [clientid]);
+
+  const fetchClientDetails = async (clientId) => {
+    try {
+      const autoRespondStatus = await getClientAutoRespond(clientId);
+      setAutoRespond(autoRespondStatus);
+    } catch (error) {
+      console.error('Error fetching client auto-respond status:', error);
+    }
+  };
 
   const fetchMessages = async (clientid) => {
     try {
       const data = await getMessagesByClientId(clientid);
-      // Sort messages by date, oldest first
       const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
       setMessages(sortedMessages);
     } catch (error) {
@@ -32,7 +40,6 @@ const ClientMessagesScreen = ({ route }) => {
     }
   };
 
-  
   const handleSendMessage = async () => {
     if (newMessage.trim() === '') return;
     try {
@@ -47,9 +54,17 @@ const ClientMessagesScreen = ({ route }) => {
     }
   };
 
+  const handleAutoRespondToggle = async (value) => {
+    try {
+      await updateClientAutoRespond(clientid, value);
+      setAutoRespond(value);
+    } catch (error) {
+      console.error('Error updating auto-respond:', error);
+    }
+  };
+
   const scrollToBottom = () => {
     if (flatListRef.current) {
-      // Use setTimeout to ensure the FlatList has rendered
       setTimeout(() => {
         flatListRef.current.scrollToEnd({ animated: false });
       }, 100);
@@ -61,7 +76,6 @@ const ClientMessagesScreen = ({ route }) => {
     const contentHeight = event.nativeEvent.contentSize.height;
     const scrollViewHeight = event.nativeEvent.layoutMeasurement.height;
 
-    // Show scroll button if not at the bottom
     setShowScrollButton(offsetY < contentHeight - scrollViewHeight - 100);
   };
 
@@ -119,7 +133,6 @@ const ClientMessagesScreen = ({ route }) => {
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
     const senderName = isAssistant ? 'Assistant' : clientName || 'Client';
 
-    // Create a unique key using id if available, or a combination of date and sender
     const messageKey = message.id || `${message.date}-${message.fromtext}-${Math.random()}`;
 
     return (
@@ -175,6 +188,15 @@ const ClientMessagesScreen = ({ route }) => {
           <Text style={styles.scrollButtonText}>↓</Text>
         </TouchableOpacity>
       )}
+      <View style={styles.autoRespondContainer}>
+        <Text style={styles.autoRespondText}>Auto-respond</Text>
+        <Switch
+          value={autoRespond}
+          onValueChange={handleAutoRespondToggle}
+          trackColor={{ false: "#292e38", true: "#195de6" }}
+          thumbColor={autoRespond ? "#ffffff" : "#9da6b8"}
+        />
+      </View>
       <View style={styles.inputContainer}>
         <Image source={defaultAvatar} style={styles.inputAvatar} />
         <TextInput
@@ -250,11 +272,27 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginTop: 4,
   },
+  autoRespondContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#111318',
+    borderTopWidth: 1,
+    borderTopColor: '#292e38',
+  },
+  autoRespondText: {
+    color: '#9da6b8',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     backgroundColor: '#111318',
+    borderTopWidth: 1,
+    borderTopColor: '#292e38',
   },
   inputAvatar: {
     width: 40,
