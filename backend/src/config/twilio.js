@@ -153,7 +153,7 @@ async function processDelayedResponse(phoneNumber) {
     pendingMessages.delete(phoneNumber);
     if (messages && messages.length > 0) {
       const responseMessage = await handleUserInput(messages, phoneNumber);
-      
+      console.log(responseMessage)
       if (responseMessage === "user" || responseMessage === "User") {
         const client = await getClientByPhoneNumber(phoneNumber);
         await toggleLastMessageReadStatus(client.id);
