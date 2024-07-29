@@ -141,10 +141,8 @@ async function processDelayedResponse(phoneNumber) {
   try {
     const messages = pendingMessages.get(phoneNumber);
     pendingMessages.delete(phoneNumber);
-
     if (messages && messages.length > 0) {
-      const combinedMessage = messages.join(' ');
-      const responseMessage = await handleUserInput(combinedMessage, phoneNumber);
+      const responseMessage = await handleUserInput(messages, phoneNumber);
       
       if (responseMessage === "user" || responseMessage === "User") {
         const client = await getClientByPhoneNumber(phoneNumber);
