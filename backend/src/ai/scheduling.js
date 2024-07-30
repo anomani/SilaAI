@@ -638,7 +638,7 @@ async function verifyResponse(response, client) {
       role: "user",
       content: response,
     });
-
+    
     const run = await openai.beta.threads.runs.create(verificationThread.id, {
       assistant_id: assistant.id,
     });
