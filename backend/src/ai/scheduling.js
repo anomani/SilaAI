@@ -329,27 +329,6 @@ const tools = [
         required: []
       }
     }
-  },
-  {
-    type: "function",
-    function: {
-      name: "updateAppointment",
-      description: "Updates an appointment with the given appointment ID if the user is trying to change the type of appoinetment",
-      parameters: {
-        type: "object",
-        properties: {
-          date: {
-            type: "string",
-            description: "The date of the appointment to update in format of YYYY-MM-DD"
-          },
-          appointmentType: {
-            type: "string",
-            description: "The type of appointment"
-          }
-        },
-        required: ["appointmentId", "appointmentType", "date", "startTime"]
-      }
-    }
   }
 ];
 
@@ -495,9 +474,6 @@ async function handleToolCalls(requiredActions, client) {
       case "clearCustomPrompt":
         output = await clearCustomPrompt(client.id);
         break;
-      case "updateAppointment":
-        output = await updateAppointment(args.appointmentId, args.appointmentType);
-        break;
       default:
         throw new Error(`Unknown function: ${funcName}`);
     }
@@ -567,7 +543,6 @@ async function handleUserInput(userMessages, phoneNumber) {
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
       additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate +"and the day of the week is"+ day,
-      
     });
 
     while (true) {
@@ -605,7 +580,7 @@ async function handleUserInput(userMessages, phoneNumber) {
     }
   } catch (error) {
     console.error(`Error in handleUserInput for ${phoneNumber}:`, error);
-    throw new Error('Error processing request');
+    return 'user'; 
   }
 }
 
@@ -641,11 +616,6 @@ async function verifyResponse(response, client) {
     });
 
     verificationThread = await openai.beta.threads.create();
-    // Add the response to be verified to the new thread
-    await openai.beta.threads.messages.create(verificationThread.id, {
-      role: "user",
-      content: response,
-    });
 
     const run = await openai.beta.threads.runs.create(verificationThread.id, {
       assistant_id: assistant.id,
