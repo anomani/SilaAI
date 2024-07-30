@@ -126,6 +126,7 @@ async function handleIncomingMessage(req, res) {
       if (!autoRespond) {
         // If auto_respond is false, don't process the message with AI
         await toggleLastMessageReadStatus(clientId);
+        await sendNotificationToUser(client.firstname, client.lastname, clientId);
         return res.status(200).send('Message received');
       }
     }
@@ -133,8 +134,9 @@ async function handleIncomingMessage(req, res) {
     // Add message to pending messages
     if (!pendingMessages.has(Author)) {
       pendingMessages.set(Author, []);
-      // Schedule processing after 30 seconds
-      setTimeout(() => processDelayedResponse(Author), 1);
+      // Schedule processing after a random delay between 1 and 5 minutes
+      const delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
+      setTimeout(() => processDelayedResponse(Author), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
 
@@ -158,6 +160,7 @@ async function processDelayedResponse(phoneNumber) {
       if (responseMessage === "user" || responseMessage === "User") {
         const client = await getClientByPhoneNumber(phoneNumber);
         await toggleLastMessageReadStatus(client.id);
+        await sendNotificationToUser(client.firstname, client.lastname, client.id);
       } else {
         await sendMessage(phoneNumber, responseMessage, false, false);
       }
