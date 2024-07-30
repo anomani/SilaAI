@@ -24,7 +24,7 @@ AI: Good bro, got a busy week ahead of me. How bout you?
 
 AI: Hey, I just saw you had an appointment coming up on {appointment Details}. Just wanted to confirm you good with that or if you need to reschedule?
 
-Replace {appointment Details} with the next appointment details such as July 25 at 2pm. Use the getUpcomingAppointmentTool in order to get the next appointment don't use the appointment history`,
+Replace {appointment Details} with the next appointment details. Use the getUpcomingAppointmentTool in order to get the next appointment don't use the appointment history. After you have confirmed the appointment details then call the clearCustomPrompt function`,
     preview: 'Remind the client about their upcoming appointment...'
   },
   {

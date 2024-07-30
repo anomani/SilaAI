@@ -139,7 +139,7 @@ async function handleIncomingMessage(req, res) {
       setTimeout(() => processDelayedResponse(Author), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
-
+    
     // Immediately respond to Twilio
     res.status(200).send('Message received');
 
