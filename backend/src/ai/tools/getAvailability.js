@@ -102,7 +102,6 @@ function getGroupAvailability(group, dayOfWeek) {
             6: [{ start: '18:00', end: '19:00' }]  // Saturday
         }
     };
-
     return availabilityMap[group] ? availabilityMap[group][dayOfWeek] : null;
 }
 
