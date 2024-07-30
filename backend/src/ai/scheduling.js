@@ -12,7 +12,7 @@ const path = require('path');
 const { createRecurringAppointments } = require('./tools/recurringAppointments');
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
-const { getAIPrompt } = require('../model/aiPrompt');
+const { getAIPrompt , deleteAIPrompt} = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { clearCustomPrompt } = require('./tools/clearCustomPrompt');
 const openai = new OpenAI({
@@ -477,7 +477,7 @@ async function handleToolCalls(requiredActions, client) {
         break;
       case "clearCustomPrompt":
         console.log("clearing prompt!")
-        output = await clearCustomPrompt(client.id);
+        await deleteAIPrompt(client.id);
         break;
       default:
         throw new Error(`Unknown function: ${funcName}`);
