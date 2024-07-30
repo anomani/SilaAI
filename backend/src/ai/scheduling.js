@@ -322,7 +322,7 @@ const tools = [
     type: "function",
     function: {
       name: "clearCustomPrompt",
-      description: "Clears the custom prompt for the client. Use this where specified in the instructions. Some customers have specific prompt add ons for their conversations. Once it is said in the prompt to clear it after a certain message then call this function.",
+      description: "Clears the custom prompt for the client. Use this where specified in the instructions. Some customers have specific prompt add ons for their conversations. Call this function after the assistant confirms the appointment",
       parameters: {
         type: "object",
         properties: {
