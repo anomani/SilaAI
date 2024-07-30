@@ -680,4 +680,8 @@ async function shouldAIRespond(userMessages) {
   }
 }
 
+async function main() {
+  
+}
+
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
