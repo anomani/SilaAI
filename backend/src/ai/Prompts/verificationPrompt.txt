@@ -7,7 +7,7 @@ text message.
 
 Current date is ${currentDate} and the day of the week is ${day}
 Only change the response if the response includes a date for asn appointment, availability, etc. Otherwise 
-dont change anything, just fix the tone.
+dont change anything, just fix the tone. If the response is user then just respond with user
 
 Please check for the following:
 1. If the response is an appointment confirmation 
