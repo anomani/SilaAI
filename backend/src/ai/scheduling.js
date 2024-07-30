@@ -325,13 +325,17 @@ const tools = [
       description: "Clears the custom prompt for the client. Use this where specified in the instructions. Some customers have specific prompt add ons for their conversations. Once it is said in the prompt to clear it after a certain message then call this function.",
       parameters: {
         type: "object",
-        properties: {},
+        properties: {
+          clientId: {
+            type: "number",
+            description: "The ID of the client whose prompt is to be cleared"
+          }
+        },
         required: []
       }
     }
   }
 ];
-
 
 async function createThread(phoneNumber, initialMessage = false) {
   if (initialMessage || !sessions.has(phoneNumber)) {
@@ -472,6 +476,7 @@ async function handleToolCalls(requiredActions, client) {
         output = getCurrentDate();
         break;
       case "clearCustomPrompt":
+        console.log("clearing prompt")
         output = await clearCustomPrompt(client.id);
         break;
       default:
