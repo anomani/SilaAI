@@ -14,6 +14,7 @@ const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt } = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
+const { clearCustomPrompt } = require('./tools/clearCustomPrompt');
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -316,7 +317,19 @@ const tools = [
         required: []
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "clearCustomPrompt",
+      description: "Clears the custom prompt for the client. Use this where specified in the prompt",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      }
     }
+  }
 ];
 
 
@@ -457,6 +470,9 @@ async function handleToolCalls(requiredActions, client) {
         break;
       case "getCurrentDate":
         output = await getCurrentDate();
+        break;
+      case "clearCustomPrompt":
+        output = await clearCustomPrompt(client.id);
         break;
       default:
         throw new Error(`Unknown function: ${funcName}`);

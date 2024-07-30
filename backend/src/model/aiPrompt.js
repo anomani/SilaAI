@@ -30,7 +30,22 @@ async function getAIPrompt(clientId) {
   }
 }
 
+async function deleteAIPrompt(clientId) {
+  const db = dbUtils.getDB();
+  const sql = 'DELETE FROM ai_prompts WHERE client_id = $1';
+  const values = [clientId];
+  try {
+    const res = await db.query(sql, values);
+    console.log(`AI prompt deleted for client ${clientId}`);
+    return res.rowCount > 0; // Returns true if a row was deleted, false otherwise
+  } catch (err) {
+    console.error('Error deleting AI prompt:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   storeAIPrompt,
-  getAIPrompt
+  getAIPrompt,
+  deleteAIPrompt
 };
