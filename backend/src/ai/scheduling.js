@@ -476,7 +476,7 @@ async function handleToolCalls(requiredActions, client) {
         output = getCurrentDate();
         break;
       case "clearCustomPrompt":
-        console.log("clearing prompt")
+        console.log("clearing prompt!")
         output = await clearCustomPrompt(client.id);
         break;
       default:
