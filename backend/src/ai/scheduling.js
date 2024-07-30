@@ -477,7 +477,7 @@ async function handleToolCalls(requiredActions, client) {
         break;
       case "clearCustomPrompt":
         console.log("clearing prompt!")
-        await deleteAIPrompt(client.id);
+        output = await deleteAIPrompt(client.id);
         break;
       default:
         throw new Error(`Unknown function: ${funcName}`);
@@ -684,5 +684,6 @@ async function shouldAIRespond(userMessages) {
     return false; // Default to human attention if there's an error
   }
 }
+
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
