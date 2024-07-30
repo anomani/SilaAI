@@ -150,8 +150,9 @@ async function handleIncomingMessage(req, res) {
 
 async function processDelayedResponse(phoneNumber) {
   console.log(`Processing delayed response for ${phoneNumber}`);
+  const messages = pendingMessages.get(phoneNumber);
+  const lastMessage = messages[messages.length - 1];
   try {
-    const messages = pendingMessages.get(phoneNumber);
     pendingMessages.delete(phoneNumber);
     if (messages && messages.length > 0) {
       const responseMessage = await handleUserInput(messages, phoneNumber);
@@ -160,7 +161,6 @@ async function processDelayedResponse(phoneNumber) {
         const client = await getClientByPhoneNumber(phoneNumber);
         await toggleLastMessageReadStatus(client.id);
         // Use the last message in the array as the Body
-        const lastMessage = messages[messages.length - 1];
         await sendNotificationToUser(`${client.firstname} ${client.lastname}`, lastMessage, client.id);
       } else {
         await sendMessage(phoneNumber, responseMessage, false, false);
@@ -168,11 +168,7 @@ async function processDelayedResponse(phoneNumber) {
     }
   } catch (error) {
     console.error('Error processing delayed response:', error);
-    try {
-      await sendMessage(phoneNumber, "I'm sorry, but I encountered an error while processing your message. Please try again later or contact support if the problem persists.", false);
-    } catch (sendError) {
-      console.error('Failed to send error message:', sendError);
-    }
+    await sendNotificationToUser(`${client.firstname} ${client.lastname}`, lastMessage, client.id);
   }
 }
 
