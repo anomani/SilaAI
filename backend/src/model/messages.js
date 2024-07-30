@@ -120,7 +120,7 @@ async function getAllMessagesGroupedByClient() {
           'date', date,
           'read', read,
           'is_ai', is_ai
-        ) ORDER BY date ASC
+        ) ORDER BY id ASC
       ) AS messages
     FROM Messages
     GROUP BY clientid
