@@ -672,6 +672,7 @@ async function shouldAIRespond(userMessages) {
     });
 
     const aiDecision = response.content[0].text.trim().toLowerCase();
+    console.log(`AI decision: ${aiDecision}`);
     return aiDecision === 'true';
   } catch (error) {
     console.error("Error in shouldAIRespond:", error);
