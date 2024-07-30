@@ -304,7 +304,7 @@ const tools = [
         },
         required: ["clientId"]
       },
-  },
+    }
   },
   {
     type: "function",
@@ -327,6 +327,27 @@ const tools = [
         type: "object",
         properties: {},
         required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "updateAppointment",
+      description: "Updates an appointment with the given appointment ID if the user is trying to change the type of appoinetment",
+      parameters: {
+        type: "object",
+        properties: {
+          date: {
+            type: "string",
+            description: "The date of the appointment to update in format of YYYY-MM-DD"
+          },
+          appointmentType: {
+            type: "string",
+            description: "The type of appointment"
+          }
+        },
+        required: ["appointmentId", "appointmentType", "date", "startTime"]
       }
     }
   }
@@ -404,7 +425,7 @@ async function handleToolCalls(requiredActions, client) {
           throw new Error(`Invalid appointment type: ${args.appointmentType}`);
         }
         totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
-        output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group, totalDuration);
+        output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group, totalDuration, client.id);
         if (output.length === 0) {
           output = {
             requestedDay: args.day,
@@ -473,6 +494,9 @@ async function handleToolCalls(requiredActions, client) {
         break;
       case "clearCustomPrompt":
         output = await clearCustomPrompt(client.id);
+        break;
+      case "updateAppointment":
+        output = await updateAppointment(args.appointmentId, args.appointmentType);
         break;
       default:
         throw new Error(`Unknown function: ${funcName}`);

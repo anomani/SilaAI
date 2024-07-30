@@ -65,6 +65,8 @@ async function updateAppointment(appointmentId, updateData) {
     }
 }
 
+
+
 async function deleteAppointment(appointmentId) {
     const db = dbUtils.getDB();
     const sql = 'DELETE FROM Appointment WHERE id = $1';
