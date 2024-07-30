@@ -569,8 +569,9 @@ async function handleUserInput(userMessages, phoneNumber) {
         
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
         if (assistantMessage) {
-          console.log(`Assistant response: ${assistantMessage.content[0].text.value}`);
-          // If you want to re-enable verification, uncomment the next line
+          if (assistantMessage.content[0].text.value == 'user') {
+            return 'user';
+          }
           return await verifyResponse(assistantMessage.content[0].text.value, client);
           
           // For now, return the assistant's message directly
