@@ -56,7 +56,7 @@ async function cancelAppointment(phoneNumber, date) {
         }
     } catch (error) {
         console.log(error)
-        return "Unable to cancel the appointment"
+        throw new Error('Failed to cancel appointment in Acuity');
     } 
 }
 
