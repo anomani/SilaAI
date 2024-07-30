@@ -520,7 +520,6 @@ async function handleUserInput(userMessages, phoneNumber) {
     console.log(`Client found: ${JSON.stringify(client)}`);
 
     let thread = await createThread(phoneNumber);
-    console.log(`Thread created/retrieved: ${thread.id}`);
 
     // Add all user messages to the thread
     for (const message of userMessages) {
@@ -528,11 +527,9 @@ async function handleUserInput(userMessages, phoneNumber) {
         role: "user",
         content: message,
       });
-      console.log(`Added user message to thread: ${message}`);
     }
 
     const shouldRespond = await shouldAIRespond(userMessages);
-    console.log(`AI should respond: ${shouldRespond}`);
     if (!shouldRespond) {
       return "user"; // Indicate that human attention is required
     }
@@ -566,30 +563,19 @@ async function handleUserInput(userMessages, phoneNumber) {
       assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, currentDate, client, upcomingAppointment);
     }
 
-    console.log(`Assistant created: ${assistant.id}`);
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
       additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate +"and the day of the week is"+ day,
       
     });
-    console.log(`Run created: ${run.id}`);
 
     while (true) {
       await delay(1000);
       const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-      console.log(`Run status: ${runStatus.status}`);
 
       if (runStatus.status === "completed") {
         const messages = await openai.beta.threads.messages.list(thread.id);
-        
-        console.log("Thread messages:");
-        messages.data.forEach((msg, index) => {
-          console.log(`Message ${index + 1}:`);
-          console.log(`Role: ${msg.role}`);
-          console.log(`Content: ${msg.content[0].text.value}`);
-          console.log("---");
-        });
         
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
         if (assistantMessage) {
@@ -601,14 +587,11 @@ async function handleUserInput(userMessages, phoneNumber) {
           // For now, return the assistant's message directly
           // return assistantMessage.content[0].text.value;
         } else {
-          console.log("No assistant message found");
           return "user";
         }
       } else if (runStatus.status === "requires_action") {
-        console.log("Run requires action");
         const requiredActions = runStatus.required_action.submit_tool_outputs;
         const toolOutputs = await handleToolCalls(requiredActions, client);
-        console.log(`Tool outputs: ${JSON.stringify(toolOutputs)}`);
 
         await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
           tool_outputs: toolOutputs
@@ -633,6 +616,7 @@ function calculateTotalDuration(appointmentType, addOnArray) {
 }
 
 async function verifyResponse(response, client) {
+  console.log(`Verifying response: ${response}`);
   let verificationThread;
   try {
     const verificationPromptPath = path.join(__dirname, 'Prompts', 'verificationPrompt.txt');
@@ -675,6 +659,7 @@ async function verifyResponse(response, client) {
         const messages = await openai.beta.threads.messages.list(verificationThread.id);
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
         if (assistantMessage) {
+          console.log(`Verified message: ${assistantMessage.content[0].text.value}`);
           return assistantMessage.content[0].text.value;
         }
       } else if (runStatus.status === "requires_action") {
@@ -717,7 +702,6 @@ async function shouldAIRespond(userMessages) {
     });
 
     const aiDecision = response.content[0].text.trim().toLowerCase();
-    console.log("AI decision on whether to respond:", aiDecision);
     return aiDecision === 'true';
   } catch (error) {
     console.error("Error in shouldAIRespond:", error);
