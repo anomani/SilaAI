@@ -10,8 +10,6 @@ const dbUtils = require('../../model/dbUtils')
 const axios = require('axios');
 
 const apiKey = process.env.BROWSERCLOUD_API_KEY;
-
-
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function cancelAcuityAppointment(acuityId) {
