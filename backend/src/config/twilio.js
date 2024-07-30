@@ -48,11 +48,12 @@ async function sendMessage(to, body, initialMessage = true, manual = true) {
 
     // Create or get the thread, passing the initialMessage parameter
     const thread = await createThread(to_formatted, initialMessage);
-    await openai.beta.threads.messages.create(thread.id, {
-      role: "assistant",
-      content: body,
-    });
-
+    if (manual) {
+      await openai.beta.threads.messages.create(thread.id, {
+        role: "assistant",
+        content: body,
+      });
+    }
     // List the messages of the thread and print them out
     const messages = await openai.beta.threads.messages.list(thread.id);
     messages.data.forEach((message, index) => {

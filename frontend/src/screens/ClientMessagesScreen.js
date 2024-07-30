@@ -83,7 +83,7 @@ const ClientMessagesScreen = ({ route }) => {
     try {
       const lastMessage = messages[messages.length - 1];
       const recipient = lastMessage.fromtext === '+18446480598' ? lastMessage.totext : lastMessage.fromtext;
-      await sendMessage(recipient, newMessage, false);
+      await sendMessage(recipient, newMessage, false, true);
       setNewMessage('');
       fetchMessages(clientid);
     } catch (error) {
