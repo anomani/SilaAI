@@ -569,7 +569,7 @@ async function handleUserInput(userMessages, phoneNumber) {
         
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
         if (assistantMessage) {
-          if (assistantMessage.content[0].text.value == 'user') {
+          if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
             return 'user';
           }
           return await verifyResponse(assistantMessage.content[0].text.value, client);
@@ -638,7 +638,7 @@ async function verifyResponse(response, client) {
       role: "user",
       content: response,
     });
-    
+
     const run = await openai.beta.threads.runs.create(verificationThread.id, {
       assistant_id: assistant.id,
     });
