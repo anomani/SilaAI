@@ -16,4 +16,4 @@ async function clearCustomPrompt(clientId) {
 async function main() {
     await clearCustomPrompt(33)
 }
-module.exports = clearCustomPrompt;
+module.exports = {clearCustomPrompt};
