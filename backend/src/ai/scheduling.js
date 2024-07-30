@@ -322,7 +322,7 @@ const tools = [
     type: "function",
     function: {
       name: "clearCustomPrompt",
-      description: "Clears the custom prompt for the client. Use this where specified in the prompt",
+      description: "Clears the custom prompt for the client. Use this where specified in the instructions",
       parameters: {
         type: "object",
         properties: {},
@@ -488,17 +488,14 @@ async function handleToolCalls(requiredActions, client) {
 }
 
 async function handleUserInput(userMessages, phoneNumber) {
-  console.log(`Starting handleUserInput for ${phoneNumber}`);
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
     if (!client) {
-      console.log(`No client found for phone number ${phoneNumber}`);
       throw new Error(`No client found for phone number ${phoneNumber}`);
     }
     console.log(`Client found: ${JSON.stringify(client)}`);
 
     let thread = await createThread(phoneNumber);
-    console.log(`Thread created/retrieved: ${thread.id}`);
 
     // Add all user messages to the thread
     for (const message of userMessages) {
@@ -507,10 +504,8 @@ async function handleUserInput(userMessages, phoneNumber) {
         content: message,
       });
     }
-    console.log(`Added ${userMessages.length} messages to the thread`);
 
     const shouldRespond = await shouldAIRespond(userMessages);
-    console.log(`AI should respond: ${shouldRespond}`);
     if (!shouldRespond) {
       return "user"; // Indicate that human attention is required
     }
@@ -521,11 +516,9 @@ async function handleUserInput(userMessages, phoneNumber) {
     let fname, lname, email;
 
     if (client.id == '') {
-      console.log('Creating temporary assistant for new client');
       thread = await createThread(phoneNumber, true); 
       assistant = await createTemporaryAssistant(phoneNumber);
     } else {
-      console.log('Creating assistant for existing client');
       const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1))[0];
       let upcomingAppointment = '';
       if (upcomingAppointmentJSON) {
@@ -545,19 +538,16 @@ async function handleUserInput(userMessages, phoneNumber) {
       thread = await createThread(phoneNumber); 
       assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, currentDate, client, upcomingAppointment);
     }
-    console.log(`Assistant created: ${assistant.id}`);
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
       additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate +"and the day of the week is"+ day,
       
     });
-    console.log(`Run created: ${run.id}`);
 
     while (true) {
       await delay(1000);
       const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-      console.log(`Run status: ${runStatus.status}`);
 
       if (runStatus.status === "completed") {
         const messages = await openai.beta.threads.messages.list(thread.id);
@@ -570,22 +560,18 @@ async function handleUserInput(userMessages, phoneNumber) {
           // For now, return the assistant's message directly
           // return assistantMessage.content[0].text.value;
         } else {
-          console.log('No assistant message found');
+          return "user";
         }
       } else if (runStatus.status === "requires_action") {
-        console.log('Run requires action');
         const requiredActions = runStatus.required_action.submit_tool_outputs;
         const toolOutputs = await handleToolCalls(requiredActions, client);
 
         await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
           tool_outputs: toolOutputs
         });
-        console.log('Tool outputs submitted');
       } else if (runStatus.status === "failed") {
-        console.error(`Run failed: ${JSON.stringify(runStatus.last_error)}`);
         throw new Error('Run failed');
       } else {
-        console.log(`Waiting for run to complete. Current status: ${runStatus.status}`);
         await delay(1000);
       }
     }

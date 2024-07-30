@@ -21,7 +21,8 @@ const ChatScreen = () => {
     "Create a list of clients who have not shown up in more than 6 months",
     "How many appointments have I done in June?",
     "How many active clients do I have",
-    "Create a list of my muslim clients"
+    "Create a list of my muslim clients",
+    "Create a list of clients named Adam Nomani"
   ];
 
   const handleSend = async (text = message) => {
