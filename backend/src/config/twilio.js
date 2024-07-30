@@ -48,12 +48,10 @@ async function sendMessage(to, body, initialMessage = true, manual = true) {
 
     // Create or get the thread, passing the initialMessage parameter
     const thread = await createThread(to_formatted, initialMessage);
-    if (initialMessage) {
-      await openai.beta.threads.messages.create(thread.id, {
-        role: "assistant",
-        content: body,
-      });
-    }
+    await openai.beta.threads.messages.create(thread.id, {
+      role: "assistant",
+      content: body,
+    });
 
     // List the messages of the thread and print them out
     const messages = await openai.beta.threads.messages.list(thread.id);
@@ -126,7 +124,7 @@ async function handleIncomingMessage(req, res) {
       if (!autoRespond) {
         // If auto_respond is false, don't process the message with AI
         await toggleLastMessageReadStatus(clientId);
-        await sendNotificationToUser(client.firstname, client.lastname, clientId);
+        await sendNotificationToUser(client.firstname + ' ' + client.lastname, Body, clientId);
         return res.status(200).send('Message received');
       }
     }
@@ -139,7 +137,7 @@ async function handleIncomingMessage(req, res) {
       setTimeout(() => processDelayedResponse(Author), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
-    
+
     // Immediately respond to Twilio
     res.status(200).send('Message received');
 
@@ -160,7 +158,7 @@ async function processDelayedResponse(phoneNumber) {
       if (responseMessage === "user" || responseMessage === "User") {
         const client = await getClientByPhoneNumber(phoneNumber);
         await toggleLastMessageReadStatus(client.id);
-        await sendNotificationToUser(client.firstname, client.lastname, client.id);
+        await sendNotificationToUser(client.firstname + ' ' + client.lastname, Body, clientId);
       } else {
         await sendMessage(phoneNumber, responseMessage, false, false);
       }

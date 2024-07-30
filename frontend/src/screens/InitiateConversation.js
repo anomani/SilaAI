@@ -11,8 +11,9 @@ const presetPrompts = [
   {
     title: 'Appointment Reminder',
     content: `Remind the client about their upcoming appointment and confirm if they're still available or if they need to reschedule. Start off with some small talk then mention their upcoming appointment and ask if it still works. Use the upcoming appointments tool to get their upcoming appointment and confirm it with them. Make sure that you make a couple lines of small talk then throw the appointment in there. You have to confirm the appointment in conversation.
+    After saying the appointment confirmation message then call clearCustomPrompt to clear the prompt
 
-Example Convo:
+<Example Convo>
 
 AI: Hey bro this is Uzi from Uzi Cuts. How's it going
 
@@ -23,6 +24,9 @@ AI: Good bro, got a busy week ahead of me. How bout you?
 ***Small talk continues. Once you feel a stall in the conversation then ask about appointment
 
 AI: Hey, I just saw you had an appointment coming up on {appointment Details}. Just wanted to confirm you good with that or if you need to reschedule?
+{call getUpcomingAppointment for appointment details}
+{call clearCustomPropmt in order to clear the prompt after sending the message}
+</Example Convo>
 
 Replace {appointment Details} with the next appointment details. Use the getUpcomingAppointmentTool in order to get the next appointment don't use the appointment history. After you have confirmed the appointment details then call the clearCustomPrompt function`,
     preview: 'Remind the client about their upcoming appointment...'
@@ -49,7 +53,7 @@ Never ask them if they need a cut. If they are asking to see if first make sure 
 
 const InitiateConversation = ({ route, navigation }) => {
   const { selectedClients, clientCount } = route.params;
-  const [conversationMessage, setConversationMessage] = useState(`Hey {firstName}, this is Uzi from Uzi Cuts.\n\n`);
+  const [conversationMessage, setConversationMessage] = useState(`Hey {firstName}, this is Uzi from Uzi Cuts reaching out from my new business number`);
   const [aiPrompt, setAiPrompt] = useState('');
 
   const initiateConversation = async () => {
