@@ -134,8 +134,8 @@ async function handleIncomingMessage(req, res) {
     if (!pendingMessages.has(Author)) {
       pendingMessages.set(Author, []);
       // Schedule processing after a random delay between 1 and 5 minutes
-      const delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
-      setTimeout(() => processDelayedResponse(Author), delayInMs);
+      // const delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
+      setTimeout(() => processDelayedResponse(Author), 10000);
     }
     pendingMessages.get(Author).push(Body);
 
@@ -159,7 +159,9 @@ async function processDelayedResponse(phoneNumber) {
       if (responseMessage === "user" || responseMessage === "User") {
         const client = await getClientByPhoneNumber(phoneNumber);
         await toggleLastMessageReadStatus(client.id);
-        await sendNotificationToUser(client.firstname + ' ' + client.lastname, Body, clientId);
+        // Use the last message in the array as the Body
+        const lastMessage = messages[messages.length - 1];
+        await sendNotificationToUser(`${client.firstname} ${client.lastname}`, lastMessage, client.id);
       } else {
         await sendMessage(phoneNumber, responseMessage, false, false);
       }
@@ -206,8 +208,6 @@ async function sendNotificationToUser(clientName, message, clientId) {
     console.error('Error sending push notification:', error);
   }
 }
-
-
 
 module.exports = {
   sendMessage,
