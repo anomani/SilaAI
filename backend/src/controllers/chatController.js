@@ -87,9 +87,9 @@ const getMessagesByClientIdController = async (req, res) => {
 
 const sendMessageController = async (req, res) => {
   try {
-    const { to, message, initialMessage } = req.body;
-    if (initialMessage) {
-      await sendMessage(to, message, initialMessage);
+    const { to, message, initialMessage, manual } = req.body;
+    if (initialMessage && manual) {
+      await sendMessage(to, message, initialMessage, manual);
     }
     else {
       await sendMessage(to, message);

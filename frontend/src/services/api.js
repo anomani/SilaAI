@@ -211,9 +211,9 @@ export const getDaysSinceLastAppointment = async (clientId) => {
   }
 };
 
-export const sendMessage = async (to, message, initialMessage = false) => {
+export const sendMessage = async (to, message, initialMessage = false, manual = false) => {
   try {
-    await retryRequest(() => throttledRequest(() => api.post('/chat/send-message', { to, message, initialMessage })));
+    await retryRequest(() => throttledRequest(() => api.post('/chat/send-message', { to, message, initialMessage, manual })));
   } catch (error) {
     console.error('Error sending message:', error);
     throw error;
