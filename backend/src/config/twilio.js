@@ -158,28 +158,50 @@ async function processDelayedResponse(phoneNumber) {
       const responseMessage = await handleUserInput(messages, phoneNumber);
       console.log(responseMessage)
       
-      // Check if the response contains any numbers
+      const client = await getClientByPhoneNumber(phoneNumber);
+      await toggleLastMessageReadStatus(client.id);
+
+      // Check if the response contains any numbers or is a user response
       if (/\d/.test(responseMessage)) {
-        // If it contains numbers, send a notification to the user with the suggested response
-        const client = await getClientByPhoneNumber(phoneNumber);
-        await toggleLastMessageReadStatus(client.id);
-        await sendNotificationToUser(`${client.firstname} ${client.lastname}`, lastMessage, client.id, responseMessage);
+        // Send a notification for AI suggested response
+        await sendNotificationToUser(
+          'Confirm AI Response',
+          responseMessage,
+          client.id,
+          client.firstname + ' ' + client.lastname,
+          lastMessage,
+          true
+        );
       } else if (responseMessage === "user" || responseMessage === "User") {
-        const client = await getClientByPhoneNumber(phoneNumber);
-        await toggleLastMessageReadStatus(client.id);
-        await sendNotificationToUser(`${client.firstname} ${client.lastname}`, lastMessage, client.id);
+        // Send a notification for client message
+        await sendNotificationToUser(
+          'New Client Message',
+          `${client.firstname} ${client.lastname}: ${lastMessage}`,
+          client.id,
+          client.firstname + ' ' + client.lastname,
+          lastMessage,
+          false
+        );
       } else {
+        // Send the AI response to the client
         await sendMessage(phoneNumber, responseMessage, false, false);
       }
     }
   } catch (error) {
     console.error('Error processing delayed response:', error);
     const client = await getClientByPhoneNumber(phoneNumber);
-    await sendNotificationToUser(`${client.firstname} ${client.lastname}`, lastMessage, client.id);
+    await sendNotificationToUser(
+      'New Client Message',
+      `${client.firstname} ${client.lastname}: ${lastMessage}`,
+      client.id,
+      client.firstname + ' ' + client.lastname,
+      lastMessage,
+      false
+    );
   }
 }
 
-async function sendNotificationToUser(clientName, message, clientId, suggestedResponse = null) {
+async function sendNotificationToUser(title, body, clientId, clientName, clientMessage, isSuggestedResponse) {
   const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
   const barber = await getUserByPhoneNumber(barberPhoneNumber);
 
@@ -198,9 +220,15 @@ async function sendNotificationToUser(clientName, message, clientId, suggestedRe
   const notification = {
     to: pushToken,
     sound: 'default',
-    title: 'New Client Message',
-    body: `${clientName}: ${message}`,
-    data: { clientName, message, clientId, suggestedResponse },  // Add suggestedResponse to the data
+    title: title,
+    body: body,
+    data: { 
+      clientId, 
+      clientName, 
+      clientMessage,
+      suggestedResponse: isSuggestedResponse ? body : null,
+      notificationType: isSuggestedResponse ? 'suggestedResponse' : 'clientMessage'
+    },
   };
 
   try {
