@@ -7,6 +7,7 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { savePushToken } from './src/services/api';
 import { ChatProvider } from './src/components/ChatContext';
+import { MessageProvider } from './src/components/MessageContext';
 
 // Import your screen components
 import Homepage from './src/screens/Homepage';
@@ -158,7 +159,9 @@ const App: React.FC = () => {
   return (
     <NavigationContainer>
       <ChatProvider>
-        <AppContent />
+        <MessageProvider>
+          <AppContent />
+        </MessageProvider>
       </ChatProvider>
     </NavigationContainer>
   );
