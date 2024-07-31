@@ -9,7 +9,7 @@ import { useIsFocused } from '@react-navigation/native';
 
 const ClientMessagesScreen = () => {
   const route = useRoute();
-  const { clientid, clientName, suggestedResponse } = route.params;
+  const { clientid, clientName, suggestedResponse, clientMessage } = route.params;
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [autoRespond, setAutoRespond] = useState(true);
@@ -32,6 +32,16 @@ const ClientMessagesScreen = () => {
         fetchMessages(clientid);
       }, 5000); // Poll every 5 seconds
       setPolling(pollInterval);
+
+      // Handle suggested response or new client message
+      if (suggestedResponse) {
+        setNewMessage(suggestedResponse);
+        setIsConfirmationModalVisible(true);
+      } else if (clientMessage) {
+        // Optionally, you can highlight the new message or scroll to it
+        // For now, we'll just log it
+        console.log('New client message:', clientMessage);
+      }
     } else {
       // Stop polling when the screen is not focused
       if (polling) {
@@ -45,15 +55,7 @@ const ClientMessagesScreen = () => {
         clearInterval(polling);
       }
     };
-  }, [clientid, isFocused]);
-
-  useEffect(() => {
-    // Set the suggested response if provided
-    if (suggestedResponse) {
-      setNewMessage(suggestedResponse);
-      setIsConfirmationModalVisible(true);
-    }
-  }, [suggestedResponse]);
+  }, [clientid, isFocused, suggestedResponse, clientMessage]);
 
   const fetchClientDetails = async (clientId) => {
     try {

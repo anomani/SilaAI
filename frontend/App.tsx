@@ -95,13 +95,21 @@ const AppContent: React.FC = () => {
       console.log('Notification data:', data);
       
       if (data && typeof data === 'object') {
-        if ('clientId' in data) {
-          const { clientId, clientName, suggestedResponse } = data;
-          console.log('Navigating to ClientMessages with:', { clientId, clientName, suggestedResponse });
+        const { clientId, clientName, clientMessage, suggestedResponse, notificationType } = data;
+        
+        if (notificationType === 'suggestedResponse') {
+          console.log('Navigating to ClientMessages with suggested response:', { clientId, clientName, suggestedResponse });
           navigation.navigate('ClientMessages', { 
             clientid: clientId, 
             clientName, 
             suggestedResponse 
+          });
+        } else if (notificationType === 'clientMessage') {
+          console.log('Navigating to ClientMessages with client message:', { clientId, clientName, clientMessage });
+          navigation.navigate('ClientMessages', { 
+            clientid: clientId, 
+            clientName, 
+            clientMessage 
           });
         } else if (data.notificationType === 'unpaid_appointments') {
           console.log('Navigating to CalendarScreen');
