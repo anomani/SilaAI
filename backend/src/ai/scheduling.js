@@ -1,6 +1,6 @@
 const { OpenAI } = require('openai');
 const dotenv = require('dotenv');
-dotenv.config({ path: '../../.env' });
+dotenv.config({ path: '../env' });
 const { getAvailability, getCurrentDate, findNextAvailableSlots } = require('./tools/getAvailability');
 const { bookAppointment } = require('./tools/bookAppointment');
 const {cancelAppointment} = require('./tools/cancelAppointment')
@@ -18,7 +18,6 @@ const { clearCustomPrompt } = require('./tools/clearCustomPrompt');
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -560,6 +559,11 @@ async function handleUserInput(userMessages, phoneNumber) {
       const phone = client.phonenumber;   
       thread = await createThread(phoneNumber); 
       assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, currentDate, client, upcomingAppointment);
+      
+      // Print the first 100 words of the assistant's instructions
+      const assistantDetails = await openai.beta.assistants.retrieve(assistant.id);
+      console.log("First 100 words of assistant instructions:");
+      console.log(assistantDetails.instructions.split(' ').slice(0, 100).join(' '));
     }
 
 
