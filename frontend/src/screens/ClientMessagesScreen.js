@@ -23,19 +23,12 @@ const ClientMessagesScreen = () => {
   const [polling, setPolling] = useState(null);
   const [inputHeight, setInputHeight] = useState(48);
   const [clientInfo, setClientInfo] = useState(null);
-  const [initialLoad, setInitialLoad] = useState(true);
 
   const groupedMessages = useCallback(() => groupMessagesByDate(messages), [messages]);
 
   const scrollToBottom = useCallback(() => {
-    console.log('Attempting to scroll to bottom');
     if (flatListRef.current && groupedMessages().length > 0) {
-      console.log('Scroll conditions met');
-      flatListRef.current.recordInteraction();
-      requestAnimationFrame(() => {
-        flatListRef.current.scrollToOffset({ offset: Number.MAX_SAFE_INTEGER, animated: false });
-        console.log('Scroll to bottom executed');
-      });
+      flatListRef.current.scrollToEnd({ animated: false });
     }
   }, [groupedMessages]);
 
@@ -75,14 +68,12 @@ const ClientMessagesScreen = () => {
   }, [clientid, isFocused, suggestedResponse, clientMessage]);
 
   useEffect(() => {
-    if (initialLoad && messages.length > 0) {
-      console.log('Initial load effect triggered');
+    if (flatListRef.current && groupedMessages().length > 0) {
       setTimeout(() => {
-        scrollToBottom();
-        setInitialLoad(false);
+        flatListRef.current.scrollToEnd({ animated: false });
       }, 100);
     }
-  }, [messages, initialLoad]);
+  }, []);
 
   const fetchClientDetails = async (clientId) => {
     try {
@@ -295,13 +286,6 @@ const ClientMessagesScreen = () => {
             keyExtractor={keyExtractor}
             getItemType={getItemType}
             contentContainerStyle={styles.flashListContent}
-            onLayout={() => {
-              console.log('FlashList onLayout triggered');
-              if (initialLoad) {
-                console.log('Initial load, calling scrollToBottom');
-                scrollToBottom();
-              }
-            }}
           />
         </View>
         {showScrollButton && (
