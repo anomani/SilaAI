@@ -478,6 +478,8 @@ async function handleToolCalls(requiredActions, client) {
       case "clearCustomPrompt":
         console.log("clearing prompt!")
         output = await deleteAIPrompt(client.id);
+        // Update the assistant instructions after clearing the custom prompt
+        await updateAssistantInstructions(client.phonenumber);
         break;
       default:
         throw new Error(`Unknown function: ${funcName}`);
@@ -490,6 +492,22 @@ async function handleToolCalls(requiredActions, client) {
   }
 
   return toolOutputs;
+}
+
+// Add this new function to update assistant instructions
+async function updateAssistantInstructions(phoneNumber) {
+  if (assistants.has(phoneNumber)) {
+    const assistant = assistants.get(phoneNumber);
+    const instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
+    let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
+
+    // Update the assistant with the new instructions
+    await openai.beta.assistants.update(assistant.id, {
+      instructions: assistantInstructions,
+    });
+
+    console.log(`Updated instructions for assistant ${assistant.id}`);
+  }
 }
 
 async function handleUserInput(userMessages, phoneNumber) {
@@ -547,7 +565,7 @@ async function handleUserInput(userMessages, phoneNumber) {
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
-      additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate +"and the day of the week is"+ day,
+      additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate + "and the day of the week is"+ day,
     });
 
     while (true) {
