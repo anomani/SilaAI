@@ -157,10 +157,16 @@ async function processDelayedResponse(phoneNumber) {
     if (messages && messages.length > 0) {
       const responseMessage = await handleUserInput(messages, phoneNumber);
       console.log(responseMessage)
-      if (responseMessage === "user" || responseMessage === "User") {
+      
+      // Check if the response contains any numbers
+      if (/\d/.test(responseMessage)) {
+        // If it contains numbers, send a notification to the user with the suggested response
         const client = await getClientByPhoneNumber(phoneNumber);
         await toggleLastMessageReadStatus(client.id);
-        // Use the last message in the array as the Body
+        await sendNotificationToUser(`${client.firstname} ${client.lastname}`, lastMessage, client.id, responseMessage);
+      } else if (responseMessage === "user" || responseMessage === "User") {
+        const client = await getClientByPhoneNumber(phoneNumber);
+        await toggleLastMessageReadStatus(client.id);
         await sendNotificationToUser(`${client.firstname} ${client.lastname}`, lastMessage, client.id);
       } else {
         await sendMessage(phoneNumber, responseMessage, false, false);
@@ -168,11 +174,12 @@ async function processDelayedResponse(phoneNumber) {
     }
   } catch (error) {
     console.error('Error processing delayed response:', error);
+    const client = await getClientByPhoneNumber(phoneNumber);
     await sendNotificationToUser(`${client.firstname} ${client.lastname}`, lastMessage, client.id);
   }
 }
 
-async function sendNotificationToUser(clientName, message, clientId) {
+async function sendNotificationToUser(clientName, message, clientId, suggestedResponse = null) {
   const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
   const barber = await getUserByPhoneNumber(barberPhoneNumber);
 
@@ -193,7 +200,7 @@ async function sendNotificationToUser(clientName, message, clientId) {
     sound: 'default',
     title: 'New Client Message',
     body: `${clientName}: ${message}`,
-    data: { clientName, message, clientId },  // Add clientId to the data
+    data: { clientName, message, clientId, suggestedResponse },  // Add suggestedResponse to the data
   };
 
   try {

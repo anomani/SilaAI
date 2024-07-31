@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
 import { useIsFocused } from '@react-navigation/native';
 
-const ClientMessagesScreen = ({ route }) => {
-  const { clientid, clientName } = route.params;
+const ClientMessagesScreen = () => {
+  const route = useRoute();
+  const { clientid, clientName, suggestedResponse } = route.params;
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [autoRespond, setAutoRespond] = useState(true);
@@ -17,6 +18,7 @@ const ClientMessagesScreen = ({ route }) => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const isFocused = useIsFocused();
   const [polling, setPolling] = useState(null);
+  const [isConfirmationModalVisible, setIsConfirmationModalVisible] = useState(false);
 
   useEffect(() => {
     if (isFocused) {
@@ -44,6 +46,14 @@ const ClientMessagesScreen = ({ route }) => {
       }
     };
   }, [clientid, isFocused]);
+
+  useEffect(() => {
+    // Set the suggested response if provided
+    if (suggestedResponse) {
+      setNewMessage(suggestedResponse);
+      setIsConfirmationModalVisible(true);
+    }
+  }, [suggestedResponse]);
 
   const fetchClientDetails = async (clientId) => {
     try {
@@ -208,6 +218,16 @@ const ClientMessagesScreen = ({ route }) => {
     </View>
   ), [renderMessage]);
 
+  const handleConfirmSuggestedResponse = () => {
+    handleSendMessage();
+    setIsConfirmationModalVisible(false);
+  };
+
+  const handleRejectSuggestedResponse = () => {
+    setNewMessage('');
+    setIsConfirmationModalVisible(false);
+  };
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -256,6 +276,23 @@ const ClientMessagesScreen = ({ route }) => {
           <Icon name="send" size={20} color="#195de6" />
         </TouchableOpacity>
       </View>
+
+      {isConfirmationModalVisible && (
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirm Suggested Response</Text>
+            <Text style={styles.modalMessage}>{newMessage}</Text>
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity style={styles.modalButton} onPress={handleRejectSuggestedResponse}>
+                <Text style={styles.modalButtonText}>Reject</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalButton} onPress={handleConfirmSuggestedResponse}>
+                <Text style={styles.modalButtonText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 };
@@ -403,6 +440,49 @@ const styles = StyleSheet.create({
     color: '#9da6b8',
     fontSize: 12,
     marginHorizontal: 10,
+  },
+  modalContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#292e38',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+  },
+  modalTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  modalMessage: {
+    color: 'white',
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    backgroundColor: '#195de6',
+    borderRadius: 8,
+    padding: 10,
+    width: '45%',
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

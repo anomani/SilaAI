@@ -96,9 +96,13 @@ const AppContent: React.FC = () => {
       
       if (data && typeof data === 'object') {
         if ('clientId' in data) {
-          const { clientId, clientName } = data;
-          console.log('Navigating to ClientMessages with:', { clientId, clientName });
-          navigation.navigate('ClientMessages', { clientid: clientId, clientName });
+          const { clientId, clientName, suggestedResponse } = data;
+          console.log('Navigating to ClientMessages with:', { clientId, clientName, suggestedResponse });
+          navigation.navigate('ClientMessages', { 
+            clientid: clientId, 
+            clientName, 
+            suggestedResponse 
+          });
         } else if (data.notificationType === 'unpaid_appointments') {
           console.log('Navigating to CalendarScreen');
           navigation.navigate('Calendar');
@@ -135,7 +139,7 @@ const AppContent: React.FC = () => {
       <Stack.Screen 
         name="ClientMessages" 
         component={ClientMessagesScreen} 
-        initialParams={{ clientid: 0, clientName: '' }}
+        initialParams={{ clientid: 0, clientName: '', suggestedResponse: null }}
       />
       <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
     </Stack.Navigator>
