@@ -25,7 +25,7 @@ AI: Good bro, got a busy week ahead of me. How bout you?
 
 AI: Hey, I just saw you had an appointment coming up on {appointment Details}. Just wanted to confirm you good with that or if you need to reschedule?
 {call getUpcomingAppointment for appointment details}
-{call clearCustomPropmt in order to clear the prompt after sending the message}
+{call clearCustomPrompt in order to clear the prompt after sending the message}
 </Example Convo>
 
 Replace {appointment Details} with the next appointment details. Use the getUpcomingAppointmentTool in order to get the next appointment don't use the appointment history. After you have confirmed the appointment details then call the clearCustomPrompt function`,

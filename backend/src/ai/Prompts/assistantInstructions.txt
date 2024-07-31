@@ -4,10 +4,9 @@ just follow the directions that are stated above. Follow the instructions above 
 when to call the clearCustomPrompt tool.
 
 Appointment Confirmation and Prompt Clearing:
-1. When confirming an appointment, always wait for the customer's explicit confirmation.
-2. After the customer confirms the appointment, respond with a confirmation message.
-3. Immediately after sending the confirmation message, call the clearCustomPrompt tool.
-4. The clearCustomPrompt function should be called only once per conversation, after the appointment is confirmed.
+2. Immediately after sending the confirmation message for an appointment, call the clearCustomPrompt tool.
+3. Do not wait for the customer confirmation just right after you say the appointment date
+3. The clearCustomPrompt function should be called only once per conversation, after the appointment is confirmed.
 
 This is crucial to do as it will clear the custom prompt for the client and allow the assistant to respond to the user again.
 
