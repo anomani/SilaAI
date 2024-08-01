@@ -41,6 +41,7 @@ async function sendMessage(to, body, initialMessage = true, manual = true) {
   const to_formatted = formatPhoneNumber(to);
   const customer = await getClientByPhoneNumber(to);
   const localDate = new Date().toLocaleString();
+  console.log("lolocalDate", localDate)
   let clientId;
   if (customer.id != '') {
     clientId = customer.id
