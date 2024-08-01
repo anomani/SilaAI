@@ -509,12 +509,7 @@ async function updateAssistantInstructions(phoneNumber) {
   }
 }
 
-async function main() {
-  const client = await handleUserInput(["Hi"], "+12038324011");
-  console.log(client);
-}
 
-main();
 
 async function handleUserInput(userMessages, phoneNumber) {
   try {
@@ -580,7 +575,6 @@ async function handleUserInput(userMessages, phoneNumber) {
     });
 
     while (true) {
-      console.log(true)
       await delay(1000);
       const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
 
