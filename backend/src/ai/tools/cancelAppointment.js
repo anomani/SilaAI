@@ -59,6 +59,7 @@ async function cancelAppointment(phoneNumber, date) {
         console.log("Deleting from database")
         try{
             await deleteAppointment(appointment.id);
+            return "Appointment cancelled"
         } catch (error) {
             console.log("Error deleting from database")
             throw error;
