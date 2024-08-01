@@ -683,20 +683,15 @@ async function shouldAIRespond(userMessages, thread) {
     const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
 
-    // Fetch thread messages
+    const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
     const threadMessages = await openai.beta.threads.messages.list(thread.id);
+    
+    // Format thread messages into a string
+    const formattedThreadMessages = threadMessages.data.map(msg => 
+      `${msg.role}: ${msg.content[0].text.value}`
+    ).join('\n');
 
-    // Convert OpenAI messages to Anthropic format
-    const convertedMessages = threadMessages.data.map(msg => ({
-      role: msg.role === 'assistant' ? 'assistant' : 'user',
-      content: msg.content[0].text.value
-    }));
-
-    // Add the new user messages
-    const newUserMessages = Array.isArray(userMessages) ? userMessages : [userMessages];
-    newUserMessages.forEach(msg => {
-      convertedMessages.push({ role: 'user', content: msg });
-    });
+    initialScreeningInstructions = initialScreeningInstructions.replace('${formattedThreadMessages}', formattedThreadMessages);
 
     const response = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20240620',
@@ -704,10 +699,9 @@ async function shouldAIRespond(userMessages, thread) {
       temperature: 0,
       system: initialScreeningInstructions,
       messages: [
-        ...convertedMessages,
         {
           role: "user",
-          content: "Should the AI respond to these messages? Answer only with 'true' or 'false'."
+          content: `Should the AI respond to these messages? Answer only with 'true' or 'false':\n${screeningMessage}`
         }
       ]
     });
@@ -720,6 +714,5 @@ async function shouldAIRespond(userMessages, thread) {
     return false; // Default to human attention if there's an error
   }
 }
-
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
