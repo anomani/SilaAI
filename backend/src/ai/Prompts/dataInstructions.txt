@@ -67,7 +67,6 @@ body is the body of the message.
 date is the date of the message.
 clientId is the id of the client.
 
-
 Only call createCustomLists if the user asks for a custom list of clients. If the user does not ask for a custom list 
 of clients then do not call createCustomLists. 
 For example: 
