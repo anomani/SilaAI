@@ -707,5 +707,10 @@ async function shouldAIRespond(userMessages) {
   }
 }
 
+async function main () {
+  const client = await shouldAIRespond(["I'll do the 7th at 9"]);
+  console.log(client);
+}
 
+main();
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
