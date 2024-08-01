@@ -36,10 +36,11 @@ async function cancelAcuityAppointment(acuityId) {
 }
 
 async function cancelAppointment(phoneNumber, date) {
+    const client = await getClientByPhoneNumber(phoneNumber)
+    const appointmentsForDay = await getAppointmentsByDay(date)
+    const appointment = appointmentsForDay.find(appointment => appointment.clientid === client.id)
+
     try {
-        const client = await getClientByPhoneNumber(phoneNumber)
-        const appointmentsForDay = await getAppointmentsByDay(date)
-        const appointment = appointmentsForDay.find(appointment => appointment.clientid === client.id)
         if (!appointment) {
             return "Appointment not found"
         }
