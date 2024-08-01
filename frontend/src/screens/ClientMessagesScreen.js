@@ -102,33 +102,38 @@ const ClientMessagesScreen = ({ route }) => {
 
   const handleSendMessage = async () => {
     if (newMessage.trim() === '' || !clientDetails) return;
+    const tempId = `temp-${Date.now()}`;
     try {
       const recipient = clientDetails.phonenumber;
-      
-      // Create a temporary message object
+      const adjustedDate = new Date();
+      adjustedDate.setHours(adjustedDate.getHours() - 4);
+      const adjustedDateString = adjustedDate.toLocaleString();
       const tempMessage = {
-        id: `temp-${Date.now()}`,
+        id: tempId,
         body: newMessage,
-        fromtext: '+18446480598', // Assuming this is the assistant's number
+        fromtext: '+18446480598',
         totext: recipient,
-        date: new Date().toLocaleString(),
+        date: adjustedDateString,
         is_ai: false,
       };
 
-      // Add the temporary message to localMessages
       setLocalMessages(prev => [...prev, tempMessage]);
       setNewMessage('');
       scrollToBottom();
 
-      // Send the message to the server
       await sendMessage(recipient, newMessage, false, true);
       
-      // Fetch updated messages from the server
-      fetchMessages(clientid);
+      console.log('Message sent successfully');
+
+      // Fetch updated messages
+      await fetchMessages(clientid);
+      
+      // Remove the temporary message after fetching updated messages
+      setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
     } catch (error) {
       console.error('Error sending message:', error);
-      // If there's an error, remove the temporary message
-      setLocalMessages(prev => prev.filter(msg => msg.id !== `temp-${Date.now()}`));
+      // Remove the temporary message if sending failed
+      setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
     }
   };
 
@@ -163,7 +168,7 @@ const ClientMessagesScreen = ({ route }) => {
     const [time, period] = timePart.split(' ');
     const [hours, minutes] = time.split(':');
 
-    let adjustedHours = parseInt(hours, 10) - 4;
+    let adjustedHours = parseInt(hours, 10) ;
     let adjustedPeriod = period;
 
     if (adjustedHours < 0) {
