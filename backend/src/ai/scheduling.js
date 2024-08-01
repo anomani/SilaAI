@@ -680,7 +680,7 @@ async function verifyResponse(response, client) {
 
 async function shouldAIRespond(userMessages, thread) {
   try {
-    const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
+    let initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
 
     const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
@@ -715,4 +715,10 @@ async function shouldAIRespond(userMessages, thread) {
   }
 }
 
+async function main() {
+  const client = await shouldAIRespond(["I'll do the 7th at 9"]);
+  console.log(client);
+}
+
+main();
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
