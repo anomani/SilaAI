@@ -23,6 +23,7 @@ const ClientMessagesScreen = ({ route }) => {
   const [clientDetails, setClientDetails] = useState(null);
   const [inputHeight, setInputHeight] = useState(60);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
     if (isFocused) {
@@ -75,9 +76,18 @@ const ClientMessagesScreen = ({ route }) => {
       setKeyboardHeight(0);
     });
 
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
     return () => {
       keyboardWillShow.remove();
       keyboardWillHide.remove();
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
     };
   }, []);
 
@@ -284,9 +294,12 @@ const ClientMessagesScreen = ({ route }) => {
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
-      keyboardVerticalOffset={0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
     >
-      <View style={[styles.contentContainer, { marginBottom: keyboardHeight }]}>
+      <View style={[
+        styles.contentContainer, 
+        keyboardVisible && styles.contentContainerKeyboardVisible
+      ]}>
         <FlatList
           ref={flatListRef}
           data={groupMessagesByDate([...messages, ...localMessages])}
@@ -353,6 +366,10 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  contentContainerKeyboardVisible: {
+    justifyContent: 'flex-start',
   },
   messageList: {
     flex: 1,

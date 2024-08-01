@@ -3,6 +3,7 @@ import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image } 
 import { getAllMessagesGroupedByClient, getClientById } from '../services/api';
 import Footer from '../components/Footer'; 
 import { useIsFocused } from '@react-navigation/native';
+import { format } from 'date-fns'; // Add this import
 
 const ChatDashboard = ({ navigation }) => {
   const [groupedMessages, setGroupedMessages] = useState({});
@@ -10,6 +11,7 @@ const ChatDashboard = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [polling, setPolling] = useState(null);
   const isFocused = useIsFocused();
+  const [lastUpdated, setLastUpdated] = useState(null); // Add this state
 
   useEffect(() => {
     if (isFocused) {
@@ -37,7 +39,10 @@ const ChatDashboard = ({ navigation }) => {
     try {
       const data = await getAllMessagesGroupedByClient();
       setGroupedMessages(prevMessages => {
-        // Only update if there are changes
+        // Update lastUpdated time on every poll
+        setLastUpdated(new Date());
+        
+        // Only update messages if there are changes
         if (JSON.stringify(prevMessages) !== JSON.stringify(data)) {
           fetchClientNames(Object.keys(data));
           return data;
@@ -155,6 +160,11 @@ const ChatDashboard = ({ navigation }) => {
           <Text style={styles.refreshIcon}>⟳</Text>
         </TouchableOpacity>
       </View>
+      {lastUpdated && (
+        <Text style={styles.lastUpdatedText}>
+          Last updated: {format(lastUpdated, 'hh:mm:ss a')}
+        </Text>
+      )}
       <FlatList
         data={filteredClients}
         renderItem={renderClient}
@@ -181,6 +191,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
+    paddingBottom: 8, // Reduced bottom padding
   },
   searchInput: {
     flex: 1,
@@ -246,6 +257,13 @@ const styles = StyleSheet.create({
   },
   flatList: {
     flex: 1,
+  },
+  lastUpdatedText: {
+    color: '#9da6b8',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 8,
+    marginTop: -4, // Added negative top margin to move it closer to the search bar
   },
 });
 
