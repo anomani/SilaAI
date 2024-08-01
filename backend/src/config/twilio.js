@@ -36,16 +36,23 @@ function formatPhoneNumber(phoneNumber) {
   return '+' + cleaned;
 }
 
+function adjustDate(date) {
+  const adjustedDate = new Date(date);
+  adjustedDate.setHours(adjustedDate.getHours() - 4);
+  return adjustedDate.toLocaleString();
+}
 
 async function sendMessage(to, body, initialMessage = true, manual = true) {
   const to_formatted = formatPhoneNumber(to);
   const customer = await getClientByPhoneNumber(to);
   const localDate = new Date().toLocaleString();
+  const adjustedDate = adjustDate(localDate);
   console.log("lolocalDate", localDate)
+  console.log("loladjustedDate", adjustedDate)
   let clientId;
   if (customer.id != '') {
     clientId = customer.id
-    await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, localDate, clientId, true, !manual);
+    await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, adjustedDate, clientId, true, !manual);
     console.log(initialMessage, manual)
     // Create or get the thread, passing the initialMessage parameter
     const thread = await createThread(to_formatted, initialMessage);
@@ -108,11 +115,12 @@ async function handleIncomingMessage(req, res) {
     const client = await getClientByPhoneNumber(Author);
     let clientId = '';
     const localDate = new Date().toLocaleString();
+    const adjustedDate = adjustDate(localDate);
     if (client.id != '') {
       clientId = client.id;
       try {
         // Set isAI to true for incoming messages
-        await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, localDate, clientId, true);
+        await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, adjustedDate, clientId, true);
       } catch (saveError) {
         if (saveError.code !== '23505') {
           console.error('Error saving message:', saveError);
