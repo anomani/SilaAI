@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -21,6 +21,8 @@ const ClientMessagesScreen = ({ route }) => {
   const [polling, setPolling] = useState(null);
   const [localMessages, setLocalMessages] = useState([]);
   const [clientDetails, setClientDetails] = useState(null);
+  const [inputHeight, setInputHeight] = useState(60);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     if (isFocused) {
@@ -64,6 +66,20 @@ const ClientMessagesScreen = ({ route }) => {
       setDraftMessage(clientid, newMessage);
     };
   }, [clientid, isFocused, suggestedResponse, clientMessage]);
+
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const keyboardWillHide = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
 
   const fetchClientDetails = async (clientId) => {
     try {
@@ -259,57 +275,72 @@ const ClientMessagesScreen = ({ route }) => {
     setDraftMessage(clientid, text);
   };
 
+  const handleContentSizeChange = (event) => {
+    const { height } = event.nativeEvent.contentSize;
+    setInputHeight(Math.min(Math.max(60, height), 150));
+  };
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -200}
+      keyboardVerticalOffset={0}
     >
-      <FlatList
-        ref={flatListRef}
-        data={groupMessagesByDate([...messages, ...localMessages])}
-        renderItem={renderItem}
-        keyExtractor={useCallback((item) => item.date, [])}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        removeClippedSubviews={true}
-        onContentSizeChange={scrollToBottom}
-        onLayout={scrollToBottom}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        style={styles.messageList}
-      />
-      {showScrollButton && (
-        <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
-          <Text style={styles.scrollButtonText}>↓</Text>
-        </TouchableOpacity>
-      )}
-      <View style={styles.autoRespondContainer}>
-        <Text style={styles.autoRespondText}>Auto-respond</Text>
-        <Switch
-          value={autoRespond}
-          onValueChange={handleAutoRespondToggle}
-          trackColor={{ false: "#292e38", true: "#195de6" }}
-          thumbColor={autoRespond ? "#ffffff" : "#9da6b8"}
+      <View style={[styles.contentContainer, { marginBottom: keyboardHeight }]}>
+        <FlatList
+          ref={flatListRef}
+          data={groupMessagesByDate([...messages, ...localMessages])}
+          renderItem={renderItem}
+          keyExtractor={useCallback((item) => item.date, [])}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          removeClippedSubviews={true}
+          onContentSizeChange={scrollToBottom}
+          onLayout={scrollToBottom}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          style={styles.messageList}
+          contentContainerStyle={[
+            styles.messageListContent,
+            { paddingBottom: keyboardHeight + 16 }
+          ]}
         />
-      </View>
-      <View style={styles.inputContainer}>
-        <Image source={defaultAvatar} style={styles.inputAvatar} />
-        <TextInput
-          style={styles.input}
-          placeholder="Write a message"
-          placeholderTextColor="#9da6b8"
-          value={newMessage}
-          onChangeText={handleInputChange}
-        />
-        <TouchableOpacity 
-          style={styles.sendButton} 
-          onPress={handleSendMessage}
-          disabled={!clientDetails} // Disable the button if clientDetails is not loaded
-        >
-          <Icon name="send" size={20} color={clientDetails ? "#195de6" : "#9da6b8"} />
-        </TouchableOpacity>
+        {showScrollButton && (
+          <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
+            <Text style={styles.scrollButtonText}>↓</Text>
+          </TouchableOpacity>
+        )}
+        <View style={styles.bottomContainer}>
+          <View style={styles.autoRespondContainer}>
+            <Text style={styles.autoRespondText}>Auto-respond</Text>
+            <Switch
+              value={autoRespond}
+              onValueChange={handleAutoRespondToggle}
+              trackColor={{ false: "#292e38", true: "#195de6" }}
+              thumbColor={autoRespond ? "#ffffff" : "#9da6b8"}
+            />
+          </View>
+          <View style={styles.inputContainer}>
+            <Image source={defaultAvatar} style={styles.inputAvatar} />
+            <TextInput
+              style={[styles.input, { height: Math.min(150, Math.max(60, inputHeight)) }]}
+              placeholder="Write a message"
+              placeholderTextColor="#9da6b8"
+              value={newMessage}
+              onChangeText={handleInputChange}
+              multiline
+              onContentSizeChange={handleContentSizeChange}
+            />
+            <TouchableOpacity 
+              style={styles.sendButton} 
+              onPress={handleSendMessage}
+              disabled={!clientDetails}
+            >
+              <Icon name="send" size={20} color={clientDetails ? "#195de6" : "#9da6b8"} />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -320,8 +351,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#111318',
   },
+  contentContainer: {
+    flex: 1,
+  },
   messageList: {
     flex: 1,
+  },
+  messageListContent: {
+    flexGrow: 1,
+    paddingBottom: 16, // Base padding
   },
   messageContainer: {
     flexDirection: 'row',
@@ -382,14 +420,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
+  bottomContainer: {
+    backgroundColor: '#111318',
+    borderTopWidth: 1,
+    borderTopColor: '#292e38',
+    paddingBottom: Platform.OS === 'ios' ? 5 : 0,
+  },
   autoRespondContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#111318',
-    borderTopWidth: 1,
-    borderTopColor: '#292e38',
   },
   autoRespondText: {
     color: '#9da6b8',
@@ -398,11 +439,8 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     padding: 12,
-    backgroundColor: '#111318',
-    borderTopWidth: 1,
-    borderTopColor: '#292e38',
   },
   inputAvatar: {
     width: 40,
@@ -412,13 +450,17 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 48,
     backgroundColor: '#292e38',
     color: 'white',
     borderRadius: 12,
     paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
     fontSize: 16,
     marginRight: 8,
+    maxHeight: 150,
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
   sendButton: {
     width: 48,
