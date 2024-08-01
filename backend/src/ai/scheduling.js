@@ -527,7 +527,7 @@ async function handleUserInput(userMessages, phoneNumber) {
       });
     }
 
-    const shouldRespond = await shouldAIRespond(userMessages);
+    const shouldRespond = await shouldAIRespond(userMessages, thread);
     if (!shouldRespond) {
       return "user"; // Indicate that human attention is required
     }
@@ -678,12 +678,25 @@ async function verifyResponse(response, client) {
   }
 }
 
-async function shouldAIRespond(userMessages) {
+async function shouldAIRespond(userMessages, thread) {
   try {
     const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
     const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
 
-    const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
+    // Fetch thread messages
+    const threadMessages = await openai.beta.threads.messages.list(thread.id);
+
+    // Convert OpenAI messages to Anthropic format
+    const convertedMessages = threadMessages.data.map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.content[0].text.value
+    }));
+
+    // Add the new user messages
+    const newUserMessages = Array.isArray(userMessages) ? userMessages : [userMessages];
+    newUserMessages.forEach(msg => {
+      convertedMessages.push({ role: 'user', content: msg });
+    });
 
     const response = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20240620',
@@ -691,9 +704,10 @@ async function shouldAIRespond(userMessages) {
       temperature: 0,
       system: initialScreeningInstructions,
       messages: [
+        ...convertedMessages,
         {
           role: "user",
-          content: `Should the AI respond to these messages? Answer only with 'true' or 'false':\n${screeningMessage}`
+          content: "Should the AI respond to these messages? Answer only with 'true' or 'false'."
         }
       ]
     });
@@ -707,10 +721,5 @@ async function shouldAIRespond(userMessages) {
   }
 }
 
-async function main () {
-  const client = await shouldAIRespond(["I'll do the 7th at 9"]);
-  console.log(client);
-}
 
-main();
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
