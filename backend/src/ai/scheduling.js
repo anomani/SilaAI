@@ -509,6 +509,13 @@ async function updateAssistantInstructions(phoneNumber) {
   }
 }
 
+async function main() {
+  const client = await handleUserInput(["Hi"], "+12038324011");
+  console.log(client);
+}
+
+main();
+
 async function handleUserInput(userMessages, phoneNumber) {
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
@@ -573,14 +580,16 @@ async function handleUserInput(userMessages, phoneNumber) {
     });
 
     while (true) {
+      console.log(true)
       await delay(1000);
       const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
 
       if (runStatus.status === "completed") {
         const messages = await openai.beta.threads.messages.list(thread.id);
-        
+        console.log("completed");
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
         if (assistantMessage) {
+          console.log(assistantMessage.content[0].text.value);
           if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
             return 'user';
           }
@@ -592,6 +601,7 @@ async function handleUserInput(userMessages, phoneNumber) {
           return "user";
         }
       } else if (runStatus.status === "requires_action") {
+        console.log("requires action");
         const requiredActions = runStatus.required_action.submit_tool_outputs;
         const toolOutputs = await handleToolCalls(requiredActions, client);
 
@@ -602,6 +612,8 @@ async function handleUserInput(userMessages, phoneNumber) {
         console.error("Run failed");
         throw new Error('Run failed');
       } else {
+        console.log(runStatus);
+        console.log("else");
         await delay(1000);
       }
     }

@@ -55,8 +55,13 @@ async function cancelAppointment(phoneNumber, date) {
             throw new Error('Failed to cancel appointment in Acuity');
         }
     } catch (error) {
-        console.log(error)
-        throw new Error('Failed to cancel appointment in Acuity');
+        console.log("Deleting from database")
+        try{
+            await deleteAppointment(appointment.id);
+        } catch (error) {
+            console.log("Error deleting from database")
+            throw error;
+        }
     } 
 }
 
