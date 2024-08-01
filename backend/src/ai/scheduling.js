@@ -680,8 +680,8 @@ async function verifyResponse(response, client) {
 
 async function shouldAIRespond(userMessages, thread) {
   try {
-    let initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
-    const initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
+    const initialScreeningPath = path.join(__dirname, 'Prompts', 'initialScreening.txt');
+    let initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
 
     const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
     const threadMessages = await openai.beta.threads.messages.list(thread.id);
