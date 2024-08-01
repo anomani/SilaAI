@@ -171,17 +171,18 @@ async function processDelayedResponse(phoneNumber) {
       await toggleLastMessageReadStatus(client.id);
 
       // Check if the response contains any numbers or is a user response
-      if (/\d/.test(responseMessage)) {
-        // Send a notification for AI suggested response
-        await sendNotificationToUser(
-          'Confirm AI Response',
-          responseMessage,
-          client.id,
-          client.firstname + ' ' + client.lastname,
-          lastMessage,
-          true
-        );
-      } else if (responseMessage === "user" || responseMessage === "User") {
+      // if (/\d/.test(responseMessage)) {
+      //   // Send a notification for AI suggested response
+      //   await sendNotificationToUser(
+      //     'Confirm AI Response',
+      //     responseMessage,
+      //     client.id,
+      //     client.firstname + ' ' + client.lastname,
+      //     lastMessage,
+      //     true
+      //   );
+      // } else 
+      if (responseMessage === "user" || responseMessage === "User") {
         // Send a notification for client message
         await sendNotificationToUser(
           'New Client Message',
