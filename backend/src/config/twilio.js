@@ -211,42 +211,43 @@ async function processDelayedResponse(phoneNumber) {
 }
 
 async function sendNotificationToUser(title, body, clientId, clientName, clientMessage, isSuggestedResponse) {
-  const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
-  const barber = await getUserByPhoneNumber(barberPhoneNumber);
+  console.log("SENDING NOTIFICATION", body)
+  // const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+  // const barber = await getUserByPhoneNumber(barberPhoneNumber);
 
-  if (!barber) {
-    console.log('No barber found with the given phone number');
-    return;
-  }
+  // if (!barber) {
+  //   console.log('No barber found with the given phone number');
+  //   return;
+  // }
 
-  const pushToken = await getUserPushToken(barber.id);
+  // const pushToken = await getUserPushToken(barber.id);
 
-  if (!pushToken) {
-    console.log('No push token found for the barber');
-    return;
-  }
+  // if (!pushToken) {
+  //   console.log('No push token found for the barber');
+  //   return;
+  // }
 
-  const notification = {
-    to: pushToken,
-    sound: 'default',
-    title: title,
-    body: body,
-    data: { 
-      clientId, 
-      clientName, 
-      clientMessage,
-      suggestedResponse: isSuggestedResponse ? body : null,
-      notificationType: isSuggestedResponse ? 'suggestedResponse' : 'clientMessage'
-    },
-  };
+  // const notification = {
+  //   to: pushToken,
+  //   sound: 'default',
+  //   title: title,
+  //   body: body,
+  //   data: { 
+  //     clientId, 
+  //     clientName, 
+  //     clientMessage,
+  //     suggestedResponse: isSuggestedResponse ? body : null,
+  //     notificationType: isSuggestedResponse ? 'suggestedResponse' : 'clientMessage'
+  //   },
+  // };
 
-  try {
-    console.log(notification)
-    let ticketChunk = await expo.sendPushNotificationsAsync([notification]);
-    console.log(ticketChunk);
-  } catch (error) {
-    console.error('Error sending push notification:', error);
-  }
+  // try {
+  //   console.log(notification)
+  //   let ticketChunk = await expo.sendPushNotificationsAsync([notification]);
+  //   console.log(ticketChunk);
+  // } catch (error) {
+  //   console.error('Error sending push notification:', error);
+  // }
 }
 
 module.exports = {
