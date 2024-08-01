@@ -714,11 +714,4 @@ async function shouldAIRespond(userMessages, thread) {
     return false; // Default to human attention if there's an error
   }
 }
-
-async function main() {
-  const client = await shouldAIRespond(["I'll do the 7th at 9"]);
-  console.log(client);
-}
-
-main();
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
