@@ -586,7 +586,6 @@ async function handleUserInput(userMessages, phoneNumber) {
 
       if (runStatus.status === "completed") {
         const messages = await openai.beta.threads.messages.list(thread.id);
-        console.log("completed");
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
         if (assistantMessage) {
           console.log(assistantMessage.content[0].text.value);
@@ -601,7 +600,6 @@ async function handleUserInput(userMessages, phoneNumber) {
           return "user";
         }
       } else if (runStatus.status === "requires_action") {
-        console.log("requires action");
         const requiredActions = runStatus.required_action.submit_tool_outputs;
         const toolOutputs = await handleToolCalls(requiredActions, client);
 
@@ -612,8 +610,6 @@ async function handleUserInput(userMessages, phoneNumber) {
         console.error("Run failed");
         throw new Error('Run failed');
       } else {
-        console.log(runStatus);
-        console.log("else");
         await delay(1000);
       }
     }
