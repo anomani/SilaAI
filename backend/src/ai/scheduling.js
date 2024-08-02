@@ -441,6 +441,7 @@ async function handleToolCalls(requiredActions, client) {
         output = await getAllAppointmentsByClientId(client.id);
         break;
       case "createClient":
+        console.log("creating client")
         output = await createClient(args.firstName, args.lastName, client.phonenumber);
         break;
       case "findRecurringAvailability":
@@ -561,11 +562,6 @@ async function handleUserInput(userMessages, phoneNumber) {
       const phone = client.phonenumber;   
       thread = await createThread(phoneNumber); 
       assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, currentDate, client, upcomingAppointment);
-      
-      // Print the first 100 words of the assistant's instructions
-      const assistantDetails = await openai.beta.assistants.retrieve(assistant.id);
-      console.log("First 100 words of assistant instructions:");
-      console.log(assistantDetails.instructions.split(' ').slice(0, 100).join(' '));
     }
 
 
@@ -594,6 +590,7 @@ async function handleUserInput(userMessages, phoneNumber) {
           return "user";
         }
       } else if (runStatus.status === "requires_action") {
+        console.log("requires action")
         const requiredActions = runStatus.required_action.submit_tool_outputs;
         const toolOutputs = await handleToolCalls(requiredActions, client);
 
