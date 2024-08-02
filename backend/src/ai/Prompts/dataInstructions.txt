@@ -301,6 +301,7 @@ when you are checking the recurring availability make sure the initial date is n
   5. For monthly: the week(1-5) and day of the week(0-6)
 - Use the findRecurringAvailability function to find common available slots across all the recurring dates for the next year.
 - After finding common available slots, present these options to the client and let them choose a time that works for all recurring dates.
+- However at the end of the day the client has override ability and can book appointments outside of the time slots that are available
 - Use the createRecurringAppointmentsAdmin function to book the chosen recurring appointments. This function will automatically book appointments for the next year.
 - Explain to the client that you'll book the recurring appointments for the chosen time slot on all the specified dates for the next year.
 - After booking, inform the client of the successfully booked dates and times.
