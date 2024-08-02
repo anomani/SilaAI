@@ -168,37 +168,42 @@ async function processDelayedResponse(phoneNumber) {
       console.log(responseMessage)
       
       const client = await getClientByPhoneNumber(phoneNumber);
-      await toggleLastMessageReadStatus(client.id);
+      if (client.id != '') {
+        await toggleLastMessageReadStatus(client.id);
 
-      // Check if the response contains any numbers or is a user response
-      if (/\d/.test(responseMessage)) {
-        // Send a notification for AI suggested response
-        await sendNotificationToUser(
-          'Confirm AI Response',
-          responseMessage,
-          client.id,
-          client.firstname + ' ' + client.lastname,
-          lastMessage,
-          true
-        );
-      } else 
-      if (responseMessage === "user" || responseMessage === "User") {
-        // Send a notification for client message
-        await sendNotificationToUser(
-          'New Client Message',
-          `${client.firstname} ${client.lastname}: ${lastMessage}`,
-          client.id,
-          client.firstname + ' ' + client.lastname,
-          lastMessage,
-          false
-        );
-      } else {
-        // Send the AI response to the client
-        await sendMessage(phoneNumber, responseMessage, false, false);
+        // Check if the response contains any numbers or is a user response
+        if (/\d/.test(responseMessage)) {
+          // Send a notification for AI suggested response
+          await sendNotificationToUser(
+            'Confirm AI Response',
+            responseMessage,
+            client.id,
+            client.firstname + ' ' + client.lastname,
+            lastMessage,
+            true
+          );
+        } else 
+        if (responseMessage === "user" || responseMessage === "User") {
+          // Send a notification for client message
+          await sendNotificationToUser(
+            'New Client Message',
+            `${client.firstname} ${client.lastname}: ${lastMessage}`,
+            client.id,
+            client.firstname + ' ' + client.lastname,
+            lastMessage,
+            false
+          );
+        } else {
+          // Send the AI response to the client
+            await sendMessage(phoneNumber, responseMessage, false, false);
+          }
+        } 
+        else {
+          await sendMessage(phoneNumber, responseMessage, false, false);
+        }
       }
-    }
-  } catch (error) {
-    console.error('Error processing delayed response:', error);
+      } catch (error) {
+        console.error('Error processing delayed response:', error);
     const client = await getClientByPhoneNumber(phoneNumber);
     await sendNotificationToUser(
       'New Client Message',
