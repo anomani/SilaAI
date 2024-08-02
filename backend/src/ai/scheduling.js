@@ -552,14 +552,16 @@ async function handleUserInput(userMessages, phoneNumber) {
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
       let appointmentDuration = appointment.length > 0 ? getAppointmentDuration(appointment) : 30;
-      
-      const daysSinceLastAppointment = getDaysSinceLastAppointment(client.id);
+      let appointmentType = '';
+      if (appointment) {
+        appointmentType = appointment[0].appointmenttype;
+      }
       fname = client.firstname;
       lname = client.lastname;
       email = client.email;
       const phone = client.phonenumber;   
       thread = await createThread(phoneNumber); 
-      assistant = await createAssistant(fname, lname, phone, messages, appointment[0].appointmenttype, currentDate, client, upcomingAppointment);
+      assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment);
     }
 
 
