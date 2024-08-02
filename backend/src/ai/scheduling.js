@@ -385,7 +385,7 @@ async function createTemporaryAssistant(phoneNumber) {
     instructions: "Initially say hey bro, don't think I've heard from you before. Can you just give me your first and last name so I can save it? Then call the createClient tool with the corresponding first name and last name. After you call it respond by saying, How can I help you today bro",
     name: `Assistant to get name of the client`,
     model: "gpt-4o",
-    tools: [tempTools, tools],
+    tools: [...tempTools, ...tools],
     temperature: 0
   });
   return newAssistant;
