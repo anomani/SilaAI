@@ -14,6 +14,8 @@ const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAvailability, getCurrentDate } = require('./tools/getAvailability');
 const { cancelAppointment, cancelAppointmentById } = require('./tools/cancelAppointment');
 const { createBlockedTime } = require('../model/appointment');
+const { createRecurringAppointments } = require('./tools/recurringAppointments');
+const { findRecurringAvailability } = require('./tools/recurringAvailability');
 
 // Add this object to store queries
 const queryStore = {};
@@ -219,6 +221,115 @@ const tools = [
       required: ["date", "startTime", "endTime"]
     }
   }
+},
+{
+  type: "function",
+  function: {
+    name: "findRecurringAvailability",
+    description: "Finds common available slots for recurring appointments over the next year",
+    parameters: {
+      type: "object",
+      properties: {
+        initialDate: {
+          type: "string",
+          description: "The initial date to start searching from (YYYY-MM-DD)"
+        },
+        appointmentDuration: {
+          type: "number",
+          description: "Duration of appointment in minutes"
+        },
+        group: {
+          type: "number",
+          description: "Appointment group (1, 2, or 3)"
+        },
+        recurrenceRule: {
+          type: "object",
+          properties: {
+            type: { 
+              type: "string", 
+              enum: ["daily", "weekly", "monthly"], 
+              description: "Type of recurrence. If we have a monthly recurrence then both the day of the week and week of month are required. If we have a weekly recurrence then only the day of the week is required." 
+            },
+            interval: {
+              type: "number",
+              description: "Interval for recurrence (e.g., every 2 weeks, every 3 months)"
+            },
+            dayOfWeek: { 
+              type: "number", 
+              description: "Day of week (0-6, where 0 is Sunday), for weekly recurrence" 
+            },
+            weekOfMonth: { 
+              type: "number", 
+              description: "Week of month (1-5), for monthly recurrence" 
+            }
+          },
+          required: ["type"]
+        },
+        clientId: {
+          type: "number",
+          description: "The ID of the client booking the recurring appointment"
+        }
+      },
+      required: ["initialDate", "appointmentDuration", "group", "recurrenceRule", "clientId"]
+    }
+  }
+},
+{
+  type: "function",
+  function: {
+    name: "createRecurringAppointments",
+    description: "Creates recurring appointments for the next year",
+    parameters: {
+      type: "object",
+      properties: {
+        initialDate: {
+          type: "string",
+          description: "The date for the first appointment (YYYY-MM-DD)"
+        },
+        startTime: {
+          type: "string",
+          description: "The start time for the appointments (HH:MM)"
+        },
+        appointmentType: { type: "string", description: "Type of appointment" },
+        appointmentDuration: { type: "number", description: "Duration of appointment in minutes" },
+        group: { type: "number", description: "Appointment group (1, 2, or 3)" },
+        price: { type: "number", description: "Price of the appointment" },
+        addOnArray: { 
+          type: "array", 
+          items: { type: "string" },
+          description: "Array of add-ons for the appointment"
+        },
+        recurrenceRule: {
+          type: "object",
+          properties: {
+            type: { 
+              type: "string", 
+              enum: ["daily", "weekly", "biweekly", "monthly", "custom"], 
+              description: "Type of recurrence" 
+            },
+            interval: {
+              type: "number",
+              description: "Interval for recurrence (e.g., every 2 weeks, every 3 months)"
+            },
+            dayOfWeek: { 
+              type: "number", 
+              description: "Day of week (0-6, where 0 is Sunday), for weekly recurrence" 
+            },
+            dayOfMonth: { 
+              type: "number", 
+              description: "Day of month (1-31), for monthly recurrence" 
+            },
+            weekOfMonth: { 
+              type: "number", 
+              description: "Week of month (1-5), for monthly recurrence" 
+            }
+          },
+          required: ["type"]
+        }
+      },
+      required: ["initialDate", "startTime", "fname", "lname", "phone", "email", "appointmentType", "appointmentDuration", "group", "price", "addOnArray", "recurrenceRule"]
+    }
+  }
 }
 ];
 
@@ -337,6 +448,10 @@ async function handleUserInputData(userMessage) {
             output = await cancelAppointmentById(args.clientId, args.date);
           } else if (funcName === "blockTime") {
             output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason);
+          } else if (funcName === "findRecurringAvailability") {
+            output = await findRecurringAvailability(args.initialDate, args.appointmentDuration, args.group, args.recurrenceRule, args.clientId);
+          } else if (funcName === "createRecurringAppointments") {
+            output = await createRecurringAppointments(args.initialDate, args.startTime, args.appointmentType, args.appointmentDuration, args.group, args.price, args.addOnArray, args.recurrenceRule);
           } else {
             throw new Error(`Unknown function: ${funcName}`);
           }
