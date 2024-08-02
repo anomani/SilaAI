@@ -571,7 +571,7 @@ async function handleUserInput(userMessages, phoneNumber) {
     while (true) {
       await delay(1000);
       const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-
+      console.log(runStatus.status)
       if (runStatus.status === "completed") {
         const messages = await openai.beta.threads.messages.list(thread.id);
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
