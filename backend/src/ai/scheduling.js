@@ -549,12 +549,13 @@ async function handleUserInput(userMessages, phoneNumber) {
         const appointmentTime = upcomingAppointmentJSON.starttime;
         upcomingAppointment = `Date: ${appointmentDate} Time: ${appointmentTime}`;
       }
-      
+
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
+      console.log(appointment)
       let appointmentDuration = appointment.length > 0 ? getAppointmentDuration(appointment) : 30;
       let appointmentType = '';
-      if (appointment) {
+      if (appointment.length > 0) {
         appointmentType = appointment[0].appointmenttype;
       }
       fname = client.firstname;
