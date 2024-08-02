@@ -145,39 +145,6 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "createClient",
-      description: "Creates a new client if the client doesn't exist",
-      parameters: {
-        type: "object",
-        properties: {
-          firstName: {
-            type: "string",
-            description: "The first name of the client"
-          },
-          lastName: {
-            type: "string",
-            description: "The last name of the client"
-          },
-          phoneNumber: {
-            type: "string",
-            description: "The phone number of the client"
-          },
-          email: {
-            type: "string",
-            description: "The email address of the client"
-          },
-          notes: {
-            type: "string",
-            description: "Any additional notes about the client"
-          }
-        },
-        required: ["firstName", "lastName", "phoneNumber"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
       name: "findRecurringAvailability",
       description: "Finds common available slots for recurring appointments over the next year",
       parameters: {
@@ -380,12 +347,46 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
   return assistants.get(phone);
 }
 
+tempTools = [{
+  type: "function",
+  function: {
+    name: "createClient",
+    description: "Creates a new client if the client doesn't exist",
+    parameters: {
+      type: "object",
+      properties: {
+        firstName: {
+          type: "string",
+          description: "The first name of the client"
+        },
+        lastName: {
+          type: "string",
+          description: "The last name of the client"
+        },
+        phoneNumber: {
+          type: "string",
+          description: "The phone number of the client"
+        },
+        email: {
+          type: "string",
+          description: "The email address of the client"
+        },
+        notes: {
+          type: "string",
+          description: "Any additional notes about the client"
+        }
+      },
+      required: ["firstName", "lastName", "phoneNumber"]
+    }
+  }
+}]
 async function createTemporaryAssistant(phoneNumber) {
   const newAssistant = await openai.beta.assistants.create({
     instructions: "Simply say. Hey bro, don't think I've heard from you before. Can you just give me your first and last name so I can save it? Then call the createClient tool with the corresponding first name and last name",
     name: `Assistant to get name of the client`,
     model: "gpt-4o",
-    tools: tools,
+    tools: tempTools,
+    tool_choice: "required",
     temperature: 0
   });
   return newAssistant;
