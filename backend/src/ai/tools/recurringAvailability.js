@@ -1,11 +1,21 @@
 const { getAvailability } = require('./getAvailability');
 const moment = require('moment-timezone');
+const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 
-async function findRecurringAvailability(initialDate, appointmentDuration, group, recurrenceRule, clientId) {
+async function findRecurringAvailability(initialDate, appointmentType, addOnArray, group, recurrenceRule, clientId) {
     console.log('Initial Date:', initialDate);
-    console.log('Appointment Duration:', appointmentDuration);
+    console.log('Appointment Type:', appointmentType);
+    console.log('Add-Ons:', addOnArray);
     console.log('Group:', group);
     console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
+
+    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
+    }
+
+    const duration = calculateTotalDuration(appointmentType, addOnArray);
+
     let commonSlots = null;
     let currentDate = moment(initialDate);
     const endDate = moment(initialDate).add(1, 'year');
@@ -13,7 +23,7 @@ async function findRecurringAvailability(initialDate, appointmentDuration, group
     while (currentDate.isSameOrBefore(endDate)) {
         if (matchesRecurrenceRule(currentDate, recurrenceRule)) {
             const formattedDate = currentDate.format('YYYY-MM-DD');
-            const availability = await getAvailability(formattedDate, appointmentDuration, group, clientId);
+            const availability = await getAvailability(formattedDate, appointmentType, addOnArray, group, clientId);
             if (Array.isArray(availability) && availability.length > 0) {
                 const startTimes = availability.map(slot => slot.startTime);
                 if (commonSlots === null) {
@@ -28,7 +38,7 @@ async function findRecurringAvailability(initialDate, appointmentDuration, group
 
     // Convert common start times back to slot objects
     return Array.from(commonSlots || []).map(startTime => {
-        const endTime = moment(startTime, 'HH:mm').add(appointmentDuration, 'minutes').format('HH:mm');
+        const endTime = moment(startTime, 'HH:mm').add(duration, 'minutes').format('HH:mm');
         return { startTime, endTime };
     });
 }
@@ -66,43 +76,10 @@ function matchesRecurrenceRule(date, recurrenceRule) {
     }
 }
 
-// Modify the example call to demonstrate timezone handling
-const exampleCall = async () => {
-    const initialDate = '2024-10-22';
-    const appointmentDuration = 30; // Duration in minutes
-    const group = 1; // Example group
-    const recurrenceRule = {
-        type: 'monthly',
-        interval: 3, // Every 3 months
-        weekOfMonth: 1,
-        dayOfWeek: 3, // First Wednesday of every 3 months
-        startDate: '2024-10-22'
-    };
-    
-    console.log(`Current server timezone: ${moment.tz.guess()}`);
-    console.log(`Current time: ${moment().format()}`);
-    
-    try {
-        console.log('Input:');
-        console.log('Initial Date:', initialDate);
-        console.log('Appointment Duration:', appointmentDuration);
-        console.log('Group:', group);
-        console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
-
-        const commonAvailability = await findRecurringAvailability(
-            initialDate,
-            appointmentDuration,
-            group,
-            recurrenceRule
-        );
-        console.log('\nOutput:');
-        console.log('Common Available Slots:', JSON.stringify(commonAvailability, null, 2));
-    } catch (error) {
-        console.error('Error finding recurring availability:', error);
-    }
-};
-
-// Uncomment the line below to run the example
-// exampleCall();
+function calculateTotalDuration(appointmentType, addOnArray) {
+    const appointmentDuration = appointmentTypes[appointmentType].duration;
+    const addOnsDuration = addOnArray.reduce((total, addOn) => total + addOns[addOn].duration, 0);
+    return appointmentDuration + addOnsDuration;
+}
 
 module.exports = { findRecurringAvailability };

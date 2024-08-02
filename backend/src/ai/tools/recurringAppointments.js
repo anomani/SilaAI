@@ -1,13 +1,21 @@
 const { getAvailability } = require('./getAvailability');
 const { bookAppointment } = require('./bookAppointment');
 const moment = require('moment-timezone');
+const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 
-async function createRecurringAppointments(initialDate, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price, addOnArray, recurrenceRule) {
+async function createRecurringAppointments(initialDate, startTime, fname, lname, phone, email, appointmentType, group, price, addOnArray, recurrenceRule) {
     console.log('Initial Date:', initialDate);
     console.log('Start Time:', startTime);
-    console.log('Appointment Duration:', appointmentDuration);
+    console.log('Appointment Type:', appointmentType);
     console.log('Group:', group);
     console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
+
+    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
+    }
+
+    const duration = calculateTotalDuration(appointmentType, addOnArray);
 
     const bookedAppointments = [];
     let currentDate = moment(initialDate);
@@ -18,7 +26,7 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
         if (matchesRecurrenceRule(currentDate, recurrenceRule, startDate)) {
             const formattedDate = currentDate.format('YYYY-MM-DD');
             console.log('Processing date:', formattedDate);
-            const availability = await getAvailability(formattedDate, appointmentDuration, group);
+            const availability = await getAvailability(formattedDate, appointmentType, addOnArray, group);
             
             if (typeof availability === 'string') {
                 return availability;
@@ -29,7 +37,7 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
                     const slotStart = moment(`${formattedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm');
                     const slotEnd = moment(`${formattedDate} ${slot.endTime}`, 'YYYY-MM-DD HH:mm');
                     const appointmentStart = moment(`${formattedDate} ${startTime}`, 'YYYY-MM-DD HH:mm');
-                    const appointmentEnd = appointmentStart.clone().add(appointmentDuration, 'minutes');
+                    const appointmentEnd = appointmentStart.clone().add(duration, 'minutes');
 
                     return appointmentStart.isSameOrAfter(slotStart) && appointmentEnd.isSameOrBefore(slotEnd);
                 });
@@ -45,10 +53,9 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
                             phone,
                             email,
                             appointmentType,
-                            appointmentDuration,
+                            addOnArray,
                             group,
-                            price,
-                            addOnArray
+                            price
                         );
                         if (result === "Appointment booked successfully") {
                             bookedAppointments.push({
@@ -70,6 +77,12 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
     }
 
     return bookedAppointments;
+}
+
+function calculateTotalDuration(appointmentType, addOnArray) {
+    const appointmentDuration = appointmentTypes[appointmentType].duration;
+    const addOnsDuration = addOnArray.reduce((total, addOn) => total + addOns[addOn].duration, 0);
+    return appointmentDuration + addOnsDuration;
 }
 
 function matchesRecurrenceRule(date, recurrenceRule, startDate) {
@@ -123,9 +136,6 @@ function matchesRecurrenceRule(date, recurrenceRule, startDate) {
 //   const phone = '+12038324011';
 //   const email = 'nomaniadam@gmail.com';
 //   const appointmentType = 'Adult Cut';
-//   const appointmentDuration = 30; // minutes
-//   const group = 1;
-//   const price = 75;
 //   const addOnArray = [];
 //   const recurrenceRule = {
 //     type: 'weekly',
@@ -142,9 +152,8 @@ function matchesRecurrenceRule(date, recurrenceRule, startDate) {
 //       phone,
 //       email,
 //       appointmentType,
-//       appointmentDuration,
-//       group,
-//       price,
+//       1,
+//       75,
 //       addOnArray,
 //       recurrenceRule
 //     );
