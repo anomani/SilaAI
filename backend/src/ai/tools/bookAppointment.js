@@ -82,9 +82,9 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
   const endTime = moment(`${date} ${startTime}`).add(totalDuration, 'minutes').format('HH:mm');
 
   try {
-    const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOns);
+    // const acuityAppointment = await bookAppointment(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOns);
     
-    // await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", totalPrice);
+    await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", totalPrice);
     
     return "Appointment booked successfully";
   } catch (error) {
