@@ -234,9 +234,18 @@ const tools = [
           type: "string",
           description: "The initial date to start searching from (YYYY-MM-DD)"
         },
-        appointmentDuration: {
-          type: "number",
-          description: "Duration of appointment in minutes"
+        appointmentType: {
+          type: "string",
+          enum: Object.keys(appointmentTypes),
+          description: "The type of appointment to book"
+        },
+        addOns: {
+          type: "array",
+          items: {
+            type: "string",
+            enum: Object.keys(addOns)
+          },
+          description: "An array of add-ons for the appointment"
         },
         group: {
           type: "number",
@@ -270,7 +279,7 @@ const tools = [
           description: "The ID of the client booking the recurring appointment"
         }
       },
-      required: ["initialDate", "appointmentDuration", "group", "recurrenceRule", "clientId"]
+      required: ["initialDate", "appointmentType", "group", "recurrenceRule", "clientId"]
     }
   }
 },
@@ -290,13 +299,20 @@ const tools = [
           type: "string",
           description: "The start time for the appointments (HH:MM)"
         },
-        appointmentType: { type: "string", description: "Type of appointment" },
+        appointmentType: { 
+          type: "string", 
+          enum: Object.keys(appointmentTypes),
+          description: "Type of appointment" 
+        },
         appointmentDuration: { type: "number", description: "Duration of appointment in minutes" },
         group: { type: "number", description: "Appointment group (1, 2, or 3)" },
         price: { type: "number", description: "Price of the appointment" },
-        addOnArray: { 
+        addOns: { 
           type: "array", 
-          items: { type: "string" },
+          items: { 
+            type: "string",
+            enum: Object.keys(addOns)
+          },
           description: "Array of add-ons for the appointment"
         },
         recurrenceRule: {
@@ -325,9 +341,13 @@ const tools = [
             }
           },
           required: ["type"]
-        }
+        },
+        fname: { type: "string", description: "Client's first name" },
+        lname: { type: "string", description: "Client's last name" },
+        phone: { type: "string", description: "Client's phone number" },
+        email: { type: "string", description: "Client's email address" }
       },
-      required: ["initialDate", "startTime", "fname", "lname", "phone", "email", "appointmentType", "appointmentDuration", "group", "price", "addOnArray", "recurrenceRule"]
+      required: ["initialDate", "startTime", "fname", "lname", "phone", "email", "appointmentType", "appointmentDuration", "group", "price", "addOns", "recurrenceRule"]
     }
   }
 }
@@ -450,9 +470,9 @@ async function handleUserInputData(userMessage) {
             } else if (funcName === "blockTime") {
               output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason);
             } else if (funcName === "findRecurringAvailability") {
-              output = await findRecurringAvailability(args.initialDate, args.appointmentDuration, args.group, args.recurrenceRule, args.clientId);
+              output = await findRecurringAvailability(args.initialDate, args.appointmentType, args.addOns, args.group, args.recurrenceRule, args.clientId);
             } else if (funcName === "createRecurringAppointments") {
-              output = await createRecurringAppointments(args.initialDate, args.startTime, args.appointmentType, args.appointmentDuration, args.group, args.price, args.addOnArray, args.recurrenceRule);
+              output = await createRecurringAppointments(args.initialDate, args.startTime, args.appointmentType, args.appointmentDuration, args.group, args.price, args.addOns, args.recurrenceRule, args.fname, args.lname, args.phone, args.email);
             } else {
               throw new Error(`Unknown function: ${funcName}`);
             }
