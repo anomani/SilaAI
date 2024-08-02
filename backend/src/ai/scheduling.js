@@ -539,7 +539,7 @@ async function handleUserInput(userMessages, phoneNumber) {
     let fname, lname, email;
 
     if (client.id == '') {
-      thread = await createThread(phoneNumber, true); 
+      thread = await createThread(phoneNumber); 
       assistant = await createTemporaryAssistant(phoneNumber);
     } else {
       const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1))[0];
