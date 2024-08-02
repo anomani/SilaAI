@@ -351,7 +351,7 @@ tempTools = [{
   type: "function",
   function: {
     name: "createClient",
-    description: "Creates a new client if the client doesn't exist",
+    description: "Creates a new client if the client doesn't exist after getting their name",
     parameters: {
       type: "object",
       properties: {
@@ -382,10 +382,10 @@ tempTools = [{
 }]
 async function createTemporaryAssistant(phoneNumber) {
   const newAssistant = await openai.beta.assistants.create({
-    instructions: "Simply say. Hey bro, don't think I've heard from you before. Can you just give me your first and last name so I can save it? Then call the createClient tool with the corresponding first name and last name. After you call it respond by saying, How can I help you today bro",
+    instructions: "Initially say hey bro, don't think I've heard from you before. Can you just give me your first and last name so I can save it? Then call the createClient tool with the corresponding first name and last name. After you call it respond by saying, How can I help you today bro",
     name: `Assistant to get name of the client`,
     model: "gpt-4o",
-    tools: tempTools,
+    tools: [tempTools, tools],
     temperature: 0
   });
   return newAssistant;
@@ -515,9 +515,6 @@ async function updateAssistantInstructions(phoneNumber) {
 async function handleUserInput(userMessages, phoneNumber) {
   try {
     const client = await getClientByPhoneNumber(phoneNumber);
-    if (!client) {
-      throw new Error(`No client found for phone number ${phoneNumber}`);
-    }
     console.log(`Client found: ${JSON.stringify(client)}`);
 
     let thread = await createThread(phoneNumber);
