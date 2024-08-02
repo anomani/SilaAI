@@ -407,64 +407,90 @@ async function handleUserInputData(userMessage) {
           } catch (parseError) {
             console.error('Error parsing function arguments:', parseError);
             console.log('Raw arguments:', action.function.arguments);
-            throw new Error('Invalid function arguments');
+            continue; // Skip this tool call and move to the next one
           }
 
           let output;
-          if (funcName === "getInfo") {
-            console.log("getInfo", args.query);
-            output = await getInfo(args.query);
-          } else if (funcName === "sendMessages") {
-            output = await sendMessages(args.clients, args.message);
-          } else if (funcName === "createCustomList") {
-            console.log("createCustomList", args.name, args.query);
-            const list = await createCustomList(args.name, args.query);
-            const queryId = uuidv4();
-            queryStore[queryId] = args.query;
-            const listLink = `/custom-list?id=${queryId}`;
-            console.log(listLink);
-            output = queryId;
-          } else if (funcName === "getMuslimClients") {
-            console.log("getMuslimClients");
-            const list = await getMuslimClients();
-            const queryId = uuidv4();
-            queryStore[queryId] = list;
-            const listLink = `/custom-list?id=${queryId}`;
-            console.log(listLink);
-            output = queryId;
-          } else if (funcName === "bookAppointmentAdmin") {
-            output = await bookAppointmentAdmin(
-              args.clientId,
-              args.date,
-              args.startTime,
-              args.appointmentType,
-              args.addOns || []
-            );
-          } else if (funcName === "getClientByName") {
-            output = await getClientByName(args.firstName, args.lastName);
-          } else if (funcName === "getAvailability") {
-            output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group);
-          } else if (funcName === "cancelAppointmentById") {
-            output = await cancelAppointmentById(args.clientId, args.date);
-          } else if (funcName === "blockTime") {
-            output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason);
-          } else if (funcName === "findRecurringAvailability") {
-            output = await findRecurringAvailability(args.initialDate, args.appointmentDuration, args.group, args.recurrenceRule, args.clientId);
-          } else if (funcName === "createRecurringAppointments") {
-            output = await createRecurringAppointments(args.initialDate, args.startTime, args.appointmentType, args.appointmentDuration, args.group, args.price, args.addOnArray, args.recurrenceRule);
-          } else {
-            throw new Error(`Unknown function: ${funcName}`);
+          try {
+            if (funcName === "getInfo") {
+              console.log("getInfo", args.query);
+              output = await getInfo(args.query);
+            } else if (funcName === "sendMessages") {
+              output = await sendMessages(args.clients, args.message);
+            } else if (funcName === "createCustomList") {
+              console.log("createCustomList", args.name, args.query);
+              const list = await createCustomList(args.name, args.query);
+              const queryId = uuidv4();
+              queryStore[queryId] = args.query;
+              const listLink = `/custom-list?id=${queryId}`;
+              console.log(listLink);
+              output = queryId;
+            } else if (funcName === "getMuslimClients") {
+              console.log("getMuslimClients");
+              const list = await getMuslimClients();
+              const queryId = uuidv4();
+              queryStore[queryId] = list;
+              const listLink = `/custom-list?id=${queryId}`;
+              console.log(listLink);
+              output = queryId;
+            } else if (funcName === "bookAppointmentAdmin") {
+              output = await bookAppointmentAdmin(
+                args.clientId,
+                args.date,
+                args.startTime,
+                args.appointmentType,
+                args.addOns || []
+              );
+            } else if (funcName === "getClientByName") {
+              output = await getClientByName(args.firstName, args.lastName);
+            } else if (funcName === "getAvailability") {
+              output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group);
+            } else if (funcName === "cancelAppointmentById") {
+              output = await cancelAppointmentById(args.clientId, args.date);
+            } else if (funcName === "blockTime") {
+              output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason);
+            } else if (funcName === "findRecurringAvailability") {
+              output = await findRecurringAvailability(args.initialDate, args.appointmentDuration, args.group, args.recurrenceRule, args.clientId);
+            } else if (funcName === "createRecurringAppointments") {
+              output = await createRecurringAppointments(args.initialDate, args.startTime, args.appointmentType, args.appointmentDuration, args.group, args.price, args.addOnArray, args.recurrenceRule);
+            } else {
+              throw new Error(`Unknown function: ${funcName}`);
+            }
+
+            if (output === undefined || output === null) {
+              console.warn(`Empty output for function ${funcName}. Skipping this tool call.`);
+              continue; // Skip this tool call and move to the next one
+            }
+
+            toolOutputs.push({
+              tool_call_id: action.id,
+              output: JSON.stringify(output)
+            });
+          } catch (error) {
+            console.error(`Error executing function ${funcName}:`, error);
+            // Instead of throwing an error, we'll skip this tool call
+            continue;
           }
-          toolOutputs.push({
-            tool_call_id: action.id,
-            output: JSON.stringify(output)
-          });
         }
 
-        await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
-          tool_outputs: toolOutputs
-        });
-
+        if (toolOutputs.length > 0) {
+          await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+            tool_outputs: toolOutputs
+          });
+        } else {
+          // If all tool calls failed, we'll cancel the run and ask the AI to rephrase the question
+          await openai.beta.threads.runs.cancel(thread.id, run.id);
+          const message = await openai.beta.threads.messages.create(thread.id, {
+            role: "user",
+            content: "I'm sorry, but I couldn't process that request. Could you please rephrase your question or provide more details?",
+          });
+          run = await openai.beta.threads.runs.create(thread.id, {
+            assistant_id: assistant.id
+          });
+        }
+      } else if (runStatus.status === "failed") {
+        console.error('Run failed:', runStatus.last_error);
+        throw new Error('Run failed: ' + runStatus.last_error.message);
       } else {
         await delay(1000);
       }
@@ -472,7 +498,8 @@ async function handleUserInputData(userMessage) {
   } catch (error) {
     console.error('Detailed error in handleUserInputData:', error);
     console.log('User message:', userMessage);
-    throw new Error('Error processing request: ' + error.message);
+    // Instead of throwing an error, we'll return a message asking the user to try again
+    return "I apologize, but I encountered an error while processing your request. Could you please try rephrasing your question or providing more details?";
   }
 }
 
