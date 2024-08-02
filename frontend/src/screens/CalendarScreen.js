@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput, TouchableWithoutFeedback, Keyboard, Switch } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Image, ScrollView, Dimensions, ActivityIndicator, Modal, Alert, TextInput, TouchableWithoutFeedback, Keyboard, Switch, Animated } from 'react-native';
 import { getAppointmentsByDay, getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, createBlockedTime, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, deleteAppointment, rescheduleAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
@@ -44,6 +44,8 @@ const CalendarScreen = ({ navigation }) => {
     paymentMethod: 'cash',
     tipAmount: '0',
   });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragPosition = useRef(new Animated.ValueXY()).current;
 
   const scrollViewRef = useRef(null);
   const messagesScrollViewRef = useRef(null);
@@ -438,13 +440,22 @@ const CalendarScreen = ({ navigation }) => {
     const [hours, minutes] = time.split(':');
     const startTimeIn24 = `${period === 'PM' && hours !== '12' ? parseInt(hours) + 12 : hours}:${minutes}`;
     const newStartTime = calculateNewTime(startTimeIn24, translationY);
-    setNewAppointmentTime(newStartTime);
+    // Convert back to 12-hour format
+    const [newHours, newMinutes] = newStartTime.split(':');
+    const newPeriod = parseInt(newHours, 10) >= 12 ? 'PM' : 'AM';
+    const adjustedNewHours = parseInt(newHours, 10) % 12 || 12;
+    setNewAppointmentTime(`${adjustedNewHours}:${newMinutes} ${newPeriod}`);
   };
 
   const onHandlerStateChange = (event, appointment) => {
     if (event.nativeEvent.oldState === State.ACTIVE) {
-      setDraggedAppointment(appointment);
+      setIsDragging(false);
+      const newStartTime = calculateNewTime(appointment.startTime, event.nativeEvent.translationY);
+      setDraggedAppointment({ ...appointment, newStartTime });
       setIsRescheduleModalVisible(true);
+    } else if (event.nativeEvent.state === State.BEGAN) {
+      setIsDragging(true);
+      dragPosition.setValue({ x: 0, y: 0 });
     }
   };
 
@@ -478,7 +489,7 @@ const CalendarScreen = ({ navigation }) => {
         return `${hours.toString().padStart(2, '0')}:${minutes}`;
       };
 
-      // newAppointmentTime is already in HH:MM format, so we don't need to convert it
+      // Use newAppointmentTime directly
       const formattedStartTime = newAppointmentTime;
       const originalStartTime = convertTo24Hour(draggedAppointment.startTime);
       const originalEndTime = convertTo24Hour(draggedAppointment.endTime);
@@ -541,91 +552,61 @@ const CalendarScreen = ({ navigation }) => {
   };
 
   const renderAppointments = () => {
-    if (appointments.length === 0) {
-      return (
-        <View style={styles.noAppointmentsContainer}>
-          <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
-        </View>
-      );
-    }
-
-    const appointmentBlocks = [];
-    appointments.forEach((appointment, index) => {
+    return appointments.map((appointment, index) => {
       const [startHour, startMinute] = appointment.startTime.split(':');
-      const [endHour, endMinute] = appointment.endTime.split(':');
-      
-      const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
-      const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
-      
-      const duration = end - start;
+      const startPeriod = appointment.startTime.split(' ')[1];
+      const start = (parseInt(startHour) % 12 + (startPeriod === 'PM' ? 12 : 0)) + parseInt(startMinute) / 60;
       const topPosition = (start - 9) * 100; // 100px per hour
 
-      const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
+      const appointmentStyle = {
+        ...styles.appointmentBlock,
+        top: topPosition,
+        height: calculateAppointmentHeight(appointment.startTime, appointment.endTime),
+      };
 
-      appointmentBlocks.push(
-        <TouchableOpacity
+      const animatedStyle = isDragging && draggedAppointment?.id === appointment.id
+        ? { transform: dragPosition.getTranslateTransform() }
+        : {};
+
+      return (
+        <PanGestureHandler
           key={appointment.id}
-          onPress={() => {
-            if (isBlockedTime) {
-              Alert.alert(
-                "Delete Blocked Time",
-                "Are you sure you want to delete this blocked time?",
-                [
-                  {
-                    text: "Cancel",
-                    style: "cancel"
-                  },
-                  { 
-                    text: "OK", 
-                    onPress: async () => {
-                      try {
-                        await deleteAppointment(appointment.id);
-                        fetchAppointments(); // Refresh the appointments list
-                      } catch (error) {
-                        console.error('Failed to delete blocked time:', error);
-                        Alert.alert('Error', 'Failed to delete blocked time. Please try again.');
-                      }
-                    }
-                  }
-                ]
-              );
-            } else {
-              navigation.navigate('AppointmentDetails', { appointment });
-            }
-          }}
+          onGestureEvent={onGestureEvent}
+          onHandlerStateChange={(event) => onHandlerStateChange(event, appointment)}
         >
-          <PanGestureHandler
-            onGestureEvent={(event) => onGestureEvent(event, appointment)}
-            onHandlerStateChange={(event) => onHandlerStateChange(event, appointment)}
-          >
-            <View
-              style={[
-                styles.appointmentBlock,
-                {
-                  top: topPosition,
-                  height: Math.max(duration * 100, 50), // Minimum height of 50px
-                  backgroundColor: isBlockedTime ? '#808080' : '#007AFF',
-                },
-              ]}
+          <Animated.View style={[appointmentStyle, animatedStyle]}>
+            <TouchableOpacity 
+              style={styles.appointmentContent} 
+              onPress={() => navigation.navigate('AppointmentDetails', { appointment: appointment })}
             >
               <View style={styles.appointmentHeader}>
                 <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
                   {appointment.clientName}
                 </Text>
                 <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
-                  {isBlockedTime ? appointment.details : appointment.appointmenttype}
+                  {appointment.appointmenttype}
                 </Text>
               </View>
-              <Text style={styles.appointmentTime}>
-                {`${appointment.startTime} - ${appointment.endTime}`}
-              </Text>
-            </View>
-          </PanGestureHandler>
-        </TouchableOpacity>
+              <View style={styles.appointmentFooter}>
+                <Text style={styles.appointmentTime}>{appointment.startTime} - {appointment.endTime}</Text>
+              </View>
+            </TouchableOpacity>
+          </Animated.View>
+        </PanGestureHandler>
       );
     });
+  };
 
-    return appointmentBlocks;
+  const calculateAppointmentHeight = (startTime, endTime) => {
+    const [startHour, startMinute] = startTime.split(':');
+    const [endHour, endMinute] = endTime.split(':');
+    const startPeriod = startTime.split(' ')[1];
+    const endPeriod = endTime.split(' ')[1];
+    
+    const start = (parseInt(startHour) % 12 + (startPeriod === 'PM' ? 12 : 0)) + parseInt(startMinute) / 60;
+    const end = (parseInt(endHour) % 12 + (endPeriod === 'PM' ? 12 : 0)) + parseInt(endMinute) / 60;
+    
+    return (end - start) * 100; // 100px per hour
   };
 
   const renderCurrentTimeLine = () => {
@@ -657,7 +638,7 @@ const CalendarScreen = ({ navigation }) => {
       'Full Service': '#9C27B0',
       // Add more types and colors as needed
     };
-    return colors[type] || '#FF9800'; // Default color
+    return colors[type] || '#007AFF'; // Default color
   };
 
   const totalHours = 21 - 9 + 1; // From 9am to 9pm, inclusive
@@ -1026,13 +1007,13 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     padding: 16, 
-    paddingTop: 0, // Ensure no top padding
+    paddingTop: 0,
     backgroundColor: '#1c1c1e' 
   },
   header: { 
     alignItems: 'center', 
     marginBottom: 20,
-    marginTop: 80, // Increase top margin to move the header further down
+    marginTop: 80,
   },
   headerDay: { 
     color: '#007AFF', 
@@ -1071,7 +1052,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 18, color: 'white' },
   time: { fontSize: 14, color: '#aaa' },
   type: { fontSize: 14, color: '#aaa' },
-  clientName: { fontSize: 16, color: '#aaa' }, // Added this line
+  clientName: { fontSize: 16, color: '#aaa' },
   navigation: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 10 },
   navButton: { padding: 10, backgroundColor: '#333', borderRadius: 5 },
   navButtonText: { color: 'white', fontSize: 16 },
@@ -1119,13 +1100,13 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     alignItems: 'center',
-    width: Dimensions.get('window').width - 40, // Full width minus 40px for margins
-    maxWidth: 400, // Maximum width of the card
+    width: Dimensions.get('window').width - 40,
+    maxWidth: 400,
   },
   clientImage: {
     width: 150,
     height: 150,
-    borderRadius: 75, // To make it circular
+    borderRadius: 75,
     marginBottom: 15,
   },
   cardClientName: {
@@ -1148,7 +1129,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#aaa',
     marginBottom: 5,
-    maxWidth: '100%', // Ensure the text doesn't overflow the container
+    maxWidth: '100%',
   },
   cardPrice: {
     fontSize: 20,
@@ -1196,7 +1177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-    paddingTop: 2, // Add a small top padding
+    paddingTop: 2,
   },
   timeText: {
     color: '#aaa',
@@ -1216,7 +1197,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#007AFF',
     borderWidth: 1,
-    borderColor: '#0056b3', // A slightly darker shade of blue for the border
+    borderColor: '#0056b3',
   },
   appointmentHeader: {
     flexDirection: 'row',
@@ -1296,25 +1277,25 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
-    width: '100%', // Ensure full width
+    width: '100%',
   },
   prevAppDate: {
     color: '#aaa',
     fontSize: 14,
-    width: '30%', // Allocate 30% of the width to the date
+    width: '30%',
   },
   prevAppType: {
     color: '#aaa',
     fontSize: 14,
-    flex: 1, // Allow this to take up available space
-    marginHorizontal: 5, // Add some horizontal margin
+    flex: 1,
+    marginHorizontal: 5,
   },
   prevAppPrice: {
     color: '#007AFF',
     fontSize: 14,
     fontWeight: 'bold',
-    width: '20%', // Allocate 20% of the width to the price
-    textAlign: 'right', // Align the price to the right
+    width: '20%',
+    textAlign: 'right',
   },
   loadingContainer: {
     flex: 1,
@@ -1407,7 +1388,7 @@ const styles = StyleSheet.create({
   },
   dayNavButton: {
     padding: 10,
-    backgroundColor: '#4a4a4a', // Gray color
+    backgroundColor: '#4a4a4a',
     borderRadius: 5,
     minWidth: 40,
     alignItems: 'center',
@@ -1599,6 +1580,139 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 15,
+  },
+  addNoteModalInput: {
+    backgroundColor: '#3a3a3c',
+    borderRadius: 5,
+    padding: 10,
+    color: '#fff',
+    fontSize: 16,
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  addNoteModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  addNoteModalButton: {
+    padding: 10,
+    borderRadius: 5,
+    width: '48%',
+    alignItems: 'center',
+  },
+  submitButton: {
+    backgroundColor: '#007AFF',
+  },
+  cancelButton: {
+    backgroundColor: '#FF3B30',
+  },
+  addNoteModalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  paymentButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+    width: '100%',
+  },
+  paymentButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  paymentModalContent: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+    maxWidth: 400,
+  },
+  paymentModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 15,
+  },
+  paymentOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  paymentOptionLabel: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  paymentMethodPicker: {
+    width: 150,
+    color: '#fff',
+  },
+  tipInput: {
+    backgroundColor: '#3a3a3c',
+    borderRadius: 5,
+    padding: 10,
+    color: '#fff',
+    fontSize: 16,
+    width: 100,
+  },
+  paymentModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  paymentModalButton: {
+    padding: 10,
+    borderRadius: 5,
+    width: '48%',
+    alignItems: 'center',
+  },
+  paymentModalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  paymentInfoContainer: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    alignItems: 'flex-end',
+    zIndex: 1,
+  },
+  paidStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    padding: 5,
+    borderRadius: 15,
+    marginBottom: 5,
+  },
+  paidStatusText: {
+    color: '#4CAF50',
+    fontWeight: 'bold',
+    marginLeft: 5,
+    fontSize: 14,
+  },
+  tipContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    padding: 5,
+    borderRadius: 15,
+  },
+  tipLabel: {
+    color: '#007AFF',
+    fontSize: 14,
+    marginRight: 5,
+  },
+  tipAmount: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   addNoteModalInput: {
     backgroundColor: '#3a3a3c',
