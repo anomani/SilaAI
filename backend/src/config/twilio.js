@@ -143,8 +143,8 @@ async function handleIncomingMessage(req, res) {
     if (!pendingMessages.has(Author)) {
       pendingMessages.set(Author, []);
       // Schedule processing after a random delay between 1 and 5 minutes
-      // const delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
-      setTimeout(() => processDelayedResponse(Author), 10000);
+      const delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
+      setTimeout(() => processDelayedResponse(Author), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
 
