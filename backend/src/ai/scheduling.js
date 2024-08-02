@@ -376,7 +376,7 @@ tempTools = [{
           description: "Any additional notes about the client"
         }
       },
-      required: ["firstName", "lastName", "phoneNumber"]
+      required: ["firstName", "lastName"]
     }
   }
 }]
@@ -386,7 +386,6 @@ async function createTemporaryAssistant(phoneNumber) {
     name: `Assistant to get name of the client`,
     model: "gpt-4o",
     tools: tempTools,
-    tool_choice: "required",
     temperature: 0
   });
   return newAssistant;
