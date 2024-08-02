@@ -14,7 +14,7 @@ const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAvailability, getCurrentDate } = require('./tools/getAvailability');
 const { cancelAppointment, cancelAppointmentById } = require('./tools/cancelAppointment');
 const { createBlockedTime } = require('../model/appointment');
-const { createRecurringAppointments } = require('./tools/recurringAppointments');
+const { createRecurringAppointments, createRecurringAppointmentsAdmin } = require('./tools/recurringAppointments');
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
 
 // Add this object to store queries
@@ -286,11 +286,12 @@ const tools = [
 {
   type: "function",
   function: {
-    name: "createRecurringAppointments",
-    description: "Creates recurring appointments for the next year",
+    name: "createRecurringAppointmentsAdmin",
+    description: "Creates recurring appointments for the next year with admin privileges",
     parameters: {
       type: "object",
       properties: {
+        clientId: { type: "number", description: "The ID of the client" },
         initialDate: {
           type: "string",
           description: "The date for the first appointment (YYYY-MM-DD)"
@@ -304,8 +305,6 @@ const tools = [
           enum: Object.keys(appointmentTypes),
           description: "Type of appointment" 
         },
-        group: { type: "number", description: "Appointment group (1, 2, or 3)" },
-        price: { type: "number", description: "Price of the appointment" },
         addOns: { 
           type: "array", 
           items: { 
@@ -314,6 +313,7 @@ const tools = [
           },
           description: "Array of add-ons for the appointment"
         },
+        group: { type: "number", description: "Appointment group (1, 2, or 3)" },
         recurrenceRule: {
           type: "object",
           properties: {
@@ -340,13 +340,9 @@ const tools = [
             }
           },
           required: ["type"]
-        },
-        fname: { type: "string", description: "Client's first name" },
-        lname: { type: "string", description: "Client's last name" },
-        phone: { type: "string", description: "Client's phone number" },
-        email: { type: "string", description: "Client's email address" }
+        }
       },
-      required: ["initialDate", "startTime", "appointmentType", "group", "price", "addOns", "recurrenceRule", "fname", "lname", "phone", "email"]
+      required: ["clientId", "initialDate", "startTime", "appointmentType", "addOns", "group", "recurrenceRule"]
     }
   }
 }
@@ -477,18 +473,14 @@ async function handleUserInputData(userMessage) {
                 args.recurrenceRule,
                 args.clientId
               );
-            } else if (funcName === "createRecurringAppointments") {
-              output = await createRecurringAppointments(
+            } else if (funcName === "createRecurringAppointmentsAdmin") {
+              output = await createRecurringAppointmentsAdmin(
+                args.clientId,
                 args.initialDate,
                 args.startTime,
-                args.fname,
-                args.lname,
-                args.phone,
-                args.email,
                 args.appointmentType,
-                args.group,
-                args.price,
                 args.addOns || [],
+                args.group,
                 args.recurrenceRule
               );
             } else {

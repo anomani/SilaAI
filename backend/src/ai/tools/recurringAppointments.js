@@ -1,5 +1,5 @@
 const { getAvailability } = require('./getAvailability');
-const { bookAppointment } = require('./bookAppointment');
+const { bookAppointmentAdmin , bookAppointment} = require('./bookAppointment');
 const moment = require('moment-timezone');
 const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 
@@ -78,6 +78,58 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
 
     return bookedAppointments;
 }
+
+
+async function createRecurringAppointmentsAdmin(clientId, initialDate, startTime, appointmentType, addOnArray, group, recurrenceRule) {
+    console.log('Client ID:', clientId);
+    console.log('Initial Date:', initialDate);
+    console.log('Start Time:', startTime);
+    console.log('Appointment Type:', appointmentType);
+    console.log('Group:', group);
+    console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
+
+    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
+    }
+
+    const bookedAppointments = [];
+    let currentDate = moment(initialDate);
+    const endDate = moment(initialDate).add(1, 'year');
+    const startDate = moment(initialDate);
+
+    while (currentDate.isSameOrBefore(endDate)) {
+        if (matchesRecurrenceRule(currentDate, recurrenceRule, startDate)) {
+            const formattedDate = currentDate.format('YYYY-MM-DD');
+            console.log('Processing date:', formattedDate);
+
+            try {
+                console.log('Booking appointment for', formattedDate, startTime);
+                const result = await bookAppointmentAdmin(
+                    clientId,
+                    formattedDate,
+                    startTime,
+                    appointmentType,
+                    addOnArray
+                );
+                if (result === "Appointment booked successfully") {
+                    bookedAppointments.push({
+                        date: formattedDate,
+                        startTime: startTime
+                    });
+                } else {
+                    console.log(`Failed to book appointment for ${formattedDate}: ${result}`);
+                }
+            } catch (error) {
+                console.error(`Error booking appointment for ${formattedDate}:`, error);
+            }
+        }
+        currentDate.add(1, 'day');
+    }
+
+    return bookedAppointments;
+}
+
 
 function calculateTotalDuration(appointmentType, addOnArray) {
     const appointmentDuration = appointmentTypes[appointmentType].duration;
@@ -167,4 +219,4 @@ function matchesRecurrenceRule(date, recurrenceRule, startDate) {
 // // Call the example function
 // exampleRecurringAppointments();
 
-module.exports = { createRecurringAppointments };
+module.exports = { createRecurringAppointments, createRecurringAppointmentsAdmin };
