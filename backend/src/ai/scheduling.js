@@ -391,7 +391,7 @@ async function createTemporaryAssistant(phoneNumber) {
   return newAssistant;
 }
 
-async function handleToolCalls(requiredActions, client) {
+async function handleToolCalls(requiredActions, client, phoneNumber) {
   console.log(requiredActions)
   const toolOutputs = [];
 
@@ -443,7 +443,7 @@ async function handleToolCalls(requiredActions, client) {
         break;
       case "createClient":
         console.log("creating client")
-        output = await createClient(args.firstName, args.lastName, client.phonenumber);
+        output = await createClient(args.firstName, args.lastName, phoneNumber);
         break;
       case "findRecurringAvailability":
         output = await findRecurringAvailability(
@@ -590,7 +590,7 @@ async function handleUserInput(userMessages, phoneNumber) {
       } else if (runStatus.status === "requires_action") {
         console.log("requires action")
         const requiredActions = runStatus.required_action.submit_tool_outputs;
-        const toolOutputs = await handleToolCalls(requiredActions, client);
+        const toolOutputs = await handleToolCalls(requiredActions, client, phoneNumber);
 
         await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
           tool_outputs: toolOutputs
