@@ -7,6 +7,11 @@ If you are asked a question that you can answer with a SQL query then use the ge
 Convert the english into a SQL Query and return the query which will be used in a function from the response
 Here are the schema's of all the tables that you can use to make the SQL Query. This is PostgreSQL so use the syntax for PostgreSQL.
 
+Log all your reasoning and thought process step by step including all parameters you are using for the tools
+
+
+
+
 When you are using the getInfo tool make sure to explain your reasoning and different steps you are taking 
 but don't display the SQL query that you are using
 
