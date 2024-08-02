@@ -279,7 +279,7 @@ const tools = [
           description: "The ID of the client booking the recurring appointment"
         }
       },
-      required: ["initialDate", "appointmentType", "group", "recurrenceRule", "clientId"]
+      required: ["initialDate", "appointmentType", "addOns", "group", "recurrenceRule", "clientId"]
     }
   }
 },
@@ -304,7 +304,6 @@ const tools = [
           enum: Object.keys(appointmentTypes),
           description: "Type of appointment" 
         },
-        appointmentDuration: { type: "number", description: "Duration of appointment in minutes" },
         group: { type: "number", description: "Appointment group (1, 2, or 3)" },
         price: { type: "number", description: "Price of the appointment" },
         addOns: { 
@@ -347,7 +346,7 @@ const tools = [
         phone: { type: "string", description: "Client's phone number" },
         email: { type: "string", description: "Client's email address" }
       },
-      required: ["initialDate", "startTime", "fname", "lname", "phone", "email", "appointmentType", "appointmentDuration", "group", "price", "addOns", "recurrenceRule"]
+      required: ["initialDate", "startTime", "appointmentType", "group", "price", "addOns", "recurrenceRule", "fname", "lname", "phone", "email"]
     }
   }
 }
@@ -470,9 +469,28 @@ async function handleUserInputData(userMessage) {
             } else if (funcName === "blockTime") {
               output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason);
             } else if (funcName === "findRecurringAvailability") {
-              output = await findRecurringAvailability(args.initialDate, args.appointmentType, args.addOns, args.group, args.recurrenceRule, args.clientId);
+              output = await findRecurringAvailability(
+                args.initialDate,
+                args.appointmentType,
+                args.addOns || [],
+                args.group,
+                args.recurrenceRule,
+                args.clientId
+              );
             } else if (funcName === "createRecurringAppointments") {
-              output = await createRecurringAppointments(args.initialDate, args.startTime, args.appointmentType, args.appointmentDuration, args.group, args.price, args.addOns, args.recurrenceRule, args.fname, args.lname, args.phone, args.email);
+              output = await createRecurringAppointments(
+                args.initialDate,
+                args.startTime,
+                args.fname,
+                args.lname,
+                args.phone,
+                args.email,
+                args.appointmentType,
+                args.group,
+                args.price,
+                args.addOns || [],
+                args.recurrenceRule
+              );
             } else {
               throw new Error(`Unknown function: ${funcName}`);
             }
