@@ -94,42 +94,55 @@ async function createRecurringAppointmentsAdmin(clientId, initialDate, startTime
     }
 
     const bookedAppointments = [];
-    let currentDate = moment(initialDate);
-    const endDate = moment(initialDate).add(1, 'year');
     const startDate = moment(initialDate);
+    const endDate = startDate.clone().add(1, 'year');
 
-    while (currentDate.isSameOrBefore(endDate)) {
-        if (matchesRecurrenceRule(currentDate, recurrenceRule, startDate)) {
-            const formattedDate = currentDate.format('YYYY-MM-DD');
-            console.log('Processing date:', formattedDate);
+    // Generate all dates that match the recurrence rule
+    const matchingDates = generateMatchingDates(startDate, endDate, recurrenceRule);
 
-            try {
-                console.log('Booking appointment for', formattedDate, startTime);
-                const result = await bookAppointmentAdmin(
-                    clientId,
-                    formattedDate,
-                    startTime,
-                    appointmentType,
-                    addOnArray
-                );
-                if (result === "Appointment booked successfully") {
-                    bookedAppointments.push({
-                        date: formattedDate,
-                        startTime: startTime
-                    });
-                } else {
-                    console.log(`Failed to book appointment for ${formattedDate}: ${result}`);
-                }
-            } catch (error) {
-                console.error(`Error booking appointment for ${formattedDate}:`, error);
+    // Use Promise.all to book appointments concurrently
+    const bookingPromises = matchingDates.map(async (date) => {
+        const formattedDate = date.format('YYYY-MM-DD');
+        try {
+            console.log('Booking appointment for', formattedDate, startTime);
+            const result = await bookAppointmentAdmin(
+                clientId,
+                formattedDate,
+                startTime,
+                appointmentType,
+                addOnArray
+            );
+            if (result === "Appointment booked successfully") {
+                return { date: formattedDate, startTime: startTime };
+            } else {
+                console.log(`Failed to book appointment for ${formattedDate}: ${result}`);
+                return null;
             }
+        } catch (error) {
+            console.error(`Error booking appointment for ${formattedDate}:`, error);
+            return null;
         }
-        currentDate.add(1, 'day');
-    }
+    });
+
+    const results = await Promise.all(bookingPromises);
+    bookedAppointments.push(...results.filter(Boolean));
 
     return bookedAppointments;
 }
 
+function generateMatchingDates(startDate, endDate, recurrenceRule) {
+    const matchingDates = [];
+    let currentDate = startDate.clone();
+
+    while (currentDate.isSameOrBefore(endDate)) {
+        if (matchesRecurrenceRule(currentDate, recurrenceRule, startDate)) {
+            matchingDates.push(currentDate.clone());
+        }
+        currentDate.add(1, 'day');
+    }
+
+    return matchingDates;
+}
 
 function calculateTotalDuration(appointmentType, addOnArray) {
     const appointmentDuration = appointmentTypes[appointmentType].duration;
