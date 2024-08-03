@@ -7,6 +7,7 @@ import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
 import { useIsFocused } from '@react-navigation/native';
 import { useMessage } from '../components/MessageContext';
+import * as Notifications from 'expo-notifications';
 
 const ClientMessagesScreen = ({ route }) => {
   const { clientid, clientName, suggestedResponse, clientMessage } = route.params;
@@ -91,6 +92,28 @@ const ClientMessagesScreen = ({ route }) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      Notifications.setNotificationCategoryAsync('suggestedResponse', [
+        {
+          identifier: 'reply',
+          buttonTitle: 'Reply',
+          options: {
+            opensAppToForeground: false,
+          },
+          textInput: {
+            submitButtonTitle: 'Send',
+            placeholder: 'Edit suggested response...',
+          },
+        },
+      ]);
+    }
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
+
+    return () => subscription.remove();
+  }, []);
+
   const fetchClientDetails = async (clientId) => {
     try {
       const clientData = await getClientById(clientId);
@@ -126,8 +149,8 @@ const ClientMessagesScreen = ({ route }) => {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (newMessage.trim() === '' || !clientDetails) return;
+  const handleSendMessage = async (messageToSend = newMessage) => {
+    if (messageToSend.trim() === '' || !clientDetails) return;
     const tempId = `temp-${Date.now()}`;
     try {
       const recipient = clientDetails.phonenumber;
@@ -136,7 +159,7 @@ const ClientMessagesScreen = ({ route }) => {
       const adjustedDateString = adjustedDate.toLocaleString();
       const tempMessage = {
         id: tempId,
-        body: newMessage,
+        body: messageToSend,
         fromtext: '+18446480598',
         totext: recipient,
         date: adjustedDateString,
@@ -147,18 +170,15 @@ const ClientMessagesScreen = ({ route }) => {
       setNewMessage('');
       scrollToBottom();
 
-      await sendMessage(recipient, newMessage, false, true);
+      await sendMessage(recipient, messageToSend, false, true);
       
       console.log('Message sent successfully');
 
-      // Fetch updated messages
       await fetchMessages(clientid);
       
-      // Remove the temporary message after fetching updated messages
       setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
     } catch (error) {
       console.error('Error sending message:', error);
-      // Remove the temporary message if sending failed
       setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
     }
   };
@@ -288,6 +308,31 @@ const ClientMessagesScreen = ({ route }) => {
   const handleContentSizeChange = (event) => {
     const { height } = event.nativeEvent.contentSize;
     setInputHeight(Math.min(Math.max(60, height), 150));
+  };
+
+  const handleNotificationResponse = (response) => {
+    if (response.actionIdentifier === 'reply' && response.userText) {
+      handleSendMessage(response.userText);
+    }
+  };
+
+  const sendSuggestedResponseNotification = async (suggestedResponse) => {
+    if (Platform.OS !== 'ios') return;
+
+    const recentMessages = messages.slice(-5);
+    const formattedMessages = recentMessages
+      .map(msg => `${msg.fromtext === '+18446480598' ? 'You' : clientName}: ${msg.body}`)
+      .join('\n');
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `Suggested Response for ${clientName}`,
+        body: `Recent messages:\n${formattedMessages}\n\nSuggested response: ${suggestedResponse}`,
+        data: { clientid, clientName, suggestedResponse, notificationType: 'suggestedResponse', recentMessages },
+        categoryIdentifier: 'suggestedResponse',
+      },
+      trigger: null,
+    });
   };
 
   return (
