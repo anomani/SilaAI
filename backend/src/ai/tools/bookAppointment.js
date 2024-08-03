@@ -110,7 +110,7 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
 
 // main()
 
-async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, group, price, addOnArray) {
+async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, price, addOnArray) {
     console.log("Date:", date);
     console.log("Start Time:", startTime);
     console.log("First Name:", fname);
@@ -119,11 +119,10 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     console.log("Email:", email);
     console.log("Appointment Type:", appointmentType);
     console.log("Appointment Duration:", appointmentDuration);
-    console.log("Group:", group);
     console.log("Price:", price);
     console.log("Add-Ons:", addOnArray);
 
-    const availability = await getAvailability(date, appointmentType, addOnArray, group);
+    const availability = await getAvailability(date, appointmentType, addOnArray);
     const endTime = addMinutes(startTime, appointmentDuration);
     console.log(availability)
     //For case that the slot overlaps
