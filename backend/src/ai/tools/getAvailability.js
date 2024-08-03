@@ -40,33 +40,36 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
             const startOfSlot = new Date(`${day}T${slot.start}`);
             const endOfSlot = new Date(`${day}T${slot.end}`);
             let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
+
             for (let i = 0; i <= appointments.length; i++) {
                 const appointment = appointments[i];
                 if (clientId && appointment && appointment.clientId === clientId) {
-                    // Skip this appointment if it belongs to the current client
                     continue;
                 }
 
                 const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
                 const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
-                console.log(slot)
-                console.log(appointmentStart)
-                console.log(currentTime)
-                console.log(duration)
-                if (currentTime <= appointmentStart && (appointmentStart - currentTime) >= duration * 60000 && currentTime <= endOfSlot) {
-                    const slotEndTime = new Date(Math.min(appointmentStart, endOfSlot));
-                    const slotDuration = slotEndTime - currentTime;
 
-                    if (slotDuration >= duration * 60000) {
-                        availableSlots.push({
-                            startTime: new Date(currentTime).toTimeString().slice(0, 5),
-                            endTime: slotEndTime.toTimeString().slice(0, 5)
-                        });
-                    }
+                // Check for available slot before the appointment
+                if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000) {
+                    availableSlots.push({
+                        startTime: new Date(currentTime).toTimeString().slice(0, 5),
+                        endTime: appointmentStart.toTimeString().slice(0, 5)
+                    });
                 }
 
+                // Update currentTime to the end of the current appointment
                 currentTime = appointmentEnd > currentTime ? appointmentEnd : currentTime;
+
                 if (currentTime >= endOfSlot) break;
+            }
+
+            // Check for available slot after the last appointment in the slot
+            if (currentTime < endOfSlot && (endOfSlot - currentTime) >= duration * 60000) {
+                availableSlots.push({
+                    startTime: new Date(currentTime).toTimeString().slice(0, 5),
+                    endTime: endOfSlot.toTimeString().slice(0, 5)
+                });
             }
         }
         console.log({date: day, availableSlots: availableSlots});
