@@ -4,16 +4,18 @@ dotenv.config({path : '../../../.env'})
 const {getAppointmentsByDay} = require('../../model/appointment')
 const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 
-async function getAvailability(day, appointmentType, addOnArray, group, clientId = null) {
+async function getAvailability(day, appointmentType, addOnArray, clientId = null) {
     console.log("Day:", day);
     console.log("Appointment Type:", appointmentType);
     console.log("Add-ons:", addOnArray);
-    console.log("Group:", group);
-
+    
     const appointmentTypeInfo = appointmentTypes[appointmentType];
     if (!appointmentTypeInfo) {
         throw new Error(`Invalid appointment type: ${appointmentType}`);
     }
+    
+    const group = appointmentTypeInfo.group;
+    console.log("Group:", group);
 
     const duration = calculateTotalDuration(appointmentType, addOnArray);
 
@@ -113,7 +115,7 @@ function getCurrentDate() {
 }
 
 
-async function findNextAvailableSlots(startDay, appointmentType, addOnArray, group, numberOfSlots = 5) {
+async function findNextAvailableSlots(startDay, appointmentType, addOnArray, numberOfSlots = 5) {
   const appointmentTypeInfo = appointmentTypes[appointmentType];
   if (!appointmentTypeInfo) {
     throw new Error(`Invalid appointment type: ${appointmentType}`);
@@ -127,7 +129,7 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, gro
 
   while (availableSlots.length < numberOfSlots && daysChecked < 14) {
     const dayString = currentDay.toISOString().split('T')[0];
-    const dayAvailability = await getAvailability(dayString, appointmentType, addOnArray, group);
+    const dayAvailability = await getAvailability(dayString, appointmentType, addOnArray);
     
     if (Array.isArray(dayAvailability) && dayAvailability.length > 0) {
       for (const slot of dayAvailability) {

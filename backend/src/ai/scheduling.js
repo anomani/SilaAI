@@ -60,13 +60,9 @@ const tools = [
               enum: Object.keys(addOns)
             },
             description: "An array of add-ons for the appointment."
-          },
-          group: {
-            type: "number",
-            description: "The appointment group (1, 2, or 3)."
           }
         },
-        required: ["day", "appointmentType", "addOns", "group"]
+        required: ["day", "appointmentType", "addOns"]
       }
     }
   },
@@ -91,10 +87,6 @@ const tools = [
             enum: Object.keys(appointmentTypes),
             description: "The type of appointment they want to book."
           },
-          group: {
-            type: "number",
-            description: "The appointment group that the appointment is in. Should be a number that is either 1,2, or 3"
-          },
           addOns: {
             type: "array",
             description: "The add-ons for the appointment",
@@ -104,7 +96,7 @@ const tools = [
             }
           }
         },
-        required: ["date", "startTime", "appointmentType", "group", "addOns"]
+        required: ["date", "startTime", "appointmentType", "addOns"]
       }
     }
   },
@@ -408,11 +400,11 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
           throw new Error(`Invalid appointment type: ${args.appointmentType}`);
         }
         totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
-        output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group, totalDuration, client.id);
+        output = await getAvailability(args.day, args.appointmentType, args.addOns, client.id);
         if (output.length === 0) {
           output = {
             requestedDay: args.day,
-            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, args.group)
+            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns)
           };
         }
         break;
@@ -430,7 +422,6 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
           client.email,
           args.appointmentType,
           totalDuration,
-          args.group,
           totalPrice,
           args.addOns
         );
