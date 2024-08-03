@@ -49,11 +49,6 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
 
                 const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
                 const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
-                console.log("appointmentStart", appointmentStart)
-                console.log("appointmentEnd", appointmentEnd)
-                console.log("currentTime", currentTime)
-                console.log("duration", duration)
-                console.log("endOfSlot", endOfSlot)
                 if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000 && currentTime <= endOfSlot) {
                     console.log("slot is available")
                     const slotEndTime = new Date(Math.min(appointmentStart, endOfSlot));
@@ -152,10 +147,5 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, num
   return availableSlots;
 }
 
-async function main() {
-    await getAvailability('2024-08-07', 'Adult - (Full Service)', []);
-}
-
-main();
 
 module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots}
