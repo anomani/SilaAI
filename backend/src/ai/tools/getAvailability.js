@@ -40,7 +40,6 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
             const startOfSlot = new Date(`${day}T${slot.start}`);
             const endOfSlot = new Date(`${day}T${slot.end}`);
             let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
-
             for (let i = 0; i <= appointments.length; i++) {
                 const appointment = appointments[i];
                 if (clientId && appointment && appointment.clientId === clientId) {
@@ -51,10 +50,11 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
                 const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
                 const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
 
+
                 if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000 && currentTime < endOfSlot) {
                     const slotEndTime = new Date(Math.min(appointmentStart, endOfSlot));
                     const slotDuration = slotEndTime - currentTime;
-                    
+
                     if (slotDuration >= duration * 60000) {
                         availableSlots.push({
                             startTime: new Date(currentTime).toTimeString().slice(0, 5),
@@ -148,10 +148,10 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, num
   return availableSlots;
 }
 
-// async function main() {
-//     await getAvailability('2024-07-27', 'Adult Cut', [], 1);
-// }
+async function main() {
+    await getAvailability('2024-08-07', 'Adult - (Full Service)', []);
+}
 
-// main();
+main();
 
 module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots}
