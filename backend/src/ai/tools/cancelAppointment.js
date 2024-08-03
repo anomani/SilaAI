@@ -80,17 +80,18 @@ async function cancelAppointmentById(clientId, date) {
         if (!appointment) {
             return "Appointment not found";
         }
-
-        const acuity_id = appointment.acuityid;
+        await deleteAppointment(appointment.id);
+        return "sucecesfully cancelled appointment"
+        // const acuity_id = appointment.acuityid;
         
-        const acuityCancelled = await cancelAcuityAppointment(acuity_id);
+        // const acuityCancelled = await cancelAcuityAppointment(acuity_id);
 
-        if (acuityCancelled) {
-            // await deleteAppointment(appointment.id);
-            return appointment;
-        } else {
-            throw new Error('Failed to cancel appointment in Acuity');
-        }
+        // if (acuityCancelled) {
+        //     await deleteAppointment(appointment.id);
+        //     return appointment;
+        // } else {
+        //     throw new Error('Failed to cancel appointment in Acuity');
+        // }
     } catch (error) {
         console.log(error);
         return "Unable to cancel the appointment";

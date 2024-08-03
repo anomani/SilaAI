@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated } from 'react-native';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, SafeAreaView, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { handleUserInput } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -102,7 +102,7 @@ const ChatScreen = () => {
 
   const renderItem = ({ item }) => (
     <LinearGradient
-      colors={item.sender === 'user' ? ['#007AFF', '#00C6FF'] : ['#333333', '#4A4A4A']}
+      colors={item.sender === 'user' ? ['#195de6', '#195de6'] : ['#333333', '#4A4A4A']}
       style={[styles.messageContainer, item.sender === 'user' ? styles.userMessage : styles.botMessage]}
     >
       {item.sender === 'bot' && item.text.includes('Custom list') ? (
@@ -144,47 +144,87 @@ const ChatScreen = () => {
   );
 
   return (
-    <LinearGradient colors={['#121214', '#1e1e20']} style={styles.container}>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -200}
-      >
-        <View style={styles.chatListContainer}>
-          {showIntro && messages.length === 0 ? (
-            renderIntro()
-          ) : (
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              renderItem={renderItem}
-              keyExtractor={(item, index) => index.toString()}
-              contentContainerStyle={styles.chatContainer}
-              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-              onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            />
-          )}
-          {isAITyping && <TypingIndicator />}
-        </View>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            value={message}
-            onChangeText={setMessage}
-            placeholder="Type a message"
-            placeholderTextColor="#888"
-          />
-          <TouchableOpacity onPress={() => handleSend()} style={styles.sendButton}>
-            <Ionicons name="send" size={24} color="#fff" />
+    <SafeAreaView style={styles.safeArea}>
+      <LinearGradient colors={['#121214', '#1e1e20']} style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>UZI AI</Text>
+          </View>
         </View>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.keyboardAvoidingView}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -200}
+        >
+          <View style={styles.chatListContainer}>
+            {showIntro && messages.length === 0 ? (
+              renderIntro()
+            ) : (
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                renderItem={renderItem}
+                keyExtractor={(item, index) => index.toString()}
+                contentContainerStyle={styles.chatContainer}
+                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              />
+            )}
+            {isAITyping && <TypingIndicator />}
+          </View>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              value={message}
+              onChangeText={setMessage}
+              placeholder="Type a message"
+              placeholderTextColor="#888"
+            />
+            <TouchableOpacity onPress={() => handleSend()} style={styles.sendButton}>
+              <Ionicons name="send" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#121214', // Match the starting color of your gradient
+  },
   container: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: 'rgba(18, 18, 20, 0.9)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 15,
+    zIndex: 1,
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  keyboardAvoidingView: {
     flex: 1,
   },
   chatListContainer: {
