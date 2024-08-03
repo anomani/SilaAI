@@ -49,8 +49,10 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
 
                 const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
                 const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
-
-
+                console.log(slot)
+                console.log(appointmentStart)
+                console.log(currentTime)
+                console.log(duration)
                 if (currentTime < appointmentStart && (appointmentStart - currentTime) > duration * 60000 && currentTime < endOfSlot) {
                     const slotEndTime = new Date(Math.min(appointmentStart, endOfSlot));
                     const slotDuration = slotEndTime - currentTime;
