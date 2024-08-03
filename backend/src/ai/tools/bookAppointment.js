@@ -148,19 +148,19 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     }
 
     try {
-        const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray);
-        console.log(acuityAppointment);
-        // const client = await getClientByPhoneNumber(phone);
-        // if (client.id != '') {
-        //     console.log("Client already exists");
-        //     const clientId = client.id;
-        //     await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", price);
-        // } else {
-        //     console.log("Client does not exist");
-        //     await createClient(fname, lname, phone, email, "");
-        //     const newClient = await getClientByPhoneNumber(phone);
-        //     await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, newClient.id, "", price);
-        // }
+        // const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray);
+        // console.log(acuityAppointment);
+        const client = await getClientByPhoneNumber(phone);
+        if (client.id != '') {
+            console.log("Client already exists");
+            const clientId = client.id;
+            await createAppointment(appointmentType, 123, date, startTime, endTime, clientId, "", price);
+        } else {
+            console.log("Client does not exist");
+            await createClient(fname, lname, phone, email, "");
+            const newClient = await getClientByPhoneNumber(phone);
+            await createAppointment(appointmentType, 123, date, startTime, endTime, newClient.id, "", price);
+        }
         return "Appointment booked successfully";
     } catch (error) {
         console.log(error);
