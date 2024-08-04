@@ -15,6 +15,7 @@ const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt , deleteAIPrompt} = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { clearCustomPrompt } = require('./tools/clearCustomPrompt');
+const { rescheduleAppointmentByPhoneAndDate } = require('./tools/rescheduleAppointment');
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -287,6 +288,35 @@ const tools = [
           clientId: {
             type: "number",
             description: "The ID of the client whose prompt is to be cleared"
+          }
+        },
+        required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "rescheduleAppointmentByPhoneAndDate",
+      description: "Reschedules an appointment for the client. Make sure to ask for confirmation before rescheduling you are going to be given the user's appointment time and info",
+      parameters: {
+        type: "object",
+        properties: {
+          phoneNumber: {
+            type: "string",
+            description: "The phone number of the client"
+          },
+          currentDate: {
+            type: "string",
+            description: "The current date of the appointment"
+          },
+          newDate: {
+            type: "string",
+            description: "The new date of the appointment"
+          },
+          newStartTime: {
+            type: "string",
+            description: "The new start time of the appointment"
           }
         },
         required: []

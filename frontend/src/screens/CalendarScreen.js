@@ -12,7 +12,6 @@ import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import RescheduleConfirmModal from '../components/RescheduleConfirmModal';
 import { Picker } from '@react-native-picker/picker';
 
-
 const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
   const [date, setDate] = useState(new Date());
@@ -434,7 +433,6 @@ const CalendarScreen = ({ navigation }) => {
 
   const onGestureEvent = (event, appointment) => {
     const { translationY } = event.nativeEvent;
-    console.log(appointment.startTime);
     const [time, period] = appointment.startTime.split(' ');
     const [hours, minutes] = time.split(':');
     const startTimeIn24 = `${period === 'PM' && hours !== '12' ? parseInt(hours) + 12 : hours}:${minutes}`;
@@ -455,7 +453,6 @@ const CalendarScreen = ({ navigation }) => {
     const newMinutes = totalMinutes + Math.round(translationY / (100 / 60)); // 100px per hour
     const newHours = Math.floor(newMinutes / 60);
     const newMinutesRemainder = newMinutes % 60;
-    console.log(`${newHours.toString().padStart(2, '0')}:${newMinutesRemainder.toString().padStart(2, '0')}`)
     return `${newHours.toString().padStart(2, '0')}:${newMinutesRemainder.toString().padStart(2, '0')}`;
   };
 
@@ -504,7 +501,6 @@ const CalendarScreen = ({ navigation }) => {
 
       const formattedEndTime = addMinutes(formattedStartTime, durationMinutes);
 
-      console.log(`Rescheduling appointment ${draggedAppointment.id} to ${formattedStartTime} - ${formattedEndTime}`);
 
       // Uncomment this line when ready to actually reschedule
       await rescheduleAppointment(
@@ -562,7 +558,7 @@ const CalendarScreen = ({ navigation }) => {
       const topPosition = (start - 9) * 100; // 100px per hour
 
       const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
-
+      console.log(isBlockedTime)
       appointmentBlocks.push(
         <TouchableOpacity
           key={appointment.id}
@@ -611,7 +607,7 @@ const CalendarScreen = ({ navigation }) => {
             >
               <View style={styles.appointmentHeader}>
                 <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
-                  {appointment.clientName}
+                  {isBlockedTime ? 'BLOCKED TIME' : appointment.clientName}
                 </Text>
                 <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
                   {isBlockedTime ? appointment.details : appointment.appointmenttype}

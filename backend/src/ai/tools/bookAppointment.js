@@ -197,6 +197,31 @@ function isAfter(time1, time2) {
     return false;
 }
 
+function isAppointmentAvailable(availability, startTime, endTime) {
+    // Check if the slot overlaps
+    for (const slot of availability) {
+        if (isAfter(startTime, slot.startTime) && !isAfter(startTime, slot.endTime)) {
+            if (isAfter(endTime, slot.endTime) && endTime !== slot.endTime) {
+                return "This appointment overlaps with another appointment.";
+            }
+        }
+    }
+
+    // Check if the appointment is in an available slot
+    let isInAvailableSlot = false;
+    for (const slot of availability) {
+        if (isAfter(startTime, slot.startTime) && !isAfter(startTime, slot.endTime)) {
+            isInAvailableSlot = true;
+            break;
+        }
+    }
+    if (!isInAvailableSlot) {
+        return "The appointment time is not in an available slot.";
+    }
+
+    return "Available";
+}
+
 // Test cases
 // async function runTestCases() {
 //     const result = await bookAppointment("2024-07-04", "17:30", "John", "Doe", "1234567890", "john.doe@example.com", "Test Appointment", 30);
@@ -205,4 +230,4 @@ function isAfter(time1, time2) {
 
 // runTestCases()
 
-module.exports = { bookAppointment, bookAppointmentWithAcuity, bookAppointmentAdmin };
+module.exports = { bookAppointment, bookAppointmentWithAcuity, bookAppointmentAdmin, isAppointmentAvailable, addMinutes, isAfter };
