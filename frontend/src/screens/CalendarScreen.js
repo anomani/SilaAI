@@ -558,7 +558,9 @@ const CalendarScreen = ({ navigation }) => {
       const topPosition = (start - 9) * 100; // 100px per hour
 
       const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
-      console.log(isBlockedTime)
+      console.log('Rendering appointment:', appointment);
+      console.log('isBlockedTime:', isBlockedTime);
+
       appointmentBlocks.push(
         <TouchableOpacity
           key={appointment.id}
@@ -601,20 +603,21 @@ const CalendarScreen = ({ navigation }) => {
                 {
                   top: topPosition,
                   height: Math.max(duration * 100, 50), // Minimum height of 50px
-                  backgroundColor: isBlockedTime ? '#808080' : '#007AFF',
+                  backgroundColor: isBlockedTime ? 'rgba(255, 149, 0, 0.7)' : '#007AFF', // Semi-transparent orange for blocked time
+                  zIndex: isBlockedTime ? 2 : 1, // Higher zIndex for blocked time
                 },
               ]}
             >
               <View style={styles.appointmentHeader}>
                 <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
-                  {isBlockedTime ? 'BLOCKED TIME' : appointment.clientName}
+                  {isBlockedTime ? 'Blocked Time' : (appointment.clientName || 'No Name')}
                 </Text>
                 <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
-                  {isBlockedTime ? appointment.details : appointment.appointmenttype}
+                  {isBlockedTime ? (appointment.details || 'No Details') : (appointment.appointmenttype || 'No Type')}
                 </Text>
               </View>
               <Text style={styles.appointmentTime}>
-                {`${appointment.startTime} - ${appointment.endTime}`}
+                {`${appointment.startTime || 'No Start'} - ${appointment.endTime || 'No End'}`}
               </Text>
             </View>
           </PanGestureHandler>
