@@ -442,7 +442,6 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
         const appointmentInfo = appointmentTypes[args.appointmentType];
         const addOnInfo = args.addOns.map(addon => addOns[addon]);
         const totalPrice = appointmentInfo.price + addOnInfo.reduce((sum, addon) => sum + addon.price, 0);
-        totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
         output = await bookAppointment(
           args.date,
           args.startTime,
@@ -451,7 +450,6 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
           client.phonenumber,
           client.email,
           args.appointmentType,
-          totalDuration,
           totalPrice,
           args.addOns
         );
@@ -502,6 +500,9 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
         output = await deleteAIPrompt(client.id);
         // Update the assistant instructions after clearing the custom prompt
         await updateAssistantInstructions(client.phonenumber);
+        break;
+      case "rescheduleAppointmentByPhoneAndDate":
+        output = await rescheduleAppointmentByPhoneAndDate(client.phonenumber, args.currentDate, args.newDate, args.newStartTime);
         break;
       default:
         throw new Error(`Unknown function: ${funcName}`);
