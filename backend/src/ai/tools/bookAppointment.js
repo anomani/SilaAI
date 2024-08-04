@@ -110,7 +110,7 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
 
 // main()
 
-async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, appointmentDuration, price, addOnArray) {
+async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray) {
     console.log("Date:", date);
     console.log("Start Time:", startTime);
     console.log("First Name:", fname);
@@ -118,32 +118,26 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     console.log("Phone:", phone);
     console.log("Email:", email);
     console.log("Appointment Type:", appointmentType);
-    console.log("Appointment Duration:", appointmentDuration);
     console.log("Price:", price);
     console.log("Add-Ons:", addOnArray);
 
-    const availability = await getAvailability(date, appointmentType, addOnArray);
-    const endTime = addMinutes(startTime, appointmentDuration);
-    console.log(availability)
-    //For case that the slot overlaps
-    for (const slot of availability) { 
-        if (isAfter(startTime, slot.startTime) && !isAfter(startTime, slot.endTime)) {
-            if (isAfter(endTime, slot.endTime) && endTime != slot.endTime) {
-                return "Actually, this overlaps with another appointment."
-            }
-        }
+    // Calculate total duration
+    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
     }
+    const addOnInfo = addOnArray.map(addon => addOns[addon]);
+    const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
 
-    //For case that appointment isn't in an available slot
-    let isInAvailableSlot = false;
-    for (const slot of availability) {
-        if (isAfter(startTime, slot.startTime) && !isAfter(startTime, slot.endTime)) {
-            isInAvailableSlot = true;
-            break;
-        }
-    }
-    if (!isInAvailableSlot) {
-        return "The appointment time is not in an available slot.";
+    const endTime = addMinutes(startTime, totalDuration);
+
+    const availability = await getAvailability(date, appointmentType, addOnArray);
+    console.log(availability);
+
+    // Check if the appointment is available
+    const availabilityCheck = isAppointmentAvailable(availability, startTime, endTime);
+    if (availabilityCheck !== "Available") {
+        return availabilityCheck;
     }
 
     try {
