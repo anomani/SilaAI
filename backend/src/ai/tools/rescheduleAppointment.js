@@ -51,7 +51,7 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
 }
 
 async function main() {
-    const a = await rescheduleAppointmentByPhoneAndDate('+12038324011', '2024-08-19', '2024-08-06', '09:00');
+    const a = await rescheduleAppointmentByPhoneAndDate('+12038324011', '2024-08-06', '2024-08-15', '09:00');
     console.log(a);
 }
 
