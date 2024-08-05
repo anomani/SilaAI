@@ -334,7 +334,7 @@ async function createThread(phoneNumber, initialMessage = false) {
 }
 
 async function createAssistant(fname, lname, phone, messages, appointment, day, client, upcomingAppointment) {
-  const instructionsPath = path.join(__dirname, 'Prompts', 'claudePrompt.txt');
+  const instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
   
   // Get the AI prompt for this client

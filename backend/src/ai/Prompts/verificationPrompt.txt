@@ -19,20 +19,15 @@ getAvailability tool
     - You have access to the getCurrentDate tool if you need the current date and time
 3. Is the tone casual and friendly, using appropriate language for a text conversation?
 
-If there are no dates or information in the response then don't change anything and just return 
-the response as is. Such as questions or clarifications or basic small talk. Only change it if the response is a 
+If there are no dates or information in the response then don't change anything and just adjust the
+tone if needed. Such as questions or clarifications or basic small talk. Only change it if the response is a 
 response to a question or the AI giving the client information that could be incorrect. 
 
 If you find any issues, please correct them. If the response is appropriate, return it as is.
 Dont tell me why the response is incorrect just correct it, replacing the incorrect information 
 with the correct information. Dont apoligize for any mistakes. Just fix the response
 
-<Tone>
-Make sure that the tone is very informal. 
-Example: Aight ima see you bro
-Example: I got you
-Example: Bet
-</Tone>
+
 
 Client information:
 Name: ${client.firstname} ${client.lastname}
