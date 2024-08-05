@@ -558,8 +558,6 @@ const CalendarScreen = ({ navigation }) => {
       const topPosition = (start - 9) * 100; // 100px per hour
 
       const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
-      console.log('Rendering appointment:', appointment);
-      console.log('isBlockedTime:', isBlockedTime);
 
       appointmentBlocks.push(
         <TouchableOpacity
@@ -861,21 +859,27 @@ const CalendarScreen = ({ navigation }) => {
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
       ) : viewMode === 'list' ? (
-        <ScrollView 
-          ref={scrollViewRef}
-          style={styles.calendarContainer}
-          contentContainerStyle={{ minHeight: totalHeight }}
-        >
-          <View style={styles.timelineContainer}>
-            <View style={styles.timeline}>
-              {renderTimeSlots()}
-            </View>
-            <View style={[styles.appointmentsContainer, { height: totalHeight }]}>
-              {renderAppointments()}
-              {renderCurrentTimeLine()}
-            </View>
+        appointments.length === 0 ? (
+          <View style={styles.noAppointmentsContainer}>
+            <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
           </View>
-        </ScrollView>
+        ) : (
+          <ScrollView 
+            ref={scrollViewRef}
+            style={styles.calendarContainer}
+            contentContainerStyle={{ minHeight: totalHeight }}
+          >
+            <View style={styles.timelineContainer}>
+              <View style={styles.timeline}>
+                {renderTimeSlots()}
+              </View>
+              <View style={[styles.appointmentsContainer, { height: totalHeight }]}>
+                {renderAppointments()}
+                {renderCurrentTimeLine()}
+              </View>
+            </View>
+          </ScrollView>
+        )
       ) : (
         <View style={styles.cardView}>
           {appointments.length > 0 ? (
@@ -896,7 +900,9 @@ const CalendarScreen = ({ navigation }) => {
               </View>
             </>
           ) : (
-            <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+            <View style={styles.noAppointmentsContainer}>
+              <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+            </View>
           )}
         </View>
       )}
@@ -1084,6 +1090,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: -50, // Move the container up
   },
   noAppointmentsText: {
     fontSize: 18,

@@ -380,7 +380,6 @@ const ClientMessagesScreen = ({ route }) => {
             />
           </View>
           <View style={styles.inputContainer}>
-            <Image source={defaultAvatar} style={styles.inputAvatar} />
             <TextInput
               style={[styles.input, { height: Math.min(150, Math.max(60, inputHeight)) }]}
               placeholder="Write a message"
@@ -503,12 +502,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     padding: 12,
-  },
-  inputAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
   },
   input: {
     flex: 1,

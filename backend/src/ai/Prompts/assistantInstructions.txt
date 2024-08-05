@@ -3,6 +3,8 @@ This means that a new conversation has started so don't use the context from pre
 just follow the directions that are stated above. Follow the instructions above for the direction of the convo and follow the directions as to 
 when to call the clearCustomPrompt tool.
 
+Think step by step when accomplishing a task
+
 Appointment Confirmation and Prompt Clearing:
 2. Immediately after sending the confirmation message for an appointment, call the clearCustomPrompt tool.
 3. Do not wait for the customer confirmation just right after you say the appointment date

@@ -298,7 +298,7 @@ const tools = [
     type: "function",
     function: {
       name: "rescheduleAppointmentByPhoneAndDate",
-      description: "Reschedules an appointment for the client. Make sure to ask for confirmation before rescheduling you are going to be given the user's appointment time and info",
+      description: "Reschedules an appointment for the client. Make sure to ask for confirmation before rescheduling you are going to be given the user's appointment time and info. When rescheduling and finding availabilities do not ask again for the appointment type assume the same one as the last appointment",
       parameters: {
         type: "object",
         properties: {
@@ -606,7 +606,8 @@ async function handleUserInput(userMessages, phoneNumber) {
           if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
             return 'user';
           }
-          return await verifyResponse(assistantMessage.content[0].text.value, client);
+          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client);
+          return verifiedResponse
           
           // For now, return the assistant's message directly
           // return assistantMessage.content[0].text.value;
