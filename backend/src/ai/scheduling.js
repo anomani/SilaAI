@@ -41,7 +41,7 @@ const tools = [
     type: "function",
     function: {
       name: "getAvailability",
-      description: "Given the day, appointment type, and add-ons, returns an array of available time slots.",
+      description: "Given the day, appointment type, and add-ons, returns an array of available time slots for the given day. ",
       parameters: {
         type: "object",
         properties: {
@@ -71,7 +71,7 @@ const tools = [
     type: "function",
     function: {
       name: "bookAppointment",
-      description: "Runs script in order to book appointment returns confirmation or if it didn't work",
+      description: "Books an appointment for a client. Returns confirmation if the appointment was booked or if the slot trying to be booked is unabailable",
       parameters: {
         type: "object",
         properties: {
@@ -105,7 +105,7 @@ const tools = [
     type: "function",
     function: {
       name: "cancelAppointment",
-      description: "Cancels an appointment by the provided name. Make sure to ask for confirmation before cancelling you are going to be given the user's appointment time and info",
+      description: "Cancels an appointment by the provided date. Make sure to ask for confirmation before cancelling you are going to be given the user's appointment time and info",
       parameters: {
         type: "object",
         properties: {
@@ -115,23 +115,6 @@ const tools = [
           }
         },
         required: ["date"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "getAllAppointmentsByClientId",
-      description: "Gets all appointments for the client. This includes the appointment id, appointment type, client id, date, start time, end time, and details",
-      parameters: {
-        type: "object",
-        properties: {
-          clientId: {
-            type: "string",
-            description: "The ID of the client whose appointments are to be retrieved"
-          }
-        },
-        required: ["clientId"]
       }
     }
   },
@@ -248,7 +231,7 @@ const tools = [
     type: "function",
     function: {
       name: "getUpcomingAppointments",
-      description: "Gets the upcoming appointments for the client, sorted by date",
+      description: "Gets the upcoming appointments for the client, sorted by date. When a customer is talking about an appointment in the future you can use this tool to find that appointment",
       parameters: {
         type: "object",
         properties: {
@@ -258,7 +241,7 @@ const tools = [
           },
           limit: {
             type: "number",
-            description: "The maximum number of appointments to retrieve (optional)"
+            description: "The maximum number of appointments to retrieve (optional). Default is 5 but if you need to see farther in the future you can increase this number"
           }
         },
         required: ["clientId"]
