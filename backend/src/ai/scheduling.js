@@ -488,6 +488,8 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
         output = await rescheduleAppointmentByPhoneAndDate(client.phonenumber, args.currentDate, args.newDate, args.newStartTime);
         break;
       default:
+        const functionDetails = requiredActions.tool_calls[0].function;
+        console.log(functionDetails);
         throw new Error(`Unknown function: ${funcName}`);
     }
 
