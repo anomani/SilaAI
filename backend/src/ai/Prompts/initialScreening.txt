@@ -16,6 +16,7 @@ We take cash and etransfers only, no debit or credit card machine
 Here is context from the conversation so far:
 ${formattedThreadMessages}
 </MessageContext>
+
 If the user is just saying very basic words or small talk such as yea, sure, ok, etc. then respond with 'true'. 
 Only for specific 
 requests that you know you can not satisfy and that require human attention. 
