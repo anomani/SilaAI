@@ -726,9 +726,5 @@ async function shouldAIRespond(userMessages, thread) {
     return false; // Default to human attention if there's an error
   }
 }
-async function main() {
-  const response = await shouldAIRespond(["I want schedule the meeting?"], null);
-  console.log(response);
-}
-main();
+
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
