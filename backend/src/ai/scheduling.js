@@ -693,12 +693,14 @@ async function shouldAIRespond(userMessages, thread) {
     let initialScreeningInstructions = fs.readFileSync(initialScreeningPath, 'utf-8');
 
     const screeningMessage = Array.isArray(userMessages) ? userMessages.join('\n') : userMessages;
-    const threadMessages = await openai.beta.threads.messages.list(thread.id);
     
-    // Format thread messages into a string
-    const formattedThreadMessages = threadMessages.data.map(msg => 
-      `${msg.role}: ${msg.content[0].text.value}`
-    ).join('\n');
+    let formattedThreadMessages = '';
+    if (thread) {
+      const threadMessages = await openai.beta.threads.messages.list(thread.id);
+      formattedThreadMessages = threadMessages.data.map(msg => 
+        `${msg.role}: ${msg.content[0].text.value}`
+      ).join('\n');
+    }
 
     initialScreeningInstructions = initialScreeningInstructions.replace('${formattedThreadMessages}', formattedThreadMessages);
 
@@ -717,10 +719,16 @@ async function shouldAIRespond(userMessages, thread) {
 
     const aiDecision = response.content[0].text.trim().toLowerCase();
     console.log(`AI decision: ${aiDecision}`);
-    return aiDecision === 'true';
+      return aiDecision === 'true';
+
   } catch (error) {
     console.error("Error in shouldAIRespond:", error);
     return false; // Default to human attention if there's an error
   }
 }
+async function main() {
+  const response = await shouldAIRespond(["I want schedule the meeting?"], null);
+  console.log(response);
+}
+main();
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
