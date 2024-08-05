@@ -13,32 +13,8 @@ const handleChatRequest = async (req, res) => {
     const { message } = req.body;
     const number = "+12038324011";
     const twilio = "+18446480598";
-    const localDate = new Date().toLocaleString();
-    await saveMessage(number, twilio, message, localDate, 3367);
 
-    // Comment out the message queue system
-    /*
-    if (!messageQueue.has(number)) {
-      messageQueue.set(number, []);
-      setTimeout(async () => {
-        try {
-          const messages = messageQueue.get(number);
-          const combinedMessage = messages.join(' ');
-          const responseMessage = await handleUserInput(combinedMessage, number);
-          await saveMessage(twilio, number, responseMessage, new Date().toLocaleString(), 3367);
-          messageQueue.delete(number);
-        } catch (error) {
-          console.error('Error handling delayed chat request:', error);
-        }
-      }, 60000);
-    }
-    messageQueue.get(number).push(message);
-    */
-
-    // Process the message immediately
-    // const responseMessage = await handleUserInputClaude(message, number);
     const responseMessage = await handleUserInput(message, number);
-    await saveMessage(twilio, number, responseMessage, new Date().toLocaleString(), 3367);
 
     // Respond to the client with the actual response
     res.json({ message: responseMessage });
