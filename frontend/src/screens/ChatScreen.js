@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, SafeAreaView, StatusBar } from 'react-native';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, SafeAreaView, StatusBar, Keyboard } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { handleUserInput } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../components/ChatContext';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const TypingIndicator = () => {
   const [dots] = useState([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]);
@@ -53,6 +52,8 @@ const ChatScreen = () => {
   const [showIntro, setShowIntro] = useState(true);
   const [isAITyping, setIsAITyping] = useState(false);
   const flatListRef = useRef(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -60,6 +61,29 @@ const ChatScreen = () => {
       flatListRef.current?.scrollToEnd({ animated: true });
     }
   }, [messages]);
+
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const keyboardWillHide = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   const suggestedPrompts = [
     "Create a list of clients who have not shown up in more than 6 months",
@@ -101,9 +125,11 @@ const ChatScreen = () => {
   };
 
   const renderItem = ({ item }) => (
-    <LinearGradient
-      colors={item.sender === 'user' ? ['#195de6', '#195de6'] : ['#333333', '#4A4A4A']}
-      style={[styles.messageContainer, item.sender === 'user' ? styles.userMessage : styles.botMessage]}
+    <View
+      style={[
+        styles.messageContainer,
+        item.sender === 'user' ? styles.userMessage : styles.botMessage
+      ]}
     >
       {item.sender === 'bot' && item.text.includes('Custom list') ? (
         <Text style={styles.messageText}>
@@ -122,7 +148,7 @@ const ChatScreen = () => {
       ) : (
         <Text style={styles.messageText}>{item.text}</Text>
       )}
-    </LinearGradient>
+    </View>
   );
 
   const renderIntro = () => (
@@ -145,20 +171,23 @@ const ChatScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <LinearGradient colors={['#121214', '#1e1e20']} style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>UZI AI</Text>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={[
+          styles.contentContainer, 
+          keyboardVisible && styles.contentContainerKeyboardVisible
+        ]}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.headerTitleContainer}>
+              <Text style={styles.headerTitle}>UZI AI</Text>
+            </View>
           </View>
-        </View>
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.keyboardAvoidingView}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : -200}
-        >
           <View style={styles.chatListContainer}>
             {showIntro && messages.length === 0 ? (
               renderIntro()
@@ -168,13 +197,20 @@ const ChatScreen = () => {
                 data={messages}
                 renderItem={renderItem}
                 keyExtractor={(item, index) => index.toString()}
-                contentContainerStyle={styles.chatContainer}
+                contentContainerStyle={[
+                  styles.chatContainer,
+                  { paddingBottom: keyboardHeight + 16 }
+                ]}
                 onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
                 onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
               />
             )}
-            {isAITyping && <TypingIndicator />}
           </View>
+          {isAITyping && (
+            <View style={styles.typingIndicatorContainer}>
+              <TypingIndicator />
+            </View>
+          )}
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
@@ -187,8 +223,8 @@ const ChatScreen = () => {
               <Ionicons name="send" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </LinearGradient>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -196,11 +232,18 @@ const ChatScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#121214', // Match the starting color of your gradient
+    backgroundColor: '#121214',
   },
   container: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: '#121214',
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  contentContainerKeyboardVisible: {
+    justifyContent: 'flex-start',
   },
   header: {
     flexDirection: 'row',
@@ -223,9 +266,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
   },
   chatListContainer: {
     flex: 1,
@@ -251,10 +291,12 @@ const styles = StyleSheet.create({
   userMessage: {
     alignSelf: 'flex-end',
     borderBottomRightRadius: 5,
+    backgroundColor: '#195de6',
   },
   botMessage: {
     alignSelf: 'flex-start',
     borderBottomLeftRadius: 5,
+    backgroundColor: '#333333',
   },
   messageText: {
     color: '#fff',
@@ -264,6 +306,10 @@ const styles = StyleSheet.create({
     color: '#4a90e2',
     textDecorationLine: 'underline',
   },
+  typingIndicatorContainer: {
+    padding: 10,
+    paddingBottom: 0,
+  },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -271,7 +317,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.05)',
     backgroundColor: 'rgba(18, 18, 20, 0.9)',
-    backdropFilter: 'blur(10px)',
   },
   input: {
     flex: 1,

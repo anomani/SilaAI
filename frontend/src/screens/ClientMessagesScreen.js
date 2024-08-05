@@ -335,6 +335,12 @@ const ClientMessagesScreen = ({ route }) => {
     });
   };
 
+  const renderEmptyConversation = () => (
+    <View style={styles.emptyConversationContainer}>
+      <Text style={styles.emptyConversationText}>Start the conversation!</Text>
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -345,25 +351,29 @@ const ClientMessagesScreen = ({ route }) => {
         styles.contentContainer, 
         keyboardVisible && styles.contentContainerKeyboardVisible
       ]}>
-        <FlatList
-          ref={flatListRef}
-          data={groupMessagesByDate([...messages, ...localMessages])}
-          renderItem={renderItem}
-          keyExtractor={useCallback((item) => item.date, [])}
-          initialNumToRender={10}
-          maxToRenderPerBatch={10}
-          windowSize={10}
-          removeClippedSubviews={true}
-          onContentSizeChange={scrollToBottom}
-          onLayout={scrollToBottom}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          style={styles.messageList}
-          contentContainerStyle={[
-            styles.messageListContent,
-            { paddingBottom: keyboardHeight + 16 }
-          ]}
-        />
+        {messages.length === 0 && localMessages.length === 0 ? (
+          renderEmptyConversation()
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={groupMessagesByDate([...messages, ...localMessages])}
+            renderItem={renderItem}
+            keyExtractor={useCallback((item) => item.date, [])}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            removeClippedSubviews={true}
+            onContentSizeChange={scrollToBottom}
+            onLayout={scrollToBottom}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            style={styles.messageList}
+            contentContainerStyle={[
+              styles.messageListContent,
+              { paddingBottom: keyboardHeight + 16 }
+            ]}
+          />
+        )}
         {showScrollButton && (
           <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
             <Text style={styles.scrollButtonText}>↓</Text>
@@ -555,6 +565,16 @@ const styles = StyleSheet.create({
     color: '#9da6b8',
     fontSize: 12,
     marginHorizontal: 10,
+  },
+  emptyConversationContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyConversationText: {
+    color: '#9da6b8',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 

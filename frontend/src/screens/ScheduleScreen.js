@@ -1,23 +1,42 @@
-import React, { useState } from 'react';
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
 import { handleChat } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
+import { useChat } from '../components/ChatContext';
 
 const ScheduleScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([]);
+  const { scheduleMessages, setScheduleMessages } = useChat();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+      setKeyboardVisible(true);
+    });
+    const keyboardWillHide = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
 
   const handleSend = async () => {
     if (message.trim() === '') return;
 
-    const newMessages = [...messages, { text: message, sender: 'user' }];
-    setMessages(newMessages);
+    const newMessages = [...scheduleMessages, { text: message, sender: 'user' }];
+    setScheduleMessages(newMessages);
     setMessage('');
 
     try {
       const response = await handleChat(message);
       const responseMessage = typeof response === 'string' ? response : response.message;
-      setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
+      setScheduleMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -30,26 +49,38 @@ const ScheduleScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={messages}
-        renderItem={renderItem}
-        keyExtractor={(item, index) => index.toString()}
-        contentContainerStyle={styles.chatContainer}
-      />
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          value={message}
-          onChangeText={setMessage}
-          placeholder="Type a message"
-          placeholderTextColor="#888"
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+    >
+      <View style={[
+        styles.contentContainer, 
+        keyboardVisible && styles.contentContainerKeyboardVisible
+      ]}>
+        <FlatList
+          data={scheduleMessages}
+          renderItem={renderItem}
+          keyExtractor={(item, index) => index.toString()}
+          contentContainerStyle={[
+            styles.chatContainer,
+            { paddingBottom: keyboardHeight }
+          ]}
         />
-        <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
-          <Ionicons name="send" size={24} color="#007AFF" />
-        </TouchableOpacity>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Type a message"
+            placeholderTextColor="#888"
+          />
+          <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
+            <Ionicons name="send" size={24} color="#007AFF" />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -57,10 +88,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1c1c1e',
-    paddingTop: 50, // Add paddingTop
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  contentContainerKeyboardVisible: {
+    justifyContent: 'flex-start',
   },
   chatContainer: {
     padding: 10,
+    flexGrow: 1,
   },
   messageContainer: {
     marginVertical: 5,
