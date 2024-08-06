@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
 import { bookAppointmentWithAcuity, searchClients } from '../services/api';
-import { Modal, FlatList } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 const AddAppointmentScreen = ({ navigation }) => {
   const [appointment, setAppointment] = useState({
@@ -33,19 +33,19 @@ const AddAppointmentScreen = ({ navigation }) => {
 
   const handleDateChange = (event, selectedDate) => {
     const currentDate = selectedDate || appointment.date;
-    setShowDatePicker(Platform.OS === 'ios');
+    setShowDatePicker(false);
     setAppointment({ ...appointment, date: currentDate });
   };
 
   const handleStartTimeChange = (event, selectedTime) => {
     const currentTime = selectedTime || appointment.startTime;
-    setShowStartTimePicker(Platform.OS === 'ios');
+    setShowStartTimePicker(false);
     setAppointment({ ...appointment, startTime: currentTime });
   };
 
   const handleEndTimeChange = (event, selectedTime) => {
     const currentTime = selectedTime || appointment.endTime;
-    setShowEndTimePicker(Platform.OS === 'ios');
+    setShowEndTimePicker(false);
     setAppointment({ ...appointment, endTime: currentTime });
   };
 
@@ -163,140 +163,191 @@ const AddAppointmentScreen = ({ navigation }) => {
     </Modal>
   );
 
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Text style={styles.backButtonText}>← Back</Text>
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Add Appointment</Text>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Client Name</Text>
-      <Autocomplete
-        data={filteredClients}
-        defaultValue={appointment.clientName}
-        onChangeText={(value) => handleInputChange('clientName', value)}
-        flatListProps={{
-          keyExtractor: item => item.id,
-          renderItem: ({ item }) => (
-            <TouchableOpacity onPress={() => handleSelectClient(item)}>
-              <Text style={styles.itemText}>{item.firstname} {item.lastname}</Text>
-            </TouchableOpacity>
-          ),
-        }}
-        inputContainerStyle={[styles.inputContainer, { backgroundColor: '#2c2c2e', borderColor: '#444', borderWidth: 1, borderRadius: 8 }]}
-        placeholder="Client Name"
-        placeholderTextColor="#888"
-        renderTextInput={(props) => (
-          <TextInput
-            {...props}
-            style={[styles.input, { color: '#fff' }]}
+    <SafeAreaView style={styles.safeArea}>
+      {renderHeader()}
+      <KeyboardAwareScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        resetScrollToCoords={{ x: 0, y: 0 }}
+        scrollEnabled={true}
+      >
+        <Text style={styles.label}>Client Name</Text>
+        <Autocomplete
+          data={filteredClients}
+          defaultValue={appointment.clientName}
+          onChangeText={(value) => handleInputChange('clientName', value)}
+          flatListProps={{
+            keyExtractor: item => item.id,
+            renderItem: ({ item }) => (
+              <TouchableOpacity onPress={() => handleSelectClient(item)}>
+                <Text style={styles.itemText}>{item.firstname} {item.lastname}</Text>
+              </TouchableOpacity>
+            ),
+          }}
+          inputContainerStyle={[styles.inputContainer, { backgroundColor: '#2c2c2e', borderColor: '#444', borderWidth: 1, borderRadius: 8 }]}
+          placeholder="Client Name"
+          placeholderTextColor="#888"
+          renderTextInput={(props) => (
+            <TextInput
+              {...props}
+              style={[styles.input, { color: '#fff' }]}
+            />
+          )}
+          listStyle={styles.listStyle}
+        />
+        <Text style={styles.label}>Date</Text>
+        <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+          <Text style={[styles.input, styles.inputText]}>
+            {appointment.date.toLocaleDateString('en-US')}
+          </Text>
+        </TouchableOpacity>
+        {showDatePicker && (
+          <DateTimePicker
+            testID="datePicker"
+            value={appointment.date}
+            mode="date"
+            is24Hour={true}
+            display="default"
+            onChange={handleDateChange}
+            themeVariant="dark"
           />
         )}
-        listStyle={styles.listStyle}
-      />
-      <Text style={styles.label}>Date</Text>
-      <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-        <Text style={[styles.input, styles.inputText]}>
-          {appointment.date.toLocaleDateString('en-US')}
-        </Text>
-      </TouchableOpacity>
-      {showDatePicker && (
-        <DateTimePicker
-          testID="datePicker"
-          value={appointment.date}
-          mode="date"
-          is24Hour={true}
-          display="default"
-          onChange={handleDateChange}
-          themeVariant="dark"
+        <Text style={styles.label}>Starts at</Text>
+        <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
+          <Text style={[styles.input, styles.inputText]}>
+            {appointment.startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </TouchableOpacity>
+        {showStartTimePicker && (
+          <DateTimePicker
+            testID="startTimePicker"
+            value={appointment.startTime}
+            mode="time"
+            is24Hour={true}
+            display="default"
+            onChange={handleStartTimeChange}
+            themeVariant="dark"
+          />
+        )}
+        <Text style={styles.label}>Ends at</Text>
+        <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
+          <Text style={[styles.input, styles.inputText]}>
+            {appointment.endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </TouchableOpacity>
+        {showEndTimePicker && (
+          <DateTimePicker
+            testID="endTimePicker"
+            value={appointment.endTime}
+            mode="time"
+            is24Hour={true}
+            display="default"
+            onChange={handleEndTimeChange}
+            themeVariant="dark"
+          />
+        )}
+        <Text style={styles.label}>Appointment Type</Text>
+        <TouchableOpacity 
+          style={styles.input}
+          onPress={() => setShowAppointmentTypePicker(true)}
+        >
+          <Text style={[styles.inputText, { color: '#fff' }]}>
+            {appointmentTypes.find(type => type.value === appointment.appointmentType)?.label || 'Select Appointment Type'}
+          </Text>
+        </TouchableOpacity>
+        {renderAppointmentTypePicker()}
+        <Text style={styles.label}>Add details</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          value={appointment.details}
+          onChangeText={(value) => handleInputChange('details', value)}
+          placeholder="Notes"
+          placeholderTextColor="#888"
+          multiline
+          returnKeyType="done"
+          blurOnSubmit={true}
+          onSubmitEditing={() => Keyboard.dismiss()}
         />
-      )}
-      <Text style={styles.label}>Starts at</Text>
-      <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
-        <Text style={[styles.input, styles.inputText]}>
-          {appointment.startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-      </TouchableOpacity>
-      {showStartTimePicker && (
-        <DateTimePicker
-          testID="startTimePicker"
-          value={appointment.startTime}
-          mode="time"
-          is24Hour={true}
-          display="default"
-          onChange={handleStartTimeChange}
-          themeVariant="dark"
+        <Text style={styles.label}>Price</Text>
+        <TextInput
+          style={styles.input}
+          value={appointment.price}
+          onChangeText={(value) => handleInputChange('price', value)}
+          placeholder="Price"
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+          returnKeyType="done"
+          onSubmitEditing={() => Keyboard.dismiss()}
         />
-      )}
-      <Text style={styles.label}>Ends at</Text>
-      <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
-        <Text style={[styles.input, styles.inputText]}>
-          {appointment.endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-      </TouchableOpacity>
-      {showEndTimePicker && (
-        <DateTimePicker
-          testID="endTimePicker"
-          value={appointment.endTime}
-          mode="time"
-          is24Hour={true}
-          display="default"
-          onChange={handleEndTimeChange}
-          themeVariant="dark"
-        />
-      )}
-      <Text style={styles.label}>Appointment Type</Text>
-      <TouchableOpacity 
-        style={styles.input}
-        onPress={() => setShowAppointmentTypePicker(true)}
-      >
-        <Text style={[styles.inputText, { color: '#fff' }]}>
-          {appointmentTypes.find(type => type.value === appointment.appointmentType)?.label || 'Select Appointment Type'}
-        </Text>
-      </TouchableOpacity>
-      {renderAppointmentTypePicker()}
-      <Text style={styles.label}>Add details</Text>
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        value={appointment.details}
-        onChangeText={(value) => handleInputChange('details', value)}
-        placeholder="Notes"
-        placeholderTextColor="#888"
-        multiline
-      />
-      <Text style={styles.label}>Price</Text>
-      <TextInput
-        style={styles.input}
-        value={appointment.price}
-        onChangeText={(value) => handleInputChange('price', value)}
-        placeholder="Price"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-      />
-      <Button title="Add Appointment" onPress={handleAddAppointment} />
-    </View>
+        <Button title="Add Appointment" onPress={handleAddAppointment} />
+      </KeyboardAwareScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#1c1c1e',
-    paddingTop: 50,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 16,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
+    padding: 16,
   },
   label: {
     fontSize: 16,
-    marginVertical: 8,
-    color: '#fff'
+    marginBottom: 8,
+    color: '#fff',
+    fontWeight: 'bold',
   },
   input: {
     borderWidth: 1,
     borderColor: '#444',
-    padding: 8,
-    marginVertical: 8,
+    padding: 12,
+    marginBottom: 16,
     borderRadius: 8,
     backgroundColor: '#2c2c2e',
-    color: '#fff'
+    color: '#fff',
+    fontSize: 16,
   },
   textArea: {
     height: 100,
-    textAlignVertical: 'top'
+    textAlignVertical: 'top',
   },
   inputContainer: {
     marginVertical: 8

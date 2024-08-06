@@ -39,6 +39,7 @@ const ScheduleScreen = ({ navigation }) => {
       setScheduleMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
     } catch (error) {
       console.error('Error sending message:', error);
+      setScheduleMessages([...newMessages, { text: "Sorry, an error occurred. Please try again.", sender: 'bot' }]);
     }
   };
 
