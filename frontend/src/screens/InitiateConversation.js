@@ -4,9 +4,9 @@ import { sendMessagesToSelectedClients, updateClientOutreachDate, setAIPrompt } 
 
 const presetPrompts = [
   {
-    title: 'General Follow-up',
-    content: 'Follow up with the client about their recent interaction and see if they need any assistance.',
-    preview: 'Follow up with the client about their recent interaction...'
+    title: 'Rescheduling',
+    content: 'Ask client to reschedule their appointment. Use the getUpcomingAppointment tool to get the appointment details for the appointment that fits the context of the conversation. Then use this appointment information to reschedule this appointment',
+    preview: 'Ask client to reschedule their appointment....'
   },
   {
     title: 'Appointment Reminder',
