@@ -5,13 +5,13 @@ const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
 
 async function createNewAppointment(req, res) {
   try {
-    const { appointmentType, date, startTime, endTime, clientId, details, price } = req.body;
+    const { appointmentType, date, startTime, endTime, clientId, details, price, addons } = req.body;
     console.log(req.body)
     if (!appointmentType || !date || !startTime || !endTime || !clientId || !price) {
       return res.status(400).send('Missing required fields');
     }
 
-    const result = await createAppointment(appointmentType, date, startTime, endTime, clientId, details, price);
+    const result = await createAppointment(appointmentType, null, date, startTime, endTime, clientId, details, price, addons);
 
     res.status(201).json(result);
   } catch (error) {

@@ -1,13 +1,13 @@
 const dbUtils = require('./dbUtils');
 
-async function createAppointment(appointmentType, acuityId, date, startTime, endTime, clientId, details, price) {
+async function createAppointment(appointmentType, acuityId, date, startTime, endTime, clientId, details, price, addons) {
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO Appointment (appointmentType, acuityId, date, startTime, endTime, clientId, details, price)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO Appointment (appointmentType, acuityId, date, startTime, endTime, clientId, details, price, addons)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         RETURNING id
     `;
-    const values = [appointmentType, acuityId, date, startTime, endTime, clientId, details, price];
+    const values = [appointmentType, acuityId, date, startTime, endTime, clientId, details, price, addons];
     try {
         const res = await db.query(sql, values);
         console.log('Appointment Created with ID:', res.rows[0].id);

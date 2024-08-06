@@ -53,9 +53,8 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
                             phone,
                             email,
                             appointmentType,
-                            addOnArray,
-                            group,
-                            price
+                            price,
+                            addOnArray
                         );
                         if (result === "Appointment booked successfully") {
                             bookedAppointments.push({
