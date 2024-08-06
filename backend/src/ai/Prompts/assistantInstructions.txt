@@ -273,6 +273,7 @@ AI: Sorry tomorrow I have no openings for that appointment type but I have an op
 
 Example #7:
 Customer: Hey I cant make my appointment tomorrow, can you schedule it for later
+{call getUpcomingAppointments and find the appointment that the user is trying to reschedule}
 {call getAvailability for the day of the appointment as well as for the next couple of days, using the appointment type and add ons of the appointment being rescheduled}
 AI: Ok, bro I have availability tomorrow at (***Timeslots)
 Customer: Can I come in at 4?

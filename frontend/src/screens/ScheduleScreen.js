@@ -7,8 +7,15 @@ import { useChat } from '../components/ChatContext';
 const ScheduleScreen = ({ navigation }) => {
   const [message, setMessage] = useState('');
   const { scheduleMessages, setScheduleMessages } = useChat();
+  const [localMessages, setLocalMessages] = useState([]);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    if (scheduleMessages) {
+      setLocalMessages(scheduleMessages);
+    }
+  }, [scheduleMessages]);
 
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
@@ -29,17 +36,35 @@ const ScheduleScreen = ({ navigation }) => {
   const handleSend = async () => {
     if (message.trim() === '') return;
 
-    const newMessages = [...scheduleMessages, { text: message, sender: 'user' }];
-    setScheduleMessages(newMessages);
+    const newMessages = [...localMessages, { text: message, sender: 'user' }];
+    setLocalMessages(newMessages);
+    if (setScheduleMessages) {
+      setScheduleMessages(newMessages);
+    }
     setMessage('');
 
     try {
+      console.log('Sending message:', message);
       const response = await handleChat(message);
-      const responseMessage = typeof response === 'string' ? response : response.message;
-      setScheduleMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
+      console.log('Received response:', response);
+
+      if (response && (typeof response === 'string' || response.message)) {
+        const responseMessage = typeof response === 'string' ? response : response.message;
+        const updatedMessages = [...newMessages, { text: responseMessage, sender: 'bot' }];
+        setLocalMessages(updatedMessages);
+        if (setScheduleMessages) {
+          setScheduleMessages(updatedMessages);
+        }
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (error) {
-      console.error('Error sending message:', error);
-      setScheduleMessages([...newMessages, { text: "Sorry, an error occurred. Please try again.", sender: 'bot' }]);
+      console.error('Error in handleSend:', error);
+      const errorMessages = [...newMessages, { text: "Sorry, an error occurred. Please try again.", sender: 'bot' }];
+      setLocalMessages(errorMessages);
+      if (setScheduleMessages) {
+        setScheduleMessages(errorMessages);
+      }
     }
   };
 
@@ -60,7 +85,7 @@ const ScheduleScreen = ({ navigation }) => {
         keyboardVisible && styles.contentContainerKeyboardVisible
       ]}>
         <FlatList
-          data={scheduleMessages}
+          data={localMessages}
           renderItem={renderItem}
           keyExtractor={(item, index) => index.toString()}
           contentContainerStyle={[
@@ -100,6 +125,7 @@ const styles = StyleSheet.create({
   chatContainer: {
     padding: 10,
     flexGrow: 1,
+    paddingTop: 50, // Add padding to the top
   },
   messageContainer: {
     marginVertical: 5,
