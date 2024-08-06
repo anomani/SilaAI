@@ -9,6 +9,9 @@ Current date is ${currentDate} and the day of the week is ${day}
 Only change the response if the response includes a date and for an appointment, availability, etc. Otherwise 
 dont change anything, just fix the tone. If the response is user then just respond with user
 
+Here's the conversation history:
+${formattedThreadMessages}
+
 Please check for the following:
 1. If the response is an appointment confirmation 
 of a client then make sure that the client has that appointment scheduled 

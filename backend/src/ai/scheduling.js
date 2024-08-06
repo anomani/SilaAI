@@ -591,7 +591,7 @@ async function handleUserInput(userMessages, phoneNumber) {
           if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
             return 'user';
           }
-          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client);
+          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
           return verifiedResponse
           
           // For now, return the assistant's message directly
@@ -626,7 +626,7 @@ function calculateTotalDuration(appointmentType, addOnArray) {
   return appointmentDuration + addOnsDuration;
 }
 
-async function verifyResponse(response, client) {
+async function verifyResponse(response, client, thread) {
   console.log(`Verifying response: ${response}`);
   let verificationThread;
   try {
@@ -634,6 +634,16 @@ async function verifyResponse(response, client) {
     let verificationPrompt = fs.readFileSync(verificationPromptPath, 'utf8');
     const currentDate = new Date(getCurrentDate());
     const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
+
+    // Get formatted thread messages
+    let formattedThreadMessages = '';
+    if (thread) {
+      const threadMessages = await openai.beta.threads.messages.list(thread.id);
+      formattedThreadMessages = threadMessages.data.map(msg => 
+        `${msg.role}: ${msg.content[0].text.value}`
+      ).join('\n');
+    }
+
     // Replace placeholders with actual values
     verificationPrompt = verificationPrompt
       .replace('${client.firstname}', client.firstname)
@@ -642,6 +652,7 @@ async function verifyResponse(response, client) {
       .replace('${response}', response)
       .replace('${currentDate}', currentDate)
       .replace('${day}', day)
+      .replace('${formattedThreadMessages}', formattedThreadMessages);
 
     const assistant = await openai.beta.assistants.create({
       instructions: verificationPrompt,
