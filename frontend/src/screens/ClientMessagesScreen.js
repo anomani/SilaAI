@@ -149,28 +149,44 @@ const ClientMessagesScreen = ({ route }) => {
     }
   };
 
-  const handleSendMessage = async (messageToSend = newMessage) => {
-    if (messageToSend.trim() === '' || !clientDetails) return;
+  const handleSendMessage = async () => {
+    console.log('handleSendMessage called', { newMessage, clientDetails });
+
+    if (typeof newMessage !== 'string' || newMessage.trim() === '') {
+      console.log('newMessage is not a valid string', newMessage);
+      return;
+    }
+
+    if (!clientDetails) {
+      console.log('clientDetails is null or undefined');
+      return;
+    }
+
     const tempId = `temp-${Date.now()}`;
     try {
       const recipient = clientDetails.phonenumber;
+      console.log('Recipient:', recipient);
+
       const adjustedDate = new Date();
       adjustedDate.setHours(adjustedDate.getHours() - 4);
       const adjustedDateString = adjustedDate.toLocaleString();
+      
       const tempMessage = {
         id: tempId,
-        body: messageToSend,
+        body: newMessage,
         fromtext: '+18446480598',
         totext: recipient,
         date: adjustedDateString,
         is_ai: false,
       };
 
+      console.log('Adding temp message to localMessages', tempMessage);
       setLocalMessages(prev => [...prev, tempMessage]);
       setNewMessage('');
       scrollToBottom();
 
-      await sendMessage(recipient, messageToSend, false, true);
+      console.log('Sending message via API');
+      await sendMessage(recipient, newMessage, false, true);
       
       console.log('Message sent successfully');
 
@@ -398,10 +414,13 @@ const ClientMessagesScreen = ({ route }) => {
             />
             <TouchableOpacity 
               style={styles.sendButton} 
-              onPress={handleSendMessage}
-              disabled={!clientDetails}
+              onPress={() => {
+                console.log('Send button pressed');
+                handleSendMessage();
+              }}
+              disabled={!clientDetails || newMessage.trim() === ''}
             >
-              <Icon name="send" size={20} color={clientDetails ? "#195de6" : "#9da6b8"} />
+              <Icon name="send" size={20} color={(clientDetails && newMessage.trim() !== '') ? "#195de6" : "#9da6b8"} />
             </TouchableOpacity>
           </View>
         </View>
