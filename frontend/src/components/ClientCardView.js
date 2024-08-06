@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Modal, Alert, TextInput, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Modal, Alert, TextInput, Switch, Keyboard } from 'react-native';
 import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import avatarImage from '../../assets/avatar.png';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
@@ -15,7 +14,7 @@ const ClientCardView = ({ appointment }) => {
   const [paymentData, setPaymentData] = useState({
     paid: false,
     paymentMethod: 'cash',
-    tipAmount: '0',
+    tipAmount: '',
   });
   const [newNote, setNewNote] = useState('');
   const [showAllNotes, setShowAllNotes] = useState(false);
@@ -77,9 +76,9 @@ const ClientCardView = ({ appointment }) => {
 
   const handlePaymentPress = () => {
     setPaymentData({
-      paid: false,
-      paymentMethod: 'cash',
-      tipAmount: '0',
+      paid: appointment.paid || false,
+      paymentMethod: appointment.paymentmethod || 'cash',
+      tipAmount: appointment.tipamount ? appointment.tipamount.toString() : '',
     });
     setIsPaymentModalVisible(true);
   };
@@ -87,15 +86,21 @@ const ClientCardView = ({ appointment }) => {
   const handlePaymentSubmit = async () => {
     if (appointment) {
       try {
-        await updateAppointmentPayment(
+        const updatedAppointment = await updateAppointmentPayment(
           appointment.id,
           paymentData.paid,
           paymentData.tipAmount ? parseFloat(paymentData.tipAmount) : 0,
           paymentData.paymentMethod
         );
-        // Refresh appointments after updating payment
-        fetchAppointments();
+        // Update the local appointment state with the new data
+        Object.assign(appointment, {
+          paid: updatedAppointment.paid,
+          paymentmethod: updatedAppointment.paymentmethod,
+          tipamount: updatedAppointment.tipamount,
+        });
         setIsPaymentModalVisible(false);
+        // Trigger a re-render
+        setPaymentData({ ...paymentData });
       } catch (error) {
         console.error('Error updating payment:', error);
         Alert.alert('Error', 'Failed to update payment. Please try again.');
@@ -103,69 +108,99 @@ const ClientCardView = ({ appointment }) => {
     }
   };
 
-  const renderPaymentModal = () => (
-    <Modal
-      transparent={true}
-      visible={isPaymentModalVisible}
-      onRequestClose={() => setIsPaymentModalVisible(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.paymentModalContent}>
-          <Text style={styles.paymentModalTitle}>Log Payment</Text>
-          
-          <View style={styles.paymentOption}>
-            <Text style={styles.paymentOptionLabel}>Paid:</Text>
-            <Switch
-              value={paymentData.paid}
-              onValueChange={(value) => setPaymentData({ ...paymentData, paid: value })}
-            />
-          </View>
+  const renderPaymentModal = () => {
+    const [displayTip, setDisplayTip] = useState(paymentData.tipAmount || '');
 
-          {paymentData.paid && (
-            <>
-              <View style={styles.paymentOption}>
+    useEffect(() => {
+      setDisplayTip(paymentData.tipAmount || '');
+    }, [paymentData.tipAmount]);
+
+    const handleTipChange = (value) => {
+      // Remove any non-numeric characters except for the decimal point
+      const numericValue = value.replace(/[^0-9.]/g, '');
+      
+      // Ensure only one decimal point
+      const parts = numericValue.split('.');
+      const formattedValue = parts[0] + (parts.length > 1 ? '.' + parts[1].slice(0, 2) : '');
+      
+      setDisplayTip(formattedValue);
+      setPaymentData({ ...paymentData, tipAmount: formattedValue });
+    };
+
+    return (
+      <Modal
+        transparent={true}
+        visible={isPaymentModalVisible}
+        onRequestClose={() => setIsPaymentModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.paymentModalContent}>
+            <Text style={styles.paymentModalTitle}>Log Payment</Text>
+            
+            <View style={styles.paymentOption}>
+              <Text style={styles.paymentOptionLabel}>Paid:</Text>
+              <Switch
+                value={paymentData.paid}
+                onValueChange={(value) => setPaymentData({ ...paymentData, paid: value })}
+              />
+            </View>
+
+            {paymentData.paid && (
+              <>
                 <Text style={styles.paymentOptionLabel}>Payment Method:</Text>
-                <Picker
-                  selectedValue={paymentData.paymentMethod}
-                  style={styles.paymentMethodPicker}
-                  onValueChange={(itemValue) => setPaymentData({ ...paymentData, paymentMethod: itemValue })}
-                >
-                  <Picker.Item label="Cash" value="cash" />
-                  <Picker.Item label="E-Transfer" value="e-transfer" />
-                </Picker>
-              </View>
+                <View style={styles.paymentMethodOptions}>
+                  {['cash', 'e-transfer'].map((method) => (
+                    <TouchableOpacity
+                      key={method}
+                      style={styles.paymentMethodOption}
+                      onPress={() => setPaymentData({ ...paymentData, paymentMethod: method })}
+                    >
+                      <View style={styles.radioButton}>
+                        {paymentData.paymentMethod === method && <View style={styles.radioButtonInner} />}
+                      </View>
+                      <Text style={styles.paymentMethodText}>{method === 'cash' ? 'Cash' : 'E-Transfer'}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
-              <View style={styles.paymentOption}>
-                <Text style={styles.paymentOptionLabel}>Tip Amount:</Text>
-                <TextInput
-                  style={styles.tipInput}
-                  value={paymentData.tipAmount}
-                  onChangeText={(value) => setPaymentData({ ...paymentData, tipAmount: value })}
-                  keyboardType="numeric"
-                  placeholder="0.00"
-                />
-              </View>
-            </>
-          )}
+                <View style={styles.paymentOption}>
+                  <Text style={styles.paymentOptionLabel}>Tip Amount:</Text>
+                  <View style={styles.tipInputContainer}>
+                    <Text style={styles.dollarSign}>$</Text>
+                    <TextInput
+                      style={styles.tipInput}
+                      value={displayTip}
+                      onChangeText={handleTipChange}
+                      keyboardType="numeric"
+                      placeholder="0.00"
+                      placeholderTextColor="#999"
+                      returnKeyType="done"
+                      onSubmitEditing={() => Keyboard.dismiss()}
+                    />
+                  </View>
+                </View>
+              </>
+            )}
 
-          <View style={styles.paymentModalButtons}>
-            <TouchableOpacity 
-              style={[styles.paymentModalButton, styles.cancelButton]} 
-              onPress={() => setIsPaymentModalVisible(false)}
-            >
-              <Text style={styles.paymentModalButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.paymentModalButton, styles.submitButton]} 
-              onPress={handlePaymentSubmit}
-            >
-              <Text style={styles.paymentModalButtonText}>Submit</Text>
-            </TouchableOpacity>
+            <View style={styles.paymentModalButtons}>
+              <TouchableOpacity 
+                style={[styles.paymentModalButton, styles.cancelButton]} 
+                onPress={() => setIsPaymentModalVisible(false)}
+              >
+                <Text style={styles.paymentModalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.paymentModalButton, styles.submitButton]} 
+                onPress={handlePaymentSubmit}
+              >
+                <Text style={styles.paymentModalButtonText}>Submit</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
-  );
+      </Modal>
+    );
+  };
 
   const addNote = async () => {
     try {
@@ -290,6 +325,11 @@ const ClientCardView = ({ appointment }) => {
         {/* Payment Status and Tip Amount */}
         {appointment.paid && (
           <View style={styles.paymentInfoContainer}>
+            <View style={styles.paymentMethodContainer}>
+              <Text style={styles.paymentMethodText}>
+                {appointment.paymentmethod === 'cash' ? 'Cash' : 'E-Transfer'}
+              </Text>
+            </View>
             <View style={styles.paidStatusContainer}>
               <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
               <Text style={styles.paidStatusText}>Paid</Text>
@@ -667,6 +707,17 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     zIndex: 1,
   },
+  paymentMethodContainer: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    padding: 5,
+    borderRadius: 15,
+    marginBottom: 5,
+  },
+  paymentMethodText: {
+    color: '#007AFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
   paidStatusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -706,46 +757,88 @@ const styles = StyleSheet.create({
   },
   paymentModalContent: {
     backgroundColor: '#2c2c2e',
-    padding: 20,
-    borderRadius: 8,
+    padding: 24,
+    borderRadius: 16,
     width: '90%',
+    maxWidth: 400,
   },
   paymentModalTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 16,
+    marginBottom: 24,
+    textAlign: 'center',
   },
   paymentOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'space-between',
+    marginBottom: 24,
   },
   paymentOptionLabel: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#fff',
+    marginBottom: 12,
   },
-  paymentMethodPicker: {
-    width: '50%',
+  paymentMethodOptions: {
+    marginBottom: 24,
+  },
+  paymentMethodOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  radioButton: {
+    height: 24,
+    width: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  radioButtonInner: {
+    height: 12,
+    width: 12,
+    borderRadius: 6,
+    backgroundColor: '#007AFF',
+  },
+  paymentMethodText: {
     color: '#fff',
+    fontSize: 18,
+  },
+  tipInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  dollarSign: {
+    color: '#fff',
+    fontSize: 18,
+    marginRight: 4,
   },
   tipInput: {
-    width: '50%',
     borderWidth: 1,
     borderColor: '#444',
     padding: 8,
-    borderRadius: 4,
+    borderRadius: 8,
     color: '#fff',
+    backgroundColor: '#3a3a3c',
+    fontSize: 18,
+    width: '70%',
+    textAlign: 'right',
   },
   paymentModalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 20,
+    marginTop: 24,
   },
   paymentModalButton: {
-    padding: 10,
-    borderRadius: 4,
-    width: '45%',
+    padding: 16,
+    borderRadius: 8,
+    width: '48%',
   },
   cancelButton: {
     backgroundColor: '#444',
@@ -754,9 +847,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
   },
   paymentModalButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#fff',
     textAlign: 'center',
+    fontWeight: 'bold',
   },
   addNoteModalContent: {
     backgroundColor: '#2c2c2e',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Button, SafeAreaView } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Button, SafeAreaView, Keyboard } from 'react-native';
 import { getClients } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -32,6 +32,11 @@ const ClientListScreen = () => {
     </TouchableOpacity>
   );
 
+  const handleSearchSubmit = () => {
+    // Dismiss the keyboard
+    Keyboard.dismiss();
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -42,6 +47,8 @@ const ClientListScreen = () => {
             placeholderTextColor="white"
             value={search}
             onChangeText={setSearch}
+            returnKeyType="done"
+            onSubmitEditing={handleSearchSubmit}
           />
           <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('AddClient')}>
             <Ionicons name="add-circle" size={24} color="#007AFF" />
