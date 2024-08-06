@@ -351,9 +351,7 @@ const ClientMessagesScreen = ({ route }) => {
         styles.contentContainer, 
         keyboardVisible && styles.contentContainerKeyboardVisible
       ]}>
-        {messages.length === 0 && localMessages.length === 0 ? (
-          renderEmptyConversation()
-        ) : (
+        
           <FlatList
             ref={flatListRef}
             data={groupMessagesByDate([...messages, ...localMessages])}
@@ -373,7 +371,6 @@ const ClientMessagesScreen = ({ route }) => {
               { paddingBottom: keyboardHeight + 16 }
             ]}
           />
-        )}
         {showScrollButton && (
           <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
             <Text style={styles.scrollButtonText}>↓</Text>
