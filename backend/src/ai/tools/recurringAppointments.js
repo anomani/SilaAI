@@ -53,8 +53,9 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
                             phone,
                             email,
                             appointmentType,
-                            price,
-                            addOnArray
+                            addOnArray,
+                            group,
+                            price
                         );
                         if (result === "Appointment booked successfully") {
                             bookedAppointments.push({
@@ -190,45 +191,5 @@ function matchesRecurrenceRule(date, recurrenceRule, startDate) {
             throw new Error('Invalid recurrence rule');
     }
 }
-
-// Example function call
-// async function exampleRecurringAppointments() {
-//   const initialDate = '2025-01-08';
-//   const startTime = '09:00';
-//   const fname = 'Adam';
-//   const lname = 'Nomani';
-//   const phone = '+12038324011';
-//   const email = 'nomaniadam@gmail.com';
-//   const appointmentType = 'Adult Cut';
-//   const addOnArray = [];
-//   const recurrenceRule = {
-//     type: 'weekly',
-//     interval: 2, // Every 3 months
-//     dayOfWeek: 3
-//   };
-
-//   try {
-//     const bookedAppointments = await createRecurringAppointments(
-//       initialDate,
-//       startTime,
-//       fname,
-//       lname,
-//       phone,
-//       email,
-//       appointmentType,
-//       1,
-//       75,
-//       addOnArray,
-//       recurrenceRule
-//     );
-
-//     console.log('Booked appointments:', bookedAppointments);
-//   } catch (error) {
-//     console.error('Error creating recurring appointments:', error);
-//   }
-// }
-
-// // Call the example function
-// exampleRecurringAppointments();
 
 module.exports = { createRecurringAppointments, createRecurringAppointmentsAdmin };
