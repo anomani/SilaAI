@@ -39,11 +39,9 @@ const ClientMessagesScreen = ({ route }) => {
       }, 5000); // Poll every 5 seconds
       setPolling(pollInterval);
 
-      // Handle suggested response, new client message, or draft message
+      // Only prefill the input for AI-suggested responses
       if (suggestedResponse) {
         setNewMessage(suggestedResponse);
-      } else if (clientMessage) {
-        setNewMessage(clientMessage);
       } else {
         const draftMessage = getDraftMessage(clientid);
         if (draftMessage !== newMessage) {

@@ -148,7 +148,7 @@ const AppContent: React.FC = () => {
       <Stack.Screen 
         name="ClientMessages" 
         component={ClientMessagesScreen} 
-        initialParams={{ clientid: 0, clientName: '', suggestedResponse: null }}
+        initialParams={{ clientid: 0, clientName: '', suggestedResponse: false }}
       />
       <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
     </Stack.Navigator>
