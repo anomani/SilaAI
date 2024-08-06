@@ -59,12 +59,12 @@ async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, e
     }
 }
 
-async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, addOns = []) {
+async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, addOnArray = []) {
     console.log("Client ID:", clientId);
     console.log("Date:", date);
     console.log("Start Time:", startTime);
     console.log("Appointment Type:", appointmentType);
-    console.log("Add-Ons:", addOns);
+    console.log("Add-Ons:", addOnArray);
   const client = await getClientById(clientId);
   if (!client) {
     throw new Error(`Client not found with ID: ${clientId}`);
@@ -75,7 +75,16 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
     throw new Error(`Invalid appointment type: ${appointmentType}`);
   }
 
-  const addOnInfo = addOns.map(addon => addOns[addon]);
+  const addOnInfo = addOnArray.map(addon => {
+    const info = addOns[addon];
+    if (!info) {
+      console.warn(`Add-on not found: ${addon}`);
+      return null;
+    }
+    return info;
+  }).filter(Boolean);
+  console.log("Add-on Info:", addOnInfo);
+
   const totalPrice = appointmentTypeInfo.price + addOnInfo.reduce((sum, addon) => sum + addon.price, 0);
   const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
 
@@ -93,22 +102,6 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
   }
 }
 
-// async function main() {
-//     const date = "2024-07-24";
-//     const startTime = "09:45";
-//     const fname = "Adam";
-//     const lname = "Nomani";
-//     const phone = "2038324011";
-//     const email = "anomani@seas.upenn.edu";
-//     const appointmentType = "Adult Cut";
-//     const price = 75;
-//     const addOns = ["Beard Grooming"];
-
-//     const result = await bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOns);
-//     console.log(result);
-// }
-
-// main()
 
 async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray) {
     console.log("Date:", date);

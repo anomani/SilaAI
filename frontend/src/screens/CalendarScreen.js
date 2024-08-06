@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration } from 'react-native';
 import { getAppointmentsByDay, getClientById, createBlockedTime, deleteAppointment, rescheduleAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
@@ -7,6 +7,7 @@ import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import RescheduleConfirmModal from '../components/RescheduleConfirmModal';
 import BlockTimeModal from '../components/BlockTimeModal';
 import ClientCardView from '../components/ClientCardView';
+
 
 const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
@@ -20,15 +21,123 @@ const CalendarScreen = ({ navigation }) => {
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [isBlockTimeModalVisible, setIsBlockTimeModalVisible] = useState(false);
 
-
-  const scrollViewRef = useRef(null);
-
   // Add this constant at the top of the component
   const HOUR_HEIGHT = 100; // Height of each hour slot in pixels
   const TOTAL_HOURS = 12; // Number of hours to display (9 AM to 9 PM)
 
   // Calculate the total height
   const totalHeight = HOUR_HEIGHT * TOTAL_HOURS;
+
+  const [activeDragId, setActiveDragId] = useState(null);
+  const panY = useRef(new Animated.Value(0)).current;
+
+  const [dragPositions, setDragPositions] = useState({});
+  const [dragTimes, setDragTimes] = useState({});
+
+  const visibleHeight = HOUR_HEIGHT * 12; // Assuming 12 hours are visible at once
+
+  const onPanGestureEvent = Animated.event(
+    [{ nativeEvent: { translationY: panY } }],
+    { 
+      useNativeDriver: false,
+      listener: (event) => {
+        if (activeDragId) {
+          const appointment = appointments.find(a => a.id === activeDragId);
+          if (appointment) {
+            const newPosition = event.nativeEvent.translationY;
+            
+            setDragPositions(prev => ({ ...prev, [appointment.id]: newPosition }));
+
+            // Calculate new times only for display purposes
+            const newStartTime = calculateNewTime(appointment.startTime, newPosition);
+            const duration = getDurationMinutes(appointment.startTime, appointment.endTime);
+            const newEndTime = calculateEndTime(newStartTime, duration);
+            setDragTimes(prev => ({ ...prev, [appointment.id]: { startTime: newStartTime, endTime: newEndTime } }));
+          }
+        }
+      }
+    }
+  );
+
+  const onPanHandlerStateChange = (event, appointment) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      // End of pan gesture
+      setActiveDragId(null);
+      panY.setValue(0);
+      setDraggedAppointment(appointment);
+      const newTime = calculateNewTime(appointment.startTime, event.nativeEvent.translationY);
+      setNewAppointmentTime(newTime);
+      setIsRescheduleModalVisible(true);
+      
+      // Reset the drag position
+      setDragPositions(prev => ({ ...prev, [appointment.id]: 0 }));
+    } else if (event.nativeEvent.state === State.BEGAN) {
+      // Start of pan gesture
+      setActiveDragId(appointment.id);
+    }
+  };
+
+  const calculateNewTime = (startTime, translationY) => {
+
+    // Convert to 24-hour format
+    const [time, period] = startTime.split(' ');
+    let [hours, minutes] = time.split(':').map(Number);
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+
+
+    // Calculate new time in minutes, rounding to nearest 15-minute interval
+    let totalMinutes = hours * 60 + minutes;
+    let dragMinutes = Math.round(translationY * 0.6); // Adjust this multiplier as needed
+    dragMinutes = Math.round(dragMinutes / 15) * 15; // Round to nearest 15 minutes
+    totalMinutes = (totalMinutes + dragMinutes + 1440) % 1440; // Ensure it's within 24 hours
+
+
+    // Convert back to hours and minutes
+    let newHours = Math.floor(totalMinutes / 60);
+    let newMinutes = totalMinutes % 60;
+
+    // Convert to 12-hour format
+    const newPeriod = newHours >= 12 ? 'PM' : 'AM';
+    newHours = newHours % 12 || 12;
+
+    const result = `${newHours}:${newMinutes.toString().padStart(2, '0')} ${newPeriod}`;
+
+    return result;
+  };
+
+  const calculateEndTime = (startTime, durationMinutes) => {
+    const [time, period] = startTime.split(' ');
+    let [hours, minutes] = time.split(':').map(Number);
+    
+    // Convert to 24-hour format
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+
+    let totalMinutes = hours * 60 + minutes + durationMinutes;
+    let newHours = Math.floor(totalMinutes / 60) % 24;
+    let newMinutes = totalMinutes % 60;
+
+    // Convert back to 12-hour format
+    const newPeriod = newHours >= 12 ? 'PM' : 'AM';
+    newHours = newHours % 12 || 12;
+
+    return `${newHours}:${newMinutes.toString().padStart(2, '0')} ${newPeriod}`;
+  };
+
+  const getDurationMinutes = (startTime, endTime) => {
+    const convertToMinutes = (timeStr) => {
+      const [time, period] = timeStr.split(' ');
+      let [hours, minutes] = time.split(':').map(Number);
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    };
+
+    const startMinutes = convertToMinutes(startTime);
+    const endMinutes = convertToMinutes(endTime);
+    return endMinutes - startMinutes;
+  };
 
   useEffect(() => {
     fetchAppointments();
@@ -128,34 +237,9 @@ const CalendarScreen = ({ navigation }) => {
     return slots;
   };
 
-  const onGestureEvent = (event, appointment) => {
-    const { translationY } = event.nativeEvent;
-    const [time, period] = appointment.startTime.split(' ');
-    const [hours, minutes] = time.split(':');
-    const startTimeIn24 = `${period === 'PM' && hours !== '12' ? parseInt(hours) + 12 : hours}:${minutes}`;
-    const newStartTime = calculateNewTime(startTimeIn24, translationY);
-    setNewAppointmentTime(newStartTime);
-  };
-
-  const onHandlerStateChange = (event, appointment) => {
-    if (event.nativeEvent.oldState === State.ACTIVE) {
-      setDraggedAppointment(appointment);
-      setIsRescheduleModalVisible(true);
-    }
-  };
-
-  const calculateNewTime = (startTime, translationY) => {
-    const [hours, minutes] = startTime.split(':');
-    const totalMinutes = parseInt(hours) * 60 + parseInt(minutes);
-    const newMinutes = totalMinutes + Math.round(translationY / (100 / 60)); // 100px per hour
-    const newHours = Math.floor(newMinutes / 60);
-    const newMinutesRemainder = newMinutes % 60;
-    return `${newHours.toString().padStart(2, '0')}:${newMinutesRemainder.toString().padStart(2, '0')}`;
-  };
-
-  const confirmReschedule = async () => {
-    if (!draggedAppointment || !newAppointmentTime) {
-      console.error('No appointment or new time set for rescheduling');
+  const confirmReschedule = async (confirmedTime) => {
+    if (!draggedAppointment || !confirmedTime) {
+      console.error('No appointment or confirmed time set for rescheduling');
       return;
     }
 
@@ -170,14 +254,16 @@ const CalendarScreen = ({ navigation }) => {
         if (modifier === 'PM') {
           hours = parseInt(hours, 10) + 12;
         }
-        return `${hours.toString().padStart(2, '0')}:${minutes}`;
+        const result = `${hours.toString().padStart(2, '0')}:${minutes}`;
+        return result;
       };
 
-      // newAppointmentTime is already in HH:MM format, so we don't need to convert it
-      const formattedStartTime = newAppointmentTime;
+      const formattedStartTime = convertTo24Hour(confirmedTime);
       const originalStartTime = convertTo24Hour(draggedAppointment.startTime);
       const originalEndTime = convertTo24Hour(draggedAppointment.endTime);
       
+
+
       // Calculate duration in minutes
       const getDurationMinutes = (start, end) => {
         const [startHours, startMinutes] = start.split(':').map(Number);
@@ -198,7 +284,6 @@ const CalendarScreen = ({ navigation }) => {
 
       const formattedEndTime = addMinutes(formattedStartTime, durationMinutes);
 
-
       // Uncomment this line when ready to actually reschedule
       await rescheduleAppointment(
         draggedAppointment.id,
@@ -206,6 +291,7 @@ const CalendarScreen = ({ navigation }) => {
         formattedStartTime,
         formattedEndTime
       );
+
       // Refresh appointments after rescheduling
       await fetchAppointments();
 
@@ -243,67 +329,98 @@ const CalendarScreen = ({ navigation }) => {
 
       const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
 
+      const animatedStyle = {
+        transform: [
+          {
+            translateY: panY.interpolate({
+              inputRange: [-1000, 0, 1000],
+              outputRange: [-1000, 0, 1000],
+              extrapolate: 'clamp',
+            }),
+          },
+        ],
+      };
+
       appointmentBlocks.push(
-        <TouchableOpacity
+        <PanGestureHandler
           key={appointment.id}
-          onPress={() => {
-            if (isBlockedTime) {
-              Alert.alert(
-                "Delete Blocked Time",
-                "Are you sure you want to delete this blocked time?",
-                [
-                  {
-                    text: "Cancel",
-                    style: "cancel"
-                  },
-                  { 
-                    text: "OK", 
-                    onPress: async () => {
-                      try {
-                        await deleteAppointment(appointment.id);
-                        fetchAppointments(); // Refresh the appointments list
-                      } catch (error) {
-                        console.error('Failed to delete blocked time:', error);
-                        Alert.alert('Error', 'Failed to delete blocked time. Please try again.');
-                      }
-                    }
-                  }
-                ]
-              );
-            } else {
-              navigation.navigate('AppointmentDetails', { appointment });
-            }
-          }}
+          onGestureEvent={onPanGestureEvent}
+          onHandlerStateChange={(event) => onPanHandlerStateChange(event, appointment)}
+          minDist={10} // Minimum distance to start the gesture
         >
-          <PanGestureHandler
-            onGestureEvent={(event) => onGestureEvent(event, appointment)}
-            onHandlerStateChange={(event) => onHandlerStateChange(event, appointment)}
-          >
-            <View
-              style={[
-                styles.appointmentBlock,
-                {
-                  top: topPosition,
-                  height: Math.max(duration * 100, 50), // Minimum height of 50px
-                  backgroundColor: isBlockedTime ? 'rgba(255, 149, 0, 0.7)' : '#007AFF', // Semi-transparent orange for blocked time
-                  zIndex: isBlockedTime ? 2 : 1, // Higher zIndex for blocked time
-                },
-              ]}
+          <Animated.View style={[
+            { zIndex: activeDragId === appointment.id ? 1000 : 1 },
+            activeDragId === appointment.id ? {
+              transform: [{ translateY: dragPositions[appointment.id] || 0 }]
+            } : null
+          ]}>
+            <TouchableOpacity
+              onPress={() => {
+                if (isBlockedTime) {
+                  Alert.alert(
+                    "Delete Blocked Time",
+                    "Are you sure you want to delete this blocked time?",
+                    [
+                      {
+                        text: "Cancel",
+                        style: "cancel"
+                      },
+                      { 
+                        text: "OK", 
+                        onPress: async () => {
+                          try {
+                            await deleteAppointment(appointment.id);
+                            fetchAppointments(); // Refresh the appointments list
+                          } catch (error) {
+                            console.error('Failed to delete blocked time:', error);
+                            Alert.alert('Error', 'Failed to delete blocked time. Please try again.');
+                          }
+                        }
+                      }
+                    ]
+                  );
+                } else {
+                  navigation.navigate('AppointmentDetails', { appointment });
+                }
+              }}
             >
-              <View style={styles.appointmentHeader}>
-                <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
-                  {isBlockedTime ? 'Blocked Time' : (appointment.clientName || 'No Name')}
+              <Animated.View
+                style={[
+                  styles.appointmentBlock,
+                  {
+                    top: topPosition,
+                    height: Math.max(duration * 100, 50), // Minimum height of 50px
+                    backgroundColor: isBlockedTime ? 'rgba(255, 149, 0, 0.7)' : '#007AFF', // Semi-transparent orange for blocked time
+                  },
+                  activeDragId === appointment.id && {
+                    shadowColor: "#000",
+                    shadowOffset: {
+                      width: 0,
+                      height: 4,
+                    },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4.65,
+                    elevation: 8,
+                  }
+                ]}
+              >
+                <View style={styles.appointmentHeader}>
+                  <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
+                    {isBlockedTime ? 'Blocked Time' : (appointment.clientName || 'No Name')}
+                  </Text>
+                  <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
+                    {isBlockedTime ? (appointment.details || 'No Details') : (appointment.appointmenttype || 'No Type')}
+                  </Text>
+                </View>
+                <Text style={styles.appointmentTime}>
+                  {activeDragId === appointment.id && dragTimes[appointment.id]
+                    ? `${dragTimes[appointment.id].startTime} - ${dragTimes[appointment.id].endTime}`
+                    : `${appointment.startTime || 'No Start'} - ${appointment.endTime || 'No End'}`}
                 </Text>
-                <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
-                  {isBlockedTime ? (appointment.details || 'No Details') : (appointment.appointmenttype || 'No Type')}
-                </Text>
-              </View>
-              <Text style={styles.appointmentTime}>
-                {`${appointment.startTime || 'No Start'} - ${appointment.endTime || 'No End'}`}
-              </Text>
-            </View>
-          </PanGestureHandler>
-        </TouchableOpacity>
+              </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
+        </PanGestureHandler>
       );
     });
 
@@ -386,7 +503,6 @@ const CalendarScreen = ({ navigation }) => {
           </View>
         ) : (
           <ScrollView 
-            ref={scrollViewRef}
             style={styles.calendarContainer}
             contentContainerStyle={{ height: totalHeight }}
           >
@@ -727,6 +843,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     borderWidth: 1,
     borderColor: '#0056b3', // A slightly darker shade of blue for the border
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   appointmentHeader: {
     flexDirection: 'row',

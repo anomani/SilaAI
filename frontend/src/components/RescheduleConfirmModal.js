@@ -1,32 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useColorScheme } from 'react-native';
 
 const RescheduleConfirmModal = ({ isVisible, appointment, newTime, onConfirm, onCancel }) => {
-  const [selectedTime, setSelectedTime] = useState(new Date());
+  const [selectedDateTime, setSelectedDateTime] = useState(new Date());
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
     if (newTime) {
-      const [hours, minutes] = newTime.split(':');
-      const newDate = new Date();
-      newDate.setHours(parseInt(hours, 10));
-      newDate.setMinutes(parseInt(minutes, 10));
-      setSelectedTime(newDate);
+      const [time, period] = newTime.split(' ');
+      const [hours, minutes] = time.split(':').map(Number);
+      const date = new Date();
+      date.setHours(period === 'PM' && hours !== 12 ? hours + 12 : hours === 12 && period === 'AM' ? 0 : hours);
+      date.setMinutes(minutes);
+      setSelectedDateTime(date);
     }
   }, [newTime]);
 
-  if (!appointment) return null;
-
   const handleTimeChange = (event, selected) => {
     if (selected) {
-      setSelectedTime(selected);
+      setSelectedDateTime(selected);
     }
   };
 
   const handleConfirm = () => {
-    const hours = selectedTime.getHours().toString().padStart(2, '0');
-    const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
-    onConfirm(`${hours}:${minutes}`);
+    const hours = selectedDateTime.getHours();
+    const minutes = selectedDateTime.getMinutes();
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const formattedHours = hours % 12 || 12;
+    const formattedTime = `${formattedHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+    onConfirm(formattedTime);
   };
 
   return (
@@ -39,15 +43,17 @@ const RescheduleConfirmModal = ({ isVisible, appointment, newTime, onConfirm, on
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Reschedule Appointment</Text>
           <Text style={styles.modalText}>
-            Reschedule {appointment.clientName}'s appointment to:
+            Reschedule {appointment?.clientName}'s appointment to:
           </Text>
           <DateTimePicker
-            value={selectedTime}
+            value={selectedDateTime}
             mode="time"
-            is24Hour={true}
+            is24Hour={false}
             display="spinner"
             onChange={handleTimeChange}
             style={styles.timePicker}
+            themeVariant={colorScheme}
+            textColor="white"
           />
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.button} onPress={onCancel}>
