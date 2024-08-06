@@ -116,7 +116,7 @@ async function handleIncomingMessage(req, res) {
     let clientId = '';
     const localDate = new Date().toLocaleString();
     const adjustedDate = adjustDate(localDate);
-    if (client.id != '') {
+    if (client && client.id != '') {
       clientId = client.id;
       try {
         // Set isAI to true for incoming messages
@@ -134,7 +134,14 @@ async function handleIncomingMessage(req, res) {
       if (!autoRespond) {
         // If auto_respond is false, don't process the message with AI
         await toggleLastMessageReadStatus(clientId);
-        await sendNotificationToUser(client.firstname + ' ' + client.lastname, Body, clientId);
+        await sendNotificationToUser(
+          'New Client Message',
+          `${client.firstname} ${client.lastname}: ${Body}`,
+          clientId,
+          client.firstname + ' ' + client.lastname,
+          Body,
+          false
+        );
         return res.status(200).send('Message received');
       }
     }
