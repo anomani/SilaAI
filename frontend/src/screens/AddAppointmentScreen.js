@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
 import { bookAppointmentWithAcuity, searchClients } from '../services/api';
@@ -22,6 +22,8 @@ const AddAppointmentScreen = ({ navigation }) => {
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
   const [showAppointmentTypePicker, setShowAppointmentTypePicker] = useState(false);
+  const [addOns, setAddOns] = useState([]);
+  const [showAddOnsPicker, setShowAddOnsPicker] = useState(false);
 
   const handleInputChange = async (field, value) => {
     setAppointment({ ...appointment, [field]: value });
@@ -91,7 +93,7 @@ const AddAppointmentScreen = ({ navigation }) => {
         email: selectedClient.email,
         appointmentType: appointment.appointmentType,
         price: parseFloat(appointment.price),
-        addOnArray: appointment.addOns || []
+        addOnArray: addOns
       };
       console.log(appointmentData)
       const result = await bookAppointmentWithAcuity(appointmentData);
@@ -107,6 +109,10 @@ const AddAppointmentScreen = ({ navigation }) => {
   const handleAppointmentTypeChange = (itemValue) => {
     handleInputChange('appointmentType', itemValue);
     setShowAppointmentTypePicker(false);
+  };
+
+  const handleAddOnChange = (selectedAddOns) => {
+    setAddOns(selectedAddOns);
   };
 
   const appointmentTypes = [
@@ -127,6 +133,12 @@ const AddAppointmentScreen = ({ navigation }) => {
     { label: 'Adult Haircut + Beard (18 & Up)', value: 'Adult Haircut + Beard (18 & Up)' },
     { label: 'Student Haircut (17 & Under)', value: 'Student Haircut (17 & Under)' },
     { label: 'Student Haircut + Beard (17 & Under)', value: 'Student Haircut + Beard (17 & Under)' },
+  ];
+
+  const addOnOptions = [
+    { label: 'Beard Trim', value: 'Beard Trim' },
+    { label: 'Hot Towel', value: 'Hot Towel' },
+    { label: 'Shampoo', value: 'Shampoo' },
   ];
 
   const renderAppointmentTypePicker = () => (
@@ -155,6 +167,47 @@ const AddAppointmentScreen = ({ navigation }) => {
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => setShowAppointmentTypePicker(false)}
+          >
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const renderAddOnsPicker = () => (
+    <Modal
+      visible={showAddOnsPicker}
+      transparent={true}
+      animationType="slide"
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <FlatList
+            data={addOnOptions}
+            keyExtractor={(item) => item.value}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.pickerItem}
+                onPress={() => {
+                  const newAddOns = addOns.includes(item.value)
+                    ? addOns.filter(addon => addon !== item.value)
+                    : [...addOns, item.value];
+                  handleAddOnChange(newAddOns);
+                }}
+              >
+                <Text style={[
+                  styles.pickerItemText,
+                  addOns.includes(item.value) && styles.selectedPickerItemText
+                ]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowAddOnsPicker(false)}
           >
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
@@ -250,6 +303,16 @@ const AddAppointmentScreen = ({ navigation }) => {
         </Text>
       </TouchableOpacity>
       {renderAppointmentTypePicker()}
+      <Text style={styles.label}>Add-ons</Text>
+      <TouchableOpacity 
+        style={styles.input}
+        onPress={() => setShowAddOnsPicker(true)}
+      >
+        <Text style={[styles.inputText, { color: '#fff' }]}>
+          {addOns.length > 0 ? addOns.join(', ') : 'Select Add-ons'}
+        </Text>
+      </TouchableOpacity>
+      {renderAddOnsPicker()}
       <Text style={styles.label}>Add details</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -361,6 +424,9 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  selectedPickerItemText: {
+    color: '#007AFF',
   },
 });
 

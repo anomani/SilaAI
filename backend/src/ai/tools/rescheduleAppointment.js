@@ -22,7 +22,7 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
         }
 
         const appointmentType = appointment.appointmenttype;
-        const addOnArray = appointment.addOns || [];
+        const addOnArray = appointment.addons || [];
 
         const appointmentTypeInfo = appointmentTypes[appointmentType];
         if (!appointmentTypeInfo) {
