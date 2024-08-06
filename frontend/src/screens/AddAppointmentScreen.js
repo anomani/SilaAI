@@ -2,8 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
-import { bookAppointmentWithAcuity, searchClients } from '../services/api';
+import { bookAppointmentWithAcuity, searchClients, addAppointment } from '../services/api';
 import { Modal, FlatList } from 'react-native';
+
+// Add these temporary definitions
+const appointmentTypes = [
+  { value: "Adult - (Full Service)", label: "Adult - (Full Service)" },
+  { value: "OFF DAY/EMERGENCY - (Full Service)", label: "OFF DAY/EMERGENCY - (Full Service)" },
+  { value: "Adult Cut", label: "Adult Cut" },
+  { value: "High-School Cut", label: "High-School Cut" },
+  { value: "Kids Cut - (12 & Under)", label: "Kids Cut - (12 & Under)" },
+  { value: "Lineup + Taper", label: "Lineup + Taper" },
+  { value: "Beard Grooming Only", label: "Beard Grooming Only" },
+];
+
+const addOns = {
+  "Beard Grooming": { id: 187938, price: 20, duration: 15 },
+  "Beard Grooming for Lineup + Taper": { id: 1128808, price: 0, duration: 0 },
+  "Colour Enhancement": { id: 187944, price: 20, duration: 15 },
+  "Hot Towel + Black Mask Treatment for Clogged Pores": { id: 187941, price: 10, duration: 0 },
+  "Wax - Hair Removal": { id: 1128727, price: 5, duration: 0 }
+};
 
 const AddAppointmentScreen = ({ navigation }) => {
   const [appointment, setAppointment] = useState({
@@ -22,7 +41,7 @@ const AddAppointmentScreen = ({ navigation }) => {
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
   const [showAppointmentTypePicker, setShowAppointmentTypePicker] = useState(false);
-  const [addOns, setAddOns] = useState([]);
+  const [selectedAddOns, setSelectedAddOns] = useState([]);
   const [showAddOnsPicker, setShowAddOnsPicker] = useState(false);
 
   const handleInputChange = async (field, value) => {
@@ -93,7 +112,11 @@ const AddAppointmentScreen = ({ navigation }) => {
         email: selectedClient.email,
         appointmentType: appointment.appointmentType,
         price: parseFloat(appointment.price),
-        addOnArray: addOns
+        addOnArray: selectedAddOns.map(addOn => ({
+          id: addOns[addOn].id,
+          price: addOns[addOn].price,
+          duration: addOns[addOn].duration
+        }))
       };
       console.log(appointmentData)
       const result = await bookAppointmentWithAcuity(appointmentData);
@@ -111,35 +134,22 @@ const AddAppointmentScreen = ({ navigation }) => {
     setShowAppointmentTypePicker(false);
   };
 
-  const handleAddOnChange = (selectedAddOns) => {
-    setAddOns(selectedAddOns);
+  const handleAddOnChange = (selectedAddOn) => {
+    setSelectedAddOns(prevAddOns => {
+      if (prevAddOns.includes(selectedAddOn)) {
+        return prevAddOns.filter(addon => addon !== selectedAddOn);
+      } else {
+        return [...prevAddOns, selectedAddOn];
+      }
+    });
   };
 
-  const appointmentTypes = [
-    { label: 'Adult Cut', value: 'Adult Cut' },
-    { label: 'High-School Cut', value: 'High-School Cut' },
-    { label: 'Kids Cut - (12 & Under)', value: 'Kids Cut - (12 & Under)' },
-    { label: 'Lineup + Taper', value: 'Lineup + Taper' },
-    { label: 'Beard Grooming Only', value: 'Beard Grooming Only' },
-    { label: 'Adult - (Full Service)', value: 'Adult - (Full Service)' },
-    { label: 'OFF DAY/EMERGENCY - (Full Service)', value: 'OFF DAY/EMERGENCY - (Full Service)' },
-    { label: 'Hair Cut', value: 'Hair Cut' },
-    { label: 'Hair Cut + Beard', value: 'Hair Cut + Beard' },
-    { label: 'Haircut + Beard', value: 'Haircut + Beard' },
-    { label: 'High-School - (Full Service)', value: 'High-School - (Full Service)' },
-    { label: 'Kids - (12 & Under)/Seniors', value: 'Kids - (12 & Under)/Seniors' },
-    { label: 'UziExpress Clean Up', value: 'UziExpress Clean Up' },
-    { label: 'Adult Haircut (18 & Up)', value: 'Adult Haircut (18 & Up)' },
-    { label: 'Adult Haircut + Beard (18 & Up)', value: 'Adult Haircut + Beard (18 & Up)' },
-    { label: 'Student Haircut (17 & Under)', value: 'Student Haircut (17 & Under)' },
-    { label: 'Student Haircut + Beard (17 & Under)', value: 'Student Haircut + Beard (17 & Under)' },
-  ];
-
-  const addOnOptions = [
-    { label: 'Beard Trim', value: 'Beard Trim' },
-    { label: 'Hot Towel', value: 'Hot Towel' },
-    { label: 'Shampoo', value: 'Shampoo' },
-  ];
+  const addOnOptions = Object.keys(addOns).map(key => ({
+    label: key,
+    value: key,
+    price: addOns[key].price,
+    duration: addOns[key].duration
+  }));
 
   const renderAppointmentTypePicker = () => (
     <Modal
@@ -189,18 +199,13 @@ const AddAppointmentScreen = ({ navigation }) => {
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.pickerItem}
-                onPress={() => {
-                  const newAddOns = addOns.includes(item.value)
-                    ? addOns.filter(addon => addon !== item.value)
-                    : [...addOns, item.value];
-                  handleAddOnChange(newAddOns);
-                }}
+                onPress={() => handleAddOnChange(item.value)}
               >
                 <Text style={[
                   styles.pickerItemText,
-                  addOns.includes(item.value) && styles.selectedPickerItemText
+                  selectedAddOns.includes(item.value) && styles.selectedPickerItemText
                 ]}>
-                  {item.label}
+                  {item.label} (${item.price}, {item.duration} min)
                 </Text>
               </TouchableOpacity>
             )}
@@ -309,7 +314,7 @@ const AddAppointmentScreen = ({ navigation }) => {
         onPress={() => setShowAddOnsPicker(true)}
       >
         <Text style={[styles.inputText, { color: '#fff' }]}>
-          {addOns.length > 0 ? addOns.join(', ') : 'Select Add-ons'}
+          {selectedAddOns.length > 0 ? selectedAddOns.join(', ') : 'Select Add-ons'}
         </Text>
       </TouchableOpacity>
       {renderAddOnsPicker()}

@@ -91,7 +91,9 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
   const endTime = moment(`${date} ${startTime}`).add(totalDuration, 'minutes').format('HH:mm');
 
   try {
-    await createAppointment(appointmentType, 2222222, date, startTime, endTime, clientId, "", totalPrice, addOnArray);
+    // const acuityAppointment = await bookAppointment(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOns);
+    
+    await createAppointment(appointmentType, 2222222, date, startTime, endTime, clientId, "", totalPrice);
     
     return "Appointment booked successfully";
   } catch (error) {
@@ -138,12 +140,12 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
         if (client.id != '') {
             console.log("Client already exists");
             const clientId = client.id;
-            await createAppointment(appointmentType, 123, date, startTime, endTime, clientId, "", price, addOnArray);
+            await createAppointment(appointmentType, 123, date, startTime, endTime, clientId, "", price);
         } else {
             console.log("Client does not exist");
             await createClient(fname, lname, phone, email, "");
             const newClient = await getClientByPhoneNumber(phone);
-            await createAppointment(appointmentType, 123, date, startTime, endTime, newClient.id, "", price, addOnArray);
+            await createAppointment(appointmentType, 123, date, startTime, endTime, newClient.id, "", price);
         }
         return "Appointment booked successfully";
     } catch (error) {
