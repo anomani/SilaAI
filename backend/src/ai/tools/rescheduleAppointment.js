@@ -10,6 +10,9 @@ const { getAvailability } = require('./getAvailability');
 
 async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, newDate, newStartTime) {
     try {
+        console.log("Current Date:", currentDate);
+        console.log("New Date:", newDate);
+        console.log("New Start Time:", newStartTime);
         const client = await getClientByPhoneNumber(phoneNumber);
         if (!client) {
             return "Client not found";
