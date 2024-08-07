@@ -5,7 +5,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import moment from 'moment';
 
 const AppointmentDetailsScreen = ({ route, navigation }) => {
-  const { appointment } = route.params;
+  const { appointment, onDelete } = route.params;
   console.log(appointment.clientid)
   const [clientName, setClientName] = useState('');
 
@@ -26,6 +26,9 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
     try {
       await deleteAppointment(appointment.id);
       Alert.alert('Success', 'Appointment deleted successfully');
+      if (onDelete) {
+        onDelete(); // Call the onDelete callback
+      }
       navigation.goBack();
     } catch (error) {
       Alert.alert('Error', 'Failed to delete appointment');
@@ -67,10 +70,6 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
         <View style={styles.infoRow}>
           <Icon name="attach-money" size={24} color="#007AFF" />
           <Text style={styles.label}>Price: <Text style={styles.value}>${appointment.price}</Text></Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Icon name="notes" size={24} color="#007AFF" />
-          <Text style={styles.label}>Details: <Text style={styles.value}>{appointment.details}</Text></Text>
         </View>
       </View>
       <View style={styles.buttonContainer}>
@@ -134,7 +133,8 @@ const styles = StyleSheet.create({
   },
   button: { 
     flexDirection: 'row', 
-    alignItems: 'center', 
+    alignItems: 'center',
+    justifyContent: 'center', // Added this line
     padding: 12, 
     borderRadius: 8, 
     width: '40%' 

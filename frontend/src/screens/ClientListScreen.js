@@ -76,7 +76,7 @@ const ClientListScreen = () => {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#1c1c1e' },
-  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e', paddingTop: 50 }, // Add paddingTop
+  container: { flex: 1, padding: 16, backgroundColor: '#1c1c1e', paddingTop: 0 }, // Add paddingTop
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
   searchBar: { flex: 1, padding: 10, backgroundColor: '#333', borderRadius: 5, color: 'white', marginRight: 10 },
   item: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#333' },

@@ -13,8 +13,8 @@ const handleChatRequest = async (req, res) => {
     const { message } = req.body;
     const number = "+12038324011";
     const twilio = "+18446480598";
-
-    const responseMessage = await handleUserInput(message, number);
+    
+    const responseMessage = await handleUserInput([message], number);
 
     // Respond to the client with the actual response
     res.json({ message: responseMessage });
