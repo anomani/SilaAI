@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration } from 'react-native';
 import { getAppointmentsByDay, getClientById, createBlockedTime, deleteAppointment, rescheduleAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import RescheduleConfirmModal from '../components/RescheduleConfirmModal';
 import BlockTimeModal from '../components/BlockTimeModal';
 import ClientCardView from '../components/ClientCardView';
+import { useFocusEffect } from '@react-navigation/native';
 
 
 const CalendarScreen = ({ navigation }) => {
@@ -139,9 +140,11 @@ const CalendarScreen = ({ navigation }) => {
     return endMinutes - startMinutes;
   };
 
-  useEffect(() => {
-    fetchAppointments();
-  }, [date]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchAppointments();
+    }, [date])
+  );
 
   const fetchAppointments = async () => {
     setIsLoading(true);
@@ -380,7 +383,7 @@ const CalendarScreen = ({ navigation }) => {
                     ]
                   );
                 } else {
-                  navigation.navigate('AppointmentDetails', { appointment });
+                  navigation.navigate('AppointmentDetails', { appointment, onDelete: fetchAppointments });
                 }
               }}
             >
@@ -523,6 +526,7 @@ const CalendarScreen = ({ navigation }) => {
             <>
               <ClientCardView
                 appointment={appointments[currentAppointmentIndex]}
+                onDelete={fetchAppointments}
               />
               <View style={styles.cardNavigation}>
                 <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.max(0, currentAppointmentIndex - 1))} style={styles.navButton}>
@@ -603,13 +607,13 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     padding: 16, 
-    paddingTop: 0, // Ensure no top padding
+    paddingTop: 40, // Reduced from 0 to add some padding at the top
     backgroundColor: '#1c1c1e' 
   },
   header: { 
     alignItems: 'center', 
     marginBottom: 20,
-    marginTop: 80, // Increase top margin to move the header further down
+    marginTop: 20, // Reduced from 80 to remove extra space
   },
   headerDay: { 
     color: '#007AFF', 

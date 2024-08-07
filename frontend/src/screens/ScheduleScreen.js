@@ -126,6 +126,7 @@ const styles = StyleSheet.create({
     padding: 10,
     flexGrow: 1,
     paddingTop: 50, // Add padding to the top
+    paddingBottom: 50, // Add padding to the bottom
   },
   messageContainer: {
     marginVertical: 5,
