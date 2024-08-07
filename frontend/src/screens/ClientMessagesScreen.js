@@ -403,12 +403,15 @@ const ClientMessagesScreen = ({ route }) => {
           <View style={styles.inputContainer}>
             <TextInput
               style={[styles.input, { height: Math.min(150, Math.max(60, inputHeight)) }]}
+              scrollEnabled={true}
               placeholder="Write a message"
               placeholderTextColor="#9da6b8"
               value={newMessage}
               onChangeText={handleInputChange}
-              multiline
+              multiline={true}
+              numberOfLines={4}
               onContentSizeChange={handleContentSizeChange}
+              textAlignVertical="top"
             />
             <TouchableOpacity 
               style={styles.sendButton} 
@@ -534,12 +537,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 12,
     fontSize: 16,
     marginRight: 8,
-    maxHeight: 150,
-    minHeight: 60,
-    textAlignVertical: 'top',
+    marginTop: 6,
+    maxHeight: 300,
+    minHeight: 100,
   },
   sendButton: {
     width: 48,

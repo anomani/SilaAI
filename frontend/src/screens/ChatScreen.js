@@ -131,7 +131,7 @@ const ChatScreen = () => {
         item.sender === 'user' ? styles.userMessage : styles.botMessage
       ]}
     >
-      {item.sender === 'bot' && item.text.includes('Custom list') ? (
+      {item.sender === 'bot' && item.text.toLowerCase().includes('custom list') ? (
         <Text style={styles.messageText}>
           {item.text.split('here:')[0]}
           <Text
