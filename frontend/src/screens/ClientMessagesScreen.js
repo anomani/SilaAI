@@ -169,13 +169,16 @@ const ClientMessagesScreen = ({ route }) => {
       adjustedDate.setHours(adjustedDate.getHours() - 4);
       const adjustedDateString = adjustedDate.toLocaleString();
       
+      // Check if the message is the same as the suggested response
+      const isAI = newMessage === suggestedResponse;
+
       const tempMessage = {
         id: tempId,
         body: newMessage,
         fromtext: '+18446480598',
         totext: recipient,
         date: adjustedDateString,
-        is_ai: false,
+        is_ai: isAI,
       };
 
       console.log('Adding temp message to localMessages', tempMessage);
@@ -184,7 +187,7 @@ const ClientMessagesScreen = ({ route }) => {
       scrollToBottom();
 
       console.log('Sending message via API');
-      await sendMessage(recipient, newMessage, false, true);
+      await sendMessage(recipient, newMessage, false, !isAI);
       
       console.log('Message sent successfully');
 
