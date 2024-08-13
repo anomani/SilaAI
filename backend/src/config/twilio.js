@@ -135,8 +135,8 @@ async function handleIncomingMessage(req, res) {
         // If auto_respond is false, don't process the message with AI
         await toggleLastMessageReadStatus(clientId);
         await sendNotificationToUser(
-          'New Client Message',
-          `${client.firstname} ${client.lastname}: ${Body}`,
+          client.firstname + ' ' + client.lastname,
+          `${Body}`,
           clientId,
           client.firstname + ' ' + client.lastname,
           Body,
@@ -153,7 +153,7 @@ async function handleIncomingMessage(req, res) {
       const delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
       // Create a new random delay between 30 seconds and 1 minute
       const shortDelayInMs = Math.floor(Math.random() * (60000 - 30000 + 1)) + 30000;
-      setTimeout(() => processDelayedResponse(Author), shortDelayInMs);
+      setTimeout(() => processDelayedResponse(Author), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
 
@@ -179,19 +179,31 @@ async function processDelayedResponse(phoneNumber) {
       const client = await getClientByPhoneNumber(phoneNumber);
       if (client.id != '') {
         await toggleLastMessageReadStatus(client.id);
-
         // Check if the response contains any numbers or is a user response
-        if (/\d/.test(responseMessage)) {
-          // Send a notification for AI suggested response
-          await sendNotificationToUser(
-            'Confirm AI Response',
-            responseMessage,
-            client.id,
-            client.firstname + ' ' + client.lastname,
-            lastMessage,
-            true
-          );
-        } else 
+        // if (/\d/.test(responseMessage)) {
+        //   // Send a notification for AI suggested response
+        //   await sendNotificationToUser(
+        //     'Confirm AI Response for ' + client.firstname + ' ' + client.lastname,
+        //     responseMessage,
+        //     client.id,
+        //     client.firstname + ' ' + client.lastname,
+        //     lastMessage,
+        //     true
+        //   );
+        // } else if (responseMessage === "user" || responseMessage === "User") {
+        //   // Send a notification for client message
+        //   await sendNotificationToUser(
+        //     'New Client Message',
+        //     `${client.firstname} ${client.lastname}: ${lastMessage}`,
+        //     client.id,
+        //     client.firstname + ' ' + client.lastname,
+        //     lastMessage,
+        //     false
+        //   );
+        // } else {
+        //   // Send the AI response to the client
+        //     await sendMessage(phoneNumber, responseMessage, false, false);
+        //   }
         if (responseMessage === "user" || responseMessage === "User") {
           // Send a notification for client message
           await sendNotificationToUser(
@@ -202,17 +214,24 @@ async function processDelayedResponse(phoneNumber) {
             lastMessage,
             false
           );
-        } else {
-          // Send the AI response to the client
-            await sendMessage(phoneNumber, responseMessage, false, false);
-          }
-        } 
+        }
+        else {
+          await sendNotificationToUser(
+            'Confirm AI Response for ' + client.firstname + ' ' + client.lastname,
+            responseMessage,
+            client.id,
+            client.firstname + ' ' + client.lastname,
+            lastMessage,
+            true
+          );
+        }
+      } 
         else {
           await sendMessage(phoneNumber, responseMessage, false, false);
         }
       }
-      } catch (error) {
-        console.error('Error processing delayed response:', error);
+  } catch (error) {
+    console.error('Error processing delayed response:', error);
     const client = await getClientByPhoneNumber(phoneNumber);
     await sendNotificationToUser(
       'New Client Message',
