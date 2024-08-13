@@ -135,8 +135,8 @@ async function handleIncomingMessage(req, res) {
         // If auto_respond is false, don't process the message with AI
         await toggleLastMessageReadStatus(clientId);
         await sendNotificationToUser(
-          client.firstname + ' ' + client.lastname,
-          `${Body}`,
+          'New Message from ' + client.firstname,
+          `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
           clientId,
           client.firstname + ' ' + client.lastname,
           Body,
@@ -207,8 +207,8 @@ async function processDelayedResponse(phoneNumber) {
         if (responseMessage === "user" || responseMessage === "User") {
           // Send a notification for client message
           await sendNotificationToUser(
-            'New Client Message',
-            `${client.firstname} ${client.lastname}: ${lastMessage}`,
+            'New Message from ' + client.firstname,
+            `${client.firstname} ${client.lastname}: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
             client.id,
             client.firstname + ' ' + client.lastname,
             lastMessage,
@@ -217,7 +217,7 @@ async function processDelayedResponse(phoneNumber) {
         }
         else {
           await sendNotificationToUser(
-            'Confirm AI Response for ' + client.firstname + ' ' + client.lastname,
+            'AI Response Ready for ' + client.firstname,
             responseMessage,
             client.id,
             client.firstname + ' ' + client.lastname,
