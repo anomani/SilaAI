@@ -226,7 +226,6 @@ async function processDelayedResponse(phoneNumber) {
           );
         }
       } 
-      
         else {
           await sendMessage(phoneNumber, responseMessage, false, false);
         }
