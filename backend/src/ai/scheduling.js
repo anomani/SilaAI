@@ -320,6 +320,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
   const instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
   
+  
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
 
@@ -338,6 +339,8 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
     .replace('${messages}', formattedMessages)
     .replace('${day}', day)
     .replace('${upcomingAppointment}', upcomingAppointment);
+
+  console.log("Full instructions:", fullInstructions.substring(0, 100));
 
   if (!assistants.has(phone)) {
     const newAssistant = await openai.beta.assistants.create({
@@ -559,8 +562,6 @@ async function handleUserInput(userMessages, phoneNumber) {
 
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
-      console.log(appointment)
-      let appointmentDuration = appointment.length > 0 ? getAppointmentDuration(appointment) : 30;
       let appointmentType = '';
       if (appointment.length > 0) {
         appointmentType = appointment[0].appointmenttype;
