@@ -8,6 +8,19 @@ import defaultAvatar from '../../assets/avatar.png';
 import { useIsFocused } from '@react-navigation/native';
 import { useMessage } from '../components/MessageContext';
 import * as Notifications from 'expo-notifications';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+
+const Header = ({ clientName, navigation }) => {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>{clientName}</Text>
+    </View>
+  );
+};
 
 const ClientMessagesScreen = ({ route }) => {
   const { clientid, clientName, suggestedResponse, clientMessage } = route.params;
@@ -166,7 +179,6 @@ const ClientMessagesScreen = ({ route }) => {
       console.log('Recipient:', recipient);
 
       const adjustedDate = new Date();
-      adjustedDate.setHours(adjustedDate.getHours() - 4);
       const adjustedDateString = adjustedDate.toLocaleString();
       
       // Check if the message is the same as the suggested response
@@ -359,77 +371,80 @@ const ClientMessagesScreen = ({ route }) => {
   );
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-    >
-      <View style={[
-        styles.contentContainer, 
-        keyboardVisible && styles.contentContainerKeyboardVisible
-      ]}>
-        
-          <FlatList
-            ref={flatListRef}
-            data={groupMessagesByDate([...messages, ...localMessages])}
-            renderItem={renderItem}
-            keyExtractor={useCallback((item) => item.date, [])}
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            removeClippedSubviews={true}
-            onContentSizeChange={scrollToBottom}
-            onLayout={scrollToBottom}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            style={styles.messageList}
-            contentContainerStyle={[
-              styles.messageListContent,
-              { paddingBottom: keyboardHeight + 16 }
-            ]}
-          />
-        {showScrollButton && (
-          <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
-            <Text style={styles.scrollButtonText}>↓</Text>
-          </TouchableOpacity>
-        )}
-        <View style={styles.bottomContainer}>
-          <View style={styles.autoRespondContainer}>
-            <Text style={styles.autoRespondText}>Auto-respond</Text>
-            <Switch
-              value={autoRespond}
-              onValueChange={handleAutoRespondToggle}
-              trackColor={{ false: "#292e38", true: "#195de6" }}
-              thumbColor={autoRespond ? "#ffffff" : "#9da6b8"}
+    <SafeAreaView style={styles.container}>
+      <Header clientName={clientName} navigation={navigation} />
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={[
+          styles.contentContainer, 
+          keyboardVisible && styles.contentContainerKeyboardVisible
+        ]}>
+          
+            <FlatList
+              ref={flatListRef}
+              data={groupMessagesByDate([...messages, ...localMessages])}
+              renderItem={renderItem}
+              keyExtractor={useCallback((item) => item.date, [])}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={10}
+              removeClippedSubviews={true}
+              onContentSizeChange={scrollToBottom}
+              onLayout={scrollToBottom}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              style={styles.messageList}
+              contentContainerStyle={[
+                styles.messageListContent,
+                { paddingBottom: keyboardHeight + 16 }
+              ]}
             />
-          </View>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[styles.input, { height: Math.min(150, Math.max(60, inputHeight)) }]}
-              scrollEnabled={true}
-              placeholder="Write a message"
-              placeholderTextColor="#9da6b8"
-              value={newMessage}
-              onChangeText={handleInputChange}
-              multiline={true}
-              numberOfLines={4}
-              onContentSizeChange={handleContentSizeChange}
-              textAlignVertical="top"
-            />
-            <TouchableOpacity 
-              style={styles.sendButton} 
-              onPress={() => {
-                console.log('Send button pressed');
-                handleSendMessage();
-              }}
-              disabled={!clientDetails || newMessage.trim() === ''}
-            >
-              <Icon name="send" size={20} color={(clientDetails && newMessage.trim() !== '') ? "#195de6" : "#9da6b8"} />
+          {showScrollButton && (
+            <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
+              <Text style={styles.scrollButtonText}>↓</Text>
             </TouchableOpacity>
+          )}
+          <View style={styles.bottomContainer}>
+            <View style={styles.autoRespondContainer}>
+              <Text style={styles.autoRespondText}>Auto-respond</Text>
+              <Switch
+                value={autoRespond}
+                onValueChange={handleAutoRespondToggle}
+                trackColor={{ false: "#292e38", true: "#195de6" }}
+                thumbColor={autoRespond ? "#ffffff" : "#9da6b8"}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, { height: Math.min(150, Math.max(60, inputHeight)) }]}
+                scrollEnabled={true}
+                placeholder="Write a message"
+                placeholderTextColor="#9da6b8"
+                value={newMessage}
+                onChangeText={handleInputChange}
+                multiline={true}
+                numberOfLines={4}
+                onContentSizeChange={handleContentSizeChange}
+                textAlignVertical="top"
+              />
+              <TouchableOpacity 
+                style={styles.sendButton} 
+                onPress={() => {
+                  console.log('Send button pressed');
+                  handleSendMessage();
+                }}
+                disabled={!clientDetails || newMessage.trim() === ''}
+              >
+                <Icon name="send" size={20} color={(clientDetails && newMessage.trim() !== '') ? "#195de6" : "#9da6b8"} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -437,6 +452,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#111318',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#111318',
+    borderBottomWidth: 1,
+    borderBottomColor: '#292e38',
+  },
+  backButton: {
+    marginRight: 16,
+  },
+  headerTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   contentContainer: {
     flex: 1,
