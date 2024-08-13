@@ -9,17 +9,17 @@ const Footer = ({ navigation }) => {
         <Ionicons name="home" size={24} color="#fff" />
         <Text style={styles.footerText}>Home</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ClientList')}>
-        <Ionicons name="people" size={24} color="#fff" />
-        <Text style={styles.footerText}>Clients</Text>
-      </TouchableOpacity>
       <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Calendar')}>
         <Ionicons name="calendar" size={24} color="#fff" />
         <Text style={styles.footerText}>Calendar</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Settings')}>
-        <Ionicons name="settings" size={24} color="#fff" />
-        <Text style={styles.footerText}>Settings</Text>
+      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ChatDashboard')}>
+        <Ionicons name="chatbubbles" size={24} color="#fff" />
+        <Text style={styles.footerText}>Chat</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ClientList')}>
+        <Ionicons name="people" size={24} color="#fff" />
+        <Text style={styles.footerText}>Clients</Text>
       </TouchableOpacity>
     </View>
   );

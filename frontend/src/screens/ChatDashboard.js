@@ -3,7 +3,8 @@ import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image } 
 import { getAllMessagesGroupedByClient, getClientById } from '../services/api';
 import Footer from '../components/Footer'; 
 import { useIsFocused } from '@react-navigation/native';
-import { format } from 'date-fns'; // Add this import
+import { format } from 'date-fns';
+import { useNavigation } from '@react-navigation/native'; // Add this import
 
 const ChatDashboard = ({ navigation }) => {
   const [groupedMessages, setGroupedMessages] = useState({});
@@ -11,7 +12,11 @@ const ChatDashboard = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [polling, setPolling] = useState(null);
   const isFocused = useIsFocused();
-  const [lastUpdated, setLastUpdated] = useState(null); // Add this state
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const handleBackPress = () => {
+    navigation.goBack();
+  };
 
   useEffect(() => {
     if (isFocused) {
@@ -149,6 +154,9 @@ const ChatDashboard = ({ navigation }) => {
         </TouchableOpacity>
       </View>
       <View style={styles.searchContainer}>
+        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
         <TextInput
           style={styles.searchInput}
           placeholder="Search"
@@ -191,7 +199,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    paddingBottom: 8, // Reduced bottom padding
+    paddingBottom: 8,
   },
   searchInput: {
     flex: 1,
@@ -200,7 +208,7 @@ const styles = StyleSheet.create({
     color: 'white',
     borderRadius: 20,
     paddingHorizontal: 16,
-    marginRight: 10,
+    marginHorizontal: 10,
   },
   refreshButton: {
     padding: 8,
@@ -210,6 +218,13 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   settingsIcon: {
+    color: 'white',
+    fontSize: 24,
+  },
+  backButton: {
+    padding: 8,
+  },
+  backIcon: {
     color: 'white',
     fontSize: 24,
   },
@@ -263,7 +278,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginBottom: 8,
-    marginTop: -4, // Added negative top margin to move it closer to the search bar
+    marginTop: -4,
   },
 });
 
