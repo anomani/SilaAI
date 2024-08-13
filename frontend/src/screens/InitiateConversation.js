@@ -5,7 +5,7 @@ import { sendMessagesToSelectedClients, updateClientOutreachDate, setAIPrompt } 
 const presetPrompts = [
   {
     title: 'Rescheduling',
-    content: 'Ask client to reschedule their appointment. Use the getUpcomingAppointment tool to get the appointment details for the appointment that fits the context of the conversation. Then use this appointment information to reschedule this appointment',
+    content: 'Ask client to reschedule their appointment. Use the getUpcomingAppointment tool to get the appointment details for the appointment that fits the context of the conversation. Then use this appointment date to reschedule this appointment. I am going on vacation from the 19th to the 26th so don’t offer appointments during those days. If a customer asks when can I book offer appointments after the 26th. When booking leave the previous appointment and just book a new appointment. Call clearCustomPrompt after customer books new appointment',
     preview: 'Ask client to reschedule their appointment....'
   },
   {
