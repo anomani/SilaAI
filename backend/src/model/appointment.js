@@ -1,9 +1,9 @@
 const dbUtils = require('./dbUtils');
 
-async function createAppointment(appointmentType, acuityId, date, startTime, endTime, clientId, details, price) {
+async function createAppointment(appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod) {
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO Appointment (appointmentType, acuityId, date, startTime, endTime, clientId, details, price)
+        INSERT INTO Appointment (appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id
     `;
