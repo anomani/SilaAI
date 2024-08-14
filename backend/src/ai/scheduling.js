@@ -631,7 +631,7 @@ async function verifyResponse(response, client, thread) {
   console.log(`Verifying response: ${response}`);
   let verificationThread;
   try {
-    const verificationPromptPath = path.join(__dirname, 'Prompts', 'verificationPrompt.txt');
+    const verificationPromptPath = path.join(__dirname, 'Prompts', 'toneVerification.txt');
     let verificationPrompt = fs.readFileSync(verificationPromptPath, 'utf8');
     const currentDate = new Date(getCurrentDate());
     const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
@@ -738,5 +738,13 @@ async function shouldAIRespond(userMessages, thread) {
     return false; // Default to human attention if there's an error
   }
 }
+
+async function main() {
+  const client = await getClientByPhoneNumber('+12038324011');
+  const response = await verifyResponse('See you then!', client, null);
+  console.log(response);
+}
+
+main();
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
