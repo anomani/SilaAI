@@ -11,7 +11,8 @@ const { Expo } = require('expo-server-sdk');
 let expo = new Expo();
 
 // New cron job for unpaid appointments notification
-cron.schedule('0 20 * * *', async () => {
+cron.schedule('* * * * *', async () => {
+    console.log('Cron job started at:', new Date().toISOString());
     try {        
         const today = new Date().toISOString().split('T')[0];
         const unpaidAppointments = await getUnpaidAppointmentsByDate(today);
@@ -25,6 +26,7 @@ cron.schedule('0 20 * * *', async () => {
     } catch (error) {
         console.error('Error checking unpaid appointments:', error);
     }
+    console.log('Cron job completed at:', new Date().toISOString());
 });
 
 async function sendUnpaidAppointmentsNotification(recipientName, message) {
@@ -59,4 +61,3 @@ async function sendUnpaidAppointmentsNotification(recipientName, message) {
         console.error('Error sending push notification:', error);
     }
 }
-
