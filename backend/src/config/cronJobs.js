@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const dbUtils = require('../model/dbUtils');
 const { ObjectId } = require('mongodb');
-const { getUnpaidAppointmentsByDate, getAppointmentsByDate } = require('../model/appointment');
+const { getUnpaidAppointmentsByDate, getAppointmentsByDay } = require('../model/appointment');
 const { sendNotificationToUser } = require('./twilio');
 const { getUserByPhoneNumber } = require('../model/users');
 const { getUserPushToken } = require('../model/pushToken');
@@ -18,7 +18,7 @@ function initializeCronJobs() {
             const today = new Date().toISOString().split('T')[0];
             console.log('Today:', today);
             const unpaidAppointments = await getUnpaidAppointmentsByDate(today);
-            const appointments = await getAppointmentsByDate(today);
+            const appointments = await getAppointmentsByDay(today);
             console.log('Unpaid appointments:', unpaidAppointments);
             console.log('Appointments:', appointments);
             if (unpaidAppointments.length > 0) {
