@@ -10,24 +10,26 @@ const { Expo } = require('expo-server-sdk');
 // Initialize the Expo SDK
 let expo = new Expo();
 
-// New cron job for unpaid appointments notification
-cron.schedule('* * * * *', async () => {
-    console.log('Cron job started at:', new Date().toISOString());
-    try {        
-        const today = new Date().toISOString().split('T')[0];
-        const unpaidAppointments = await getUnpaidAppointmentsByDate(today);
-        
-        if (unpaidAppointments.length > 0) {
-            const message = `You have ${unpaidAppointments.length} unpaid appointment(s) for today.`;
-            await sendUnpaidAppointmentsNotification('Barber', message);
+function initializeCronJobs() {
+    // New cron job for unpaid appointments notification
+    cron.schedule('* * * * *', async () => {
+        console.log('Cron job started at:', new Date().toISOString());
+        try {        
+            const today = new Date().toISOString().split('T')[0];
+            const unpaidAppointments = await getUnpaidAppointmentsByDate(today);
+            
+            if (unpaidAppointments.length > 0) {
+                const message = `You have ${unpaidAppointments.length} unpaid appointment(s) for today.`;
+                await sendUnpaidAppointmentsNotification('Barber', message);
+            }
+            
+            console.log('Checked for unpaid appointments and sent notification if necessary');
+        } catch (error) {
+            console.error('Error checking unpaid appointments:', error);
         }
-        
-        console.log('Checked for unpaid appointments and sent notification if necessary');
-    } catch (error) {
-        console.error('Error checking unpaid appointments:', error);
-    }
-    console.log('Cron job completed at:', new Date().toISOString());
-});
+        console.log('Cron job completed at:', new Date().toISOString());
+    });
+}
 
 async function sendUnpaidAppointmentsNotification(recipientName, message) {
     const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
@@ -61,3 +63,7 @@ async function sendUnpaidAppointmentsNotification(recipientName, message) {
         console.error('Error sending push notification:', error);
     }
 }
+
+module.exports = {
+    initializeCronJobs
+};
