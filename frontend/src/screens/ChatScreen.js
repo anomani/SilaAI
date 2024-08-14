@@ -54,6 +54,7 @@ const ChatScreen = () => {
   const flatListRef = useRef(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [inputHeight, setInputHeight] = useState(40); // Add this line
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -213,11 +214,15 @@ const ChatScreen = () => {
           )}
           <View style={styles.inputContainer}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { height: Math.max(40, inputHeight) }]}
               value={message}
               onChangeText={setMessage}
               placeholder="Type a message"
               placeholderTextColor="#888"
+              multiline
+              onContentSizeChange={(event) => {
+                setInputHeight(event.nativeEvent.contentSize.height);
+              }}
             />
             <TouchableOpacity onPress={() => handleSend()} style={styles.sendButton}>
               <Ionicons name="send" size={24} color="#fff" />
@@ -312,7 +317,7 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end', // Change this from 'center' to 'flex-end'
     padding: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.05)',
@@ -325,6 +330,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     color: '#fff',
     fontSize: 16,
+    maxHeight: 120, // Add this line to limit the maximum height
   },
   sendButton: {
     marginLeft: 10,

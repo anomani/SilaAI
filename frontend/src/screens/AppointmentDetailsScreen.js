@@ -1,42 +1,55 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
-import { deleteAppointment, rescheduleAppointment, getClientById } from '../services/api';
+import { deleteAppointment, getClientById } from '../services/api';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import moment from 'moment';
+import { useFocusEffect } from '@react-navigation/native';
 
 const AppointmentDetailsScreen = ({ route, navigation }) => {
-  const { appointment, onDelete } = route.params;
+  const { appointment } = route.params;
   console.log(appointment.clientid)
   const [clientName, setClientName] = useState('');
 
-  useEffect(() => {
-    const fetchClientName = async () => {
-      try {
-        const clientDetails = await getClientById(appointment.clientid);
-        setClientName(`${clientDetails.firstname} ${clientDetails.lastname}`);
-      } catch (error) {
-        Alert.alert('Error', 'Failed to fetch client details');
-      }
-    };
+  useFocusEffect(
+    useCallback(() => {
+      const fetchClientName = async () => {
+        try {
+          const clientDetails = await getClientById(appointment.clientid);
+          setClientName(`${clientDetails.firstname} ${clientDetails.lastname}`);
+        } catch (error) {
+          Alert.alert('Error', 'Failed to fetch client details');
+        }
+      };
 
-    fetchClientName();
-  }, [appointment.clientid]);
+      fetchClientName();
+    }, [appointment.clientid])
+  );
 
-  const handleDelete = async () => {
-    try {
-      await deleteAppointment(appointment.id);
-      Alert.alert('Success', 'Appointment deleted successfully');
-      if (onDelete) {
-        onDelete(); // Call the onDelete callback
-      }
-      navigation.goBack();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to delete appointment');
-    }
-  };
-
-  const handleReschedule = () => {
-    navigation.navigate('RescheduleAppointment', { appointment });
+  const handleDelete = () => {
+    Alert.alert(
+      "Confirm Deletion",
+      "Are you sure you want to delete this appointment?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "Delete", 
+          onPress: async () => {
+            try {
+              await deleteAppointment(appointment.id);
+              Alert.alert('Success', 'Appointment deleted successfully');
+              navigation.navigate('Calendar', { refresh: true });
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete appointment');
+            }
+          },
+          style: "destructive"
+        }
+      ],
+      { cancelable: false }
+    );
   };
 
   const formatTime = (time) => {
@@ -73,10 +86,6 @@ const AppointmentDetailsScreen = ({ route, navigation }) => {
         </View>
       </View>
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={[styles.button, styles.rescheduleButton]} onPress={handleReschedule}>
-          <Icon name="edit" size={24} color="#fff" />
-          <Text style={styles.buttonText}>Reschedule</Text>
-        </TouchableOpacity>
         <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={handleDelete}>
           <Icon name="delete" size={24} color="#fff" />
           <Text style={styles.buttonText}>Delete</Text>
@@ -126,21 +135,17 @@ const styles = StyleSheet.create({
     fontWeight: '500' 
   },
   buttonContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-around', 
+    alignItems: 'center', 
     marginTop: 20, 
     marginBottom: 40 
   },
   button: { 
     flexDirection: 'row', 
     alignItems: 'center',
-    justifyContent: 'center', // Added this line
+    justifyContent: 'center',
     padding: 12, 
     borderRadius: 8, 
     width: '40%' 
-  },
-  rescheduleButton: { 
-    backgroundColor: '#007AFF' 
   },
   deleteButton: { 
     backgroundColor: '#FF3B30' 

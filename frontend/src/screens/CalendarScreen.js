@@ -10,7 +10,7 @@ import ClientCardView from '../components/ClientCardView';
 import { useFocusEffect } from '@react-navigation/native';
 
 
-const CalendarScreen = ({ navigation }) => {
+const CalendarScreen = ({ navigation, route }) => {
   const [appointments, setAppointments] = useState([]);
   const [date, setDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('list');
@@ -144,6 +144,16 @@ const CalendarScreen = ({ navigation }) => {
     useCallback(() => {
       fetchAppointments();
     }, [date])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (route.params?.refresh) {
+        fetchAppointments();
+        // Clear the refresh parameter
+        navigation.setParams({ refresh: undefined });
+      }
+    }, [route.params?.refresh])
   );
 
   const fetchAppointments = async () => {
@@ -314,7 +324,7 @@ const CalendarScreen = ({ navigation }) => {
     if (appointments.length === 0) {
       return (
         <View style={styles.noAppointmentsContainer}>
-          <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+          <Text style={styles.noAppointmentsText}>No appointments scheduled for this day</Text>
         </View>
       );
     }
@@ -383,7 +393,7 @@ const CalendarScreen = ({ navigation }) => {
                     ]
                   );
                 } else {
-                  navigation.navigate('AppointmentDetails', { appointment, onDelete: fetchAppointments });
+                  navigation.navigate('AppointmentDetails', { appointment });
                 }
               }}
             >
@@ -502,7 +512,7 @@ const CalendarScreen = ({ navigation }) => {
       ) : viewMode === 'list' ? (
         appointments.length === 0 ? (
           <View style={styles.noAppointmentsContainer}>
-            <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+            <Text style={styles.noAppointmentsText}>No appointments scheduled for this day</Text>
           </View>
         ) : (
           <ScrollView 
@@ -544,7 +554,7 @@ const CalendarScreen = ({ navigation }) => {
             </>
           ) : (
             <View style={styles.noAppointmentsContainer}>
-              <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+              <Text style={styles.noAppointmentsText}>No appointments scheduled for this day</Text>
             </View>
           )}
         </View>

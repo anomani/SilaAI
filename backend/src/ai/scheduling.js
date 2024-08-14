@@ -692,7 +692,6 @@ async function verifyResponse(response, client, thread) {
       }
     }
   } finally {
-    // Clean up the verification thread
     if (verificationThread) {
       await openai.beta.threads.del(verificationThread.id);
     }
