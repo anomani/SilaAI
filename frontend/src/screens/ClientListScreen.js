@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Button, SafeAreaView, Keyboard } from 'react-native';
 import { getClients } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Footer from '../components/Footer'; // Import Footer component
 
 const ClientListScreen = () => {
@@ -10,14 +10,22 @@ const ClientListScreen = () => {
   const [search, setSearch] = useState('');
   const navigation = useNavigation();
 
-  useEffect(() => {
-    fetchClients();
+  const fetchClients = useCallback(async () => {
+    try {
+      const data = await getClients();
+      setClients(data);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+      // Optionally, you could show an error message to the user here
+    }
   }, []);
 
-  const fetchClients = async () => {
-    const data = await getClients();
-    setClients(data);
-  };
+  // Use useFocusEffect to refresh the client list when the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchClients();
+    }, [fetchClients])
+  );
 
   const filteredClients = clients.filter(client =>
     `${client.firstname} ${client.lastname}`.toLowerCase().includes(search.toLowerCase())
@@ -56,12 +64,6 @@ const ClientListScreen = () => {
           <TouchableOpacity style={styles.refreshButton} onPress={fetchClients}>
             <Ionicons name="refresh" size={24} color="#007AFF" />
           </TouchableOpacity>
-          {/* <TouchableOpacity style={styles.followUpButton} onPress={() => navigation.navigate('SuggestedFollowUps')}>
-            <Ionicons name="mail" size={24} color="#007AFF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('Chat')}>
-            <Ionicons name="chatbubbles" size={24} color="#007AFF" />
-          </TouchableOpacity> */}
         </View>
         <FlatList
           data={filteredClients}
