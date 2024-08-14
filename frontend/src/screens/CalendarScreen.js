@@ -140,11 +140,15 @@ const CalendarScreen = ({ navigation, route }) => {
     return endMinutes - startMinutes;
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchAppointments();
-    }, [date])
-  );
+  useEffect(() => {
+    const openInCardView = route.params?.openInCardView;
+
+    if (openInCardView) {
+      setViewMode('card');
+    }
+
+    fetchAppointments();
+  }, [route.params]);
 
   const fetchAppointments = async () => {
     setIsLoading(true);
@@ -177,6 +181,11 @@ const CalendarScreen = ({ navigation, route }) => {
         }
       }));
       setAppointments(adjustedAppointments);
+
+      // If we're opening in card view, set the current appointment index to 0
+      if (route.params?.openInCardView && adjustedAppointments.length > 0) {
+        setCurrentAppointmentIndex(0);
+      }
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {
@@ -617,7 +626,7 @@ const styles = StyleSheet.create({
   },
   header: { 
     alignItems: 'center', 
-    marginBottom: 20,
+    marginBottom: 20, 
     marginTop: 20, // Reduced from 80 to remove extra space
   },
   headerDay: { 
