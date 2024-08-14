@@ -146,16 +146,6 @@ const CalendarScreen = ({ navigation, route }) => {
     }, [date])
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      if (route.params?.refresh) {
-        fetchAppointments();
-        // Clear the refresh parameter
-        navigation.setParams({ refresh: undefined });
-      }
-    }, [route.params?.refresh])
-  );
-
   const fetchAppointments = async () => {
     setIsLoading(true);
     setAppointments([]); // Clear existing appointments
@@ -393,7 +383,7 @@ const CalendarScreen = ({ navigation, route }) => {
                     ]
                   );
                 } else {
-                  navigation.navigate('AppointmentDetails', { appointment });
+                  navigation.navigate('AppointmentDetails', { appointment, onDelete: fetchAppointments });
                 }
               }}
             >
@@ -489,90 +479,92 @@ const CalendarScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerDay}>{formatDay(date)}</Text>
-        <View style={styles.headerDateContainer}>
-          <Text style={styles.headerDate}>{formatDate(date)}</Text>
-        </View>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddButtonPress}>
-          <Ionicons name="add-circle" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.refreshButton} onPress={fetchAppointments}>
-          <Ionicons name="refresh" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.viewToggleButton} onPress={toggleViewMode}>
-          <Ionicons name={viewMode === 'list' ? 'card' : 'list'} size={24} color="#007AFF" />
-        </TouchableOpacity>
-      </View>
-      
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-        </View>
-      ) : viewMode === 'list' ? (
-        appointments.length === 0 ? (
-          <View style={styles.noAppointmentsContainer}>
-            <Text style={styles.noAppointmentsText}>No appointments scheduled for this day</Text>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.headerDay}>{formatDay(date)}</Text>
+          <View style={styles.headerDateContainer}>
+            <Text style={styles.headerDate}>{formatDate(date)}</Text>
           </View>
-        ) : (
-          <ScrollView 
-            style={styles.calendarContainer}
-            contentContainerStyle={{ height: totalHeight }}
-          >
-            <View style={styles.timelineContainer}>
-              <View style={styles.timeline}>
-                {renderTimeSlots()}
-              </View>
-              <View style={[styles.appointmentsContainer, { height: totalHeight }]}>
-                {renderAppointments()}
-                {renderCurrentTimeLine()}
-              </View>
-            </View>
-          </ScrollView>
-        )
-      ) : (
-        <View style={styles.cardView}>
-          {appointments.length > 0 ? (
-            <>
-              <ClientCardView
-                appointment={appointments[currentAppointmentIndex]}
-                onDelete={fetchAppointments}
-              />
-              <View style={styles.cardNavigation}>
-                <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.max(0, currentAppointmentIndex - 1))} style={styles.navButton}>
-                  <Text style={styles.navButtonText}>‹</Text>
-                </TouchableOpacity>
-                <View style={styles.appointmentCounterContainer}>
-                  <Text style={styles.appointmentCounter}>
-                    {currentAppointmentIndex + 1} / {appointments.length}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.min(appointments.length - 1, currentAppointmentIndex + 1))} style={styles.navButton}>
-                  <Text style={styles.navButtonText}>›</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
+          <TouchableOpacity style={styles.addButton} onPress={handleAddButtonPress}>
+            <Ionicons name="add-circle" size={24} color="#007AFF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.refreshButton} onPress={fetchAppointments}>
+            <Ionicons name="refresh" size={24} color="#007AFF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.viewToggleButton} onPress={toggleViewMode}>
+            <Ionicons name={viewMode === 'list' ? 'card' : 'list'} size={24} color="#007AFF" />
+          </TouchableOpacity>
+        </View>
+        
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+          </View>
+        ) : viewMode === 'list' ? (
+          appointments.length === 0 ? (
             <View style={styles.noAppointmentsContainer}>
               <Text style={styles.noAppointmentsText}>No appointments scheduled for this day</Text>
             </View>
-          )}
+          ) : (
+            <ScrollView 
+              style={styles.calendarContainer}
+              contentContainerStyle={{ height: totalHeight }}
+            >
+              <View style={styles.timelineContainer}>
+                <View style={styles.timeline}>
+                  {renderTimeSlots()}
+                </View>
+                <View style={[styles.appointmentsContainer, { height: totalHeight }]}>
+                  {renderAppointments()}
+                  {renderCurrentTimeLine()}
+                </View>
+              </View>
+            </ScrollView>
+          )
+        ) : (
+          <View style={styles.cardView}>
+            {appointments.length > 0 ? (
+              <>
+                <ClientCardView
+                  appointment={appointments[currentAppointmentIndex]}
+                  onDelete={fetchAppointments}
+                />
+                <View style={styles.cardNavigation}>
+                  <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.max(0, currentAppointmentIndex - 1))} style={styles.navButton}>
+                    <Text style={styles.navButtonText}>‹</Text>
+                  </TouchableOpacity>
+                  <View style={styles.appointmentCounterContainer}>
+                    <Text style={styles.appointmentCounter}>
+                      {currentAppointmentIndex + 1} / {appointments.length}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.min(appointments.length - 1, currentAppointmentIndex + 1))} style={styles.navButton}>
+                    <Text style={styles.navButtonText}>›</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <View style={styles.noAppointmentsContainer}>
+                <Text style={styles.noAppointmentsText}>No appointments scheduled for this day</Text>
+              </View>
+            )}
+          </View>
+        )}
+        
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalText}>Daily Total: ${calculateDailyTotal()}</Text>
         </View>
-      )}
-      
-      <View style={styles.totalContainer}>
-        <Text style={styles.totalText}>Daily Total: ${calculateDailyTotal()}</Text>
-      </View>
-      <View style={styles.navigation}>
-        <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(-1)}>
-          <Text style={styles.dayNavButtonText}>Previous Day</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.dayNavButton} onPress={goToToday}>
-          <Text style={styles.dayNavButtonText}>Today</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(1)}>
-          <Text style={styles.dayNavButtonText}>Next Day</Text>
-        </TouchableOpacity>
+        <View style={styles.navigation}>
+          <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(-1)}>
+            <Text style={styles.dayNavButtonText}>Previous Day</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.dayNavButton} onPress={goToToday}>
+            <Text style={styles.dayNavButtonText}>Today</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(1)}>
+            <Text style={styles.dayNavButtonText}>Next Day</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <Footer navigation={navigation} />
       <RescheduleConfirmModal
@@ -616,9 +608,12 @@ const CalendarScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    padding: 16, 
-    paddingTop: 40, // Reduced from 0 to add some padding at the top
-    backgroundColor: '#1c1c1e' 
+    backgroundColor: '#1c1c1e',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+    paddingTop: 40,
   },
   header: { 
     alignItems: 'center', 
