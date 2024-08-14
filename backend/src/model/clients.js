@@ -84,7 +84,7 @@ async function deleteClient(clientId) {
 
 async function getAllClients() {
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Client';
+    const sql = 'SELECT * FROM Client ORDER BY LOWER(lastName), LOWER(firstName)';
     try {
         const res = await db.query(sql);
         return res.rows;

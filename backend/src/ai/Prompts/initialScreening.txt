@@ -23,7 +23,6 @@ requests that you know you can not satisfy and that require human attention.
 It should not only be about decisions that 
 the barber has to make but any information that he needs to know such as client arriving at barbershop, their location, etc. Any time sensitive information about the clients location
 
-
 The AI can handle:
 
 1. Scheduling and modifying appointments
