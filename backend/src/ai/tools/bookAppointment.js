@@ -138,7 +138,6 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
         // console.log(acuityAppointment);
         const client = await getClientByPhoneNumber(phone);
         if (client.id != '') {
-            console.log("Client already exists");
             const clientId = client.id;
             await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", price);
         } else {

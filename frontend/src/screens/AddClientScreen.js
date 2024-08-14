@@ -4,6 +4,7 @@ import { addClient } from '../services/api';
 
 const AddClientScreen = ({ navigation }) => {
   const [client, setClient] = useState({ firstname: '', lastname: '', phonenumber: '', email: '' });
+  const [formattedPhoneNumber, setFormattedPhoneNumber] = useState('');
   const [errors, setErrors] = useState({});
   
   const handleInputChange = (field, value) => {
@@ -11,11 +12,33 @@ const AddClientScreen = ({ navigation }) => {
     setErrors({ ...errors, [field]: '' });
   };
 
+  const formatPhoneNumber = (input) => {
+    const cleaned = input.replace(/\D/g, '').slice(0, 10);
+    let formatted = '';
+    if (cleaned.length > 0) {
+      formatted += '(' + cleaned.slice(0, 3);
+      if (cleaned.length > 3) {
+        formatted += ')-' + cleaned.slice(3, 6);
+        if (cleaned.length > 6) {
+          formatted += '-' + cleaned.slice(6);
+        }
+      }
+    }
+    return formatted;
+  };
+
+  const handlePhoneNumberChange = (value) => {
+    const formattedNumber = formatPhoneNumber(value);
+    setFormattedPhoneNumber(formattedNumber);
+    const numericValue = value.replace(/\D/g, '').slice(0, 10);
+    handleInputChange('phonenumber', numericValue);
+  };
+
   const validateForm = () => {
     let newErrors = {};
     if (!client.firstname.trim()) newErrors.firstname = 'First name is required';
     if (!client.lastname.trim()) newErrors.lastname = 'Last name is required';
-    if (!client.phonenumber.trim()) newErrors.phonenumber = 'Phone number is required';
+    if (client.phonenumber.length !== 10) newErrors.phonenumber = 'Phone number must be 10 digits';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -68,8 +91,10 @@ const AddClientScreen = ({ navigation }) => {
       <TextInput
         ref={(input) => { this.phonenumberInput = input; }}
         style={[styles.input, errors.phonenumber && styles.inputError]}
-        value={client.phonenumber}
-        onChangeText={(value) => handleInputChange('phonenumber', value)}
+        value={formattedPhoneNumber}
+        onChangeText={handlePhoneNumberChange}
+        placeholder="(XXX)-XXX-XXXX"
+        keyboardType="phone-pad"
         returnKeyType="next"
         onSubmitEditing={() => handleSubmitEditing(this.emailInput)}
       />
