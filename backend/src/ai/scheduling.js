@@ -738,12 +738,12 @@ async function shouldAIRespond(userMessages, thread) {
   }
 }
 
-async function main() {
-  const client = await getClientByPhoneNumber('+12038324011');
-  const response = await verifyResponse('See you then!', client, null);
-  console.log(response);
-}
+// async function main() {
+//   const client = await getClientByPhoneNumber('+12038324011');
+//   const response = await verifyResponse('See you then!', client, null);
+//   console.log(response);
+// }
 
-main();
+// main();
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
