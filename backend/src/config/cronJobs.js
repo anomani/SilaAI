@@ -16,11 +16,7 @@ function initializeCronJobs() {
         console.log('Cron job started at:', new Date().toISOString());
         try {        
             const today = new Date().toISOString().split('T')[0];
-            console.log('Today:', today);
             const unpaidAppointments = await getUnpaidAppointmentsByDate(today);
-            const appointments = await getAppointmentsByDay(today);
-            console.log('Unpaid appointments:', unpaidAppointments);
-            console.log('Appointments:', appointments);
             if (unpaidAppointments.length > 0) {
                 const message = `You have ${unpaidAppointments.length} unpaid appointment(s) for today.`;
                 await sendUnpaidAppointmentsNotification('Barber', message);

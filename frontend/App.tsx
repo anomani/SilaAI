@@ -113,8 +113,8 @@ const AppContent: React.FC = () => {
             clientMessage 
           });
         } else if (data.notificationType === 'unpaid_appointments') {
-          console.log('Navigating to CalendarScreen');
-          navigation.navigate('Calendar');
+          console.log('Navigating to CalendarScreen in card view');
+          navigation.navigate('Calendar', { openInCardView: true });
         }
       } else {
         console.warn('Invalid or missing data in notification:', data);
