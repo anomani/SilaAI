@@ -257,6 +257,7 @@ async function getUnpaidAppointmentsByDate(date) {
     }
 }
 
+
 async function rescheduleAppointment(appointmentId, newDate, newStartTime, newEndTime) {
     const db = dbUtils.getDB();
     const sql = `

@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const dbUtils = require('../model/dbUtils');
 const { ObjectId } = require('mongodb');
-const { getUnpaidAppointmentsByDate } = require('../model/appointment');
+const { getUnpaidAppointmentsByDate, getAppointmentsByDate } = require('../model/appointment');
 const { sendNotificationToUser } = require('./twilio');
 const { getUserByPhoneNumber } = require('../model/users');
 const { getUserPushToken } = require('../model/pushToken');
@@ -11,13 +11,16 @@ const { Expo } = require('expo-server-sdk');
 let expo = new Expo();
 
 function initializeCronJobs() {
-    // New cron job for unpaid appointments notification
-    cron.schedule('* * * * *', async () => {
+    // Cron job for unpaid appointments notification, runs daily at 8:00 PM
+    cron.schedule('0 20 * * *', async () => {
         console.log('Cron job started at:', new Date().toISOString());
         try {        
             const today = new Date().toISOString().split('T')[0];
+            console.log('Today:', today);
             const unpaidAppointments = await getUnpaidAppointmentsByDate(today);
-            
+            const appointments = await getAppointmentsByDate(today);
+            console.log('Unpaid appointments:', unpaidAppointments);
+            console.log('Appointments:', appointments);
             if (unpaidAppointments.length > 0) {
                 const message = `You have ${unpaidAppointments.length} unpaid appointment(s) for today.`;
                 await sendUnpaidAppointmentsNotification('Barber', message);
