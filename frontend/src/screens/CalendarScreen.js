@@ -150,6 +150,17 @@ const CalendarScreen = ({ navigation, route }) => {
     fetchAppointments();
   }, [route.params]);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      const openInCardView = route.params?.openInCardView;
+      if (openInCardView) {
+        setViewMode('card');
+        // Reset the parameter after handling it
+        navigation.setParams({ openInCardView: undefined });
+      }
+    }, [route.params, navigation])
+  );
+
   const fetchAppointments = async () => {
     setIsLoading(true);
     setAppointments([]); // Clear existing appointments
