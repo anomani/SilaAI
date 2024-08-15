@@ -1,4 +1,6 @@
-const app = require('../src/app');
+require('dotenv').config(); // Add this line at the very top
+
+const app = require('./src/app');
 const port = process.env.PORT || 3000;
 const bodyParser = require('body-parser');
 app.get("/", (req, res) => res.send("Uzi Barber App"));

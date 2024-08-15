@@ -403,3 +403,36 @@ export const updateClientAutoRespond = async (clientId, autoRespond) => {
     throw error;
   }
 };
+
+export const uploadClientImages = async (clientId, imageUris) => {
+  const formData = new FormData();
+  imageUris.forEach((uri, index) => {
+    formData.append('images', {
+      uri: uri,
+      type: 'image/jpeg',
+      name: `image_${index}.jpg`,
+    });
+  });
+
+  try {
+    const response = await api.post(`/images/upload/${clientId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error uploading client images:', error);
+    throw error;
+  }
+};
+
+export const getClientImages = async (clientId) => {
+  try {
+    const response = await api.get(`/images/${clientId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching client images:', error);
+    throw error;
+  }
+};

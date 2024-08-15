@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Modal, Alert, TextInput, Switch, Keyboard } from 'react-native';
-import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay } from '../services/api';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Modal, Alert, TextInput, Switch, Keyboard, FlatList } from 'react-native';
+import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientImages, uploadClientImages } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import avatarImage from '../../assets/avatar.png';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 
 const ClientCardView = ({ appointment }) => {
   const navigation = useNavigation();
@@ -21,6 +22,7 @@ const ClientCardView = ({ appointment }) => {
   const [clientAppointments, setClientAppointments] = useState([]);
   const [messages, setMessages] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [clientImages, setClientImages] = useState([]);
 
   // Extract clientId from the appointment object
   const currentClientId = appointment.clientid;
@@ -30,6 +32,7 @@ const ClientCardView = ({ appointment }) => {
       fetchClientAppointments();
       fetchNotes();
       fetchMessages();
+      fetchClientImages();
     } else {
       console.log('No currentClientId available in the appointment object');
     }
@@ -64,6 +67,15 @@ const ClientCardView = ({ appointment }) => {
     } catch (error) {
       console.error('Error fetching messages:', error);
       setMessages([]);
+    }
+  };
+
+  const fetchClientImages = async () => {
+    try {
+      const images = await getClientImages(currentClientId);
+      setClientImages(images);
+    } catch (error) {
+      console.error('Error fetching client images:', error);
     }
   };
 
@@ -312,6 +324,36 @@ const ClientCardView = ({ appointment }) => {
     });
   };
 
+  const pickImages = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets.length > 0) {
+      uploadImages(result.assets.map(asset => asset.uri));
+    }
+  };
+
+  const uploadImages = async (uris) => {
+    try {
+      const response = await uploadClientImages(currentClientId, uris);
+      if (response.images) {
+        setClientImages(prevImages => [...response.images, ...prevImages]);
+      }
+      Alert.alert('Success', 'Images uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      Alert.alert('Error', 'Failed to upload images');
+    }
+  };
+
+  const renderImageItem = ({ item }) => (
+    <Image source={{ uri: item.image_url }} style={styles.clientImage} />
+  );
+
   return (
     <ScrollView style={styles.cardView}>
       <View style={styles.cardContainer}>
@@ -336,10 +378,18 @@ const ClientCardView = ({ appointment }) => {
           </View>
         )}
 
-        <Image 
-          source={appointment.avatar ? { uri: appointment.avatar } : avatarImage} 
-          style={styles.clientImage} 
+        <TouchableOpacity onPress={pickImages}>
+          <Text style={styles.uploadImagesText}>Upload Images</Text>
+        </TouchableOpacity>
+        
+        <FlatList
+          data={clientImages}
+          renderItem={renderImageItem}
+          keyExtractor={(item) => item.id.toString()}
+          horizontal
+          showsHorizontalScrollIndicator={false}
         />
+        
         <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
         
         <Text style={styles.cardDate}>{formatAppointmentDate(appointment.date)}</Text>
@@ -479,7 +529,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    marginBottom: 15,
+    marginRight: 10,
   },
   cardClientName: {
     fontSize: 24,
@@ -893,6 +943,12 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 14,
     fontStyle: 'italic',
+  },
+  uploadImagesText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
 });
 
