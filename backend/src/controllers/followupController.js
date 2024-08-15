@@ -1,9 +1,9 @@
-const path = require('path');
-const { readCSV } = require('../services/csvService');
-const { sendMessage } = require('../config/twilio');
-const {getClients, getCSV} = require('../config/clientScraping')
+// const path = require('path');
+// const { readCSV } = require('../services/csvService');
+// const { sendMessage } = require('../config/twilio');
+// const {getClients, getCSV} = require('../config/clientScraping')
 
-const fs = require('fs');
+// const fs = require('fs');
 
 
 async function fetchClients(req, res) {
