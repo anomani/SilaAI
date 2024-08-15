@@ -4,7 +4,7 @@ async function createAppointment(appointmentType, acuityId, date, startTime, end
     const db = dbUtils.getDB();
     const sql = `
         INSERT INTO Appointment (appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING id
     `;
     const values = [appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod];
