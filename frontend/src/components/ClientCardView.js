@@ -351,7 +351,10 @@ const ClientCardView = ({ appointment }) => {
   };
 
   const renderImageItem = ({ item }) => (
-    <Image source={{ uri: item.image_url }} style={styles.clientImage} />
+    <Image 
+      source={item.image_url ? { uri: item.image_url } : avatarImage} 
+      style={styles.clientImage} 
+    />
   );
 
   return (
@@ -382,13 +385,17 @@ const ClientCardView = ({ appointment }) => {
           <Text style={styles.uploadImagesText}>Upload Images</Text>
         </TouchableOpacity>
         
-        <FlatList
-          data={clientImages}
-          renderItem={renderImageItem}
-          keyExtractor={(item) => item.id.toString()}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-        />
+        {clientImages.length > 0 ? (
+          <FlatList
+            data={clientImages}
+            renderItem={renderImageItem}
+            keyExtractor={(item) => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          />
+        ) : (
+          <Image source={avatarImage} style={styles.clientImage} />
+        )}
         
         <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
         
