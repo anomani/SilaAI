@@ -3,7 +3,7 @@ const path = require('path');
 const { addClientImage, getClientImages } = require('../model/clientImages');
 
 const storage = new Storage({
-  keyFilename: path.join(__dirname, '../../keys/uzi-app-55428-6ab92ae91fbf.json'),
+  keyFilename: path.join(__dirname, '../keys/uzi-app-55428-6ab92ae91fbf.json'),
   projectId: 'uzi-app-55428',
 });
 
