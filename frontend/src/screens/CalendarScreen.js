@@ -10,7 +10,7 @@ import ClientCardView from '../components/ClientCardView';
 import { useFocusEffect } from '@react-navigation/native';
 
 
-const CalendarScreen = ({ navigation, route }) => {
+const CalendarScreen = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
   const [date, setDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('list');
@@ -140,25 +140,10 @@ const CalendarScreen = ({ navigation, route }) => {
     return endMinutes - startMinutes;
   };
 
-  useEffect(() => {
-    const openInCardView = route.params?.openInCardView;
-
-    if (openInCardView) {
-      setViewMode('card');
-    }
-
-    fetchAppointments();
-  }, [route.params]);
-
   useFocusEffect(
-    React.useCallback(() => {
-      const openInCardView = route.params?.openInCardView;
-      if (openInCardView) {
-        setViewMode('card');
-        // Reset the parameter after handling it
-        navigation.setParams({ openInCardView: undefined });
-      }
-    }, [route.params, navigation])
+    useCallback(() => {
+      fetchAppointments();
+    }, [date])
   );
 
   const fetchAppointments = async () => {
@@ -192,11 +177,6 @@ const CalendarScreen = ({ navigation, route }) => {
         }
       }));
       setAppointments(adjustedAppointments);
-
-      // If we're opening in card view, set the current appointment index to 0
-      if (route.params?.openInCardView && adjustedAppointments.length > 0) {
-        setCurrentAppointmentIndex(0);
-      }
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {
@@ -334,7 +314,7 @@ const CalendarScreen = ({ navigation, route }) => {
     if (appointments.length === 0) {
       return (
         <View style={styles.noAppointmentsContainer}>
-          <Text style={styles.noAppointmentsText}>No appointments scheduled for this day</Text>
+          <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
         </View>
       );
     }
@@ -499,92 +479,90 @@ const CalendarScreen = ({ navigation, route }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.headerDay}>{formatDay(date)}</Text>
-          <View style={styles.headerDateContainer}>
-            <Text style={styles.headerDate}>{formatDate(date)}</Text>
-          </View>
-          <TouchableOpacity style={styles.addButton} onPress={handleAddButtonPress}>
-            <Ionicons name="add-circle" size={24} color="#007AFF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.refreshButton} onPress={fetchAppointments}>
-            <Ionicons name="refresh" size={24} color="#007AFF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.viewToggleButton} onPress={toggleViewMode}>
-            <Ionicons name={viewMode === 'list' ? 'card' : 'list'} size={24} color="#007AFF" />
-          </TouchableOpacity>
+      <View style={styles.header}>
+        <Text style={styles.headerDay}>{formatDay(date)}</Text>
+        <View style={styles.headerDateContainer}>
+          <Text style={styles.headerDate}>{formatDate(date)}</Text>
         </View>
-        
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+        <TouchableOpacity style={styles.addButton} onPress={handleAddButtonPress}>
+          <Ionicons name="add-circle" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.refreshButton} onPress={fetchAppointments}>
+          <Ionicons name="refresh" size={24} color="#007AFF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.viewToggleButton} onPress={toggleViewMode}>
+          <Ionicons name={viewMode === 'list' ? 'card' : 'list'} size={24} color="#007AFF" />
+        </TouchableOpacity>
+      </View>
+      
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      ) : viewMode === 'list' ? (
+        appointments.length === 0 ? (
+          <View style={styles.noAppointmentsContainer}>
+            <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
           </View>
-        ) : viewMode === 'list' ? (
-          appointments.length === 0 ? (
-            <View style={styles.noAppointmentsContainer}>
-              <Text style={styles.noAppointmentsText}>No appointments scheduled for this day</Text>
-            </View>
-          ) : (
-            <ScrollView 
-              style={styles.calendarContainer}
-              contentContainerStyle={{ height: totalHeight }}
-            >
-              <View style={styles.timelineContainer}>
-                <View style={styles.timeline}>
-                  {renderTimeSlots()}
-                </View>
-                <View style={[styles.appointmentsContainer, { height: totalHeight }]}>
-                  {renderAppointments()}
-                  {renderCurrentTimeLine()}
-                </View>
-              </View>
-            </ScrollView>
-          )
         ) : (
-          <View style={styles.cardView}>
-            {appointments.length > 0 ? (
-              <>
-                <ClientCardView
-                  appointment={appointments[currentAppointmentIndex]}
-                  onDelete={fetchAppointments}
-                />
-                <View style={styles.cardNavigation}>
-                  <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.max(0, currentAppointmentIndex - 1))} style={styles.navButton}>
-                    <Text style={styles.navButtonText}>‹</Text>
-                  </TouchableOpacity>
-                  <View style={styles.appointmentCounterContainer}>
-                    <Text style={styles.appointmentCounter}>
-                      {currentAppointmentIndex + 1} / {appointments.length}
-                    </Text>
-                  </View>
-                  <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.min(appointments.length - 1, currentAppointmentIndex + 1))} style={styles.navButton}>
-                    <Text style={styles.navButtonText}>›</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            ) : (
-              <View style={styles.noAppointmentsContainer}>
-                <Text style={styles.noAppointmentsText}>No appointments scheduled for this day</Text>
+          <ScrollView 
+            style={styles.calendarContainer}
+            contentContainerStyle={{ height: totalHeight }}
+          >
+            <View style={styles.timelineContainer}>
+              <View style={styles.timeline}>
+                {renderTimeSlots()}
               </View>
-            )}
-          </View>
-        )}
-        
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>Daily Total: ${calculateDailyTotal()}</Text>
+              <View style={[styles.appointmentsContainer, { height: totalHeight }]}>
+                {renderAppointments()}
+                {renderCurrentTimeLine()}
+              </View>
+            </View>
+          </ScrollView>
+        )
+      ) : (
+        <View style={styles.cardView}>
+          {appointments.length > 0 ? (
+            <>
+              <ClientCardView
+                appointment={appointments[currentAppointmentIndex]}
+                onDelete={fetchAppointments}
+              />
+              <View style={styles.cardNavigation}>
+                <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.max(0, currentAppointmentIndex - 1))} style={styles.navButton}>
+                  <Text style={styles.navButtonText}>‹</Text>
+                </TouchableOpacity>
+                <View style={styles.appointmentCounterContainer}>
+                  <Text style={styles.appointmentCounter}>
+                    {currentAppointmentIndex + 1} / {appointments.length}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.min(appointments.length - 1, currentAppointmentIndex + 1))} style={styles.navButton}>
+                  <Text style={styles.navButtonText}>›</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <View style={styles.noAppointmentsContainer}>
+              <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
+            </View>
+          )}
         </View>
-        <View style={styles.navigation}>
-          <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(-1)}>
-            <Text style={styles.dayNavButtonText}>Previous Day</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.dayNavButton} onPress={goToToday}>
-            <Text style={styles.dayNavButtonText}>Today</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(1)}>
-            <Text style={styles.dayNavButtonText}>Next Day</Text>
-          </TouchableOpacity>
-        </View>
+      )}
+      
+      <View style={styles.totalContainer}>
+        <Text style={styles.totalText}>Daily Total: ${calculateDailyTotal()}</Text>
+      </View>
+      <View style={styles.navigation}>
+        <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(-1)}>
+          <Text style={styles.dayNavButtonText}>Previous Day</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.dayNavButton} onPress={goToToday}>
+          <Text style={styles.dayNavButtonText}>Today</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(1)}>
+          <Text style={styles.dayNavButtonText}>Next Day</Text>
+        </TouchableOpacity>
       </View>
       <Footer navigation={navigation} />
       <RescheduleConfirmModal
@@ -628,16 +606,13 @@ const CalendarScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#1c1c1e',
-  },
-  content: {
-    flex: 1,
-    padding: 16,
-    paddingTop: 40,
+    padding: 16, 
+    paddingTop: 40, // Reduced from 0 to add some padding at the top
+    backgroundColor: '#1c1c1e' 
   },
   header: { 
     alignItems: 'center', 
-    marginBottom: 20, 
+    marginBottom: 20,
     marginTop: 20, // Reduced from 80 to remove extra space
   },
   headerDay: { 
