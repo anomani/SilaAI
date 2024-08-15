@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
-import { bookAppointmentWithAcuity, searchClients } from '../services/api';
+import { addAppointment, searchClients } from '../services/api';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 const AddAppointmentScreen = ({ navigation }) => {
@@ -79,28 +79,25 @@ const AddAppointmentScreen = ({ navigation }) => {
       const formatTime = (date) => {
         return date.toTimeString().split(' ')[0].slice(0, 5);
       };
-      if(!selectedClient.email) {
-        selectedClient.email = ''
-      }
+
       const appointmentData = {
         date: formatDate(appointment.date),
         startTime: formatTime(appointment.startTime),
-        fname: selectedClient.firstname,
-        lname: selectedClient.lastname,
-        phone: selectedClient.phonenumber,
-        email: selectedClient.email,
+        endTime: formatTime(appointment.endTime),
+        clientId: selectedClient.id,
         appointmentType: appointment.appointmentType,
+        details: appointment.details,
         price: parseFloat(appointment.price),
-        addOnArray: appointment.addOns || []
       };
-      console.log(appointmentData)
-      const result = await bookAppointmentWithAcuity(appointmentData);
 
-      console.log('Appointment booked:', result);
+      console.log(appointmentData);
+      await addAppointment(appointmentData);
+
+      console.log('Appointment added successfully');
       navigation.goBack();
     } catch (error) {
-      console.error('Error booking appointment:', error);
-      Alert.alert('Booking Error', 'Failed to book appointment. Please try again.');
+      console.error('Error adding appointment:', error);
+      Alert.alert('Booking Error', 'Failed to add appointment. Please try again.');
     }
   };
 

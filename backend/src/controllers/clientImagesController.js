@@ -1,6 +1,6 @@
 const { Storage } = require('@google-cloud/storage');
 const path = require('path');
-const { addClientImage, getClientImages } = require('../model/clientImages');
+const { addClientImage, getClientImages, deleteClientImage } = require('../model/clientImages');
 
 const storage = new Storage({
   keyFilename: path.join(__dirname, '../keys/uzi-imaging-project-33fdba88c16b.json'),
@@ -55,7 +55,28 @@ async function getClientImagesController(req, res) {
   }
 }
 
+async function deleteClientImageController(req, res) {
+  try {
+    const imageId = req.params.imageId;
+    const image = await deleteClientImage(imageId);
+    
+    if (image) {
+      // Delete the image from Google Cloud Storage
+      const fileName = path.basename(image.image_url);
+      await bucket.file(fileName).delete();
+      
+      res.status(200).json({ message: 'Image deleted successfully' });
+    } else {
+      res.status(404).json({ message: 'Image not found' });
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Server error');
+  }
+}
+
 module.exports = {
   uploadClientImages,
-  getClientImagesController
+  getClientImagesController,
+  deleteClientImageController
 };

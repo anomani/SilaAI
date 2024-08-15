@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -433,6 +433,15 @@ export const getClientImages = async (clientId) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching client images:', error);
+    throw error;
+  }
+};
+
+export const deleteClientImage = async (imageId) => {
+  try {
+    await retryRequest(() => throttledRequest(() => api.delete(`/images/${imageId}`)));
+  } catch (error) {
+    console.error('Error deleting client image:', error);
     throw error;
   }
 };

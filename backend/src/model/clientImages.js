@@ -30,7 +30,21 @@ async function getClientImages(clientId) {
   }
 }
 
+async function deleteClientImage(imageId) {
+  const db = dbUtils.getDB();
+  const sql = 'DELETE FROM client_images WHERE id = $1 RETURNING *';
+  const values = [imageId];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error deleting client image:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   addClientImage,
-  getClientImages
+  getClientImages,
+  deleteClientImage
 };
