@@ -3,11 +3,12 @@ const path = require('path');
 const { addClientImage, getClientImages } = require('../model/clientImages');
 
 const storage = new Storage({
-  keyFilename: path.join(__dirname, '../keys/uzi-app-55428-6ab92ae91fbf.json'),
-  projectId: 'uzi-app-55428',
+  keyFilename: path.join(__dirname, '../keys/uzi-imaging-project-33fdba88c16b.json'),
+  projectId: 'uzi-imaging-project',
 });
 
-const bucket = storage.bucket('uzi-bucket-images');
+
+const bucket = storage.bucket('image-buckets-uzi');
 
 async function uploadClientImages(req, res) {
   try {
@@ -26,7 +27,6 @@ async function uploadClientImages(req, res) {
       await new Promise((resolve, reject) => {
         blobStream.on('error', reject);
         blobStream.on('finish', async () => {
-          await blob.makePublic();
           const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
           
           const savedImage = await addClientImage(clientId, publicUrl);
