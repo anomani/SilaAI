@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Modal, Alert, TextInput, Switch, Keyboard, FlatList } from 'react-native';
 import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientImages, uploadClientImages } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import avatarImage from '../../assets/avatar.png';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
 import { useNavigation } from '@react-navigation/native';
+import ImageGallery from './ImageGallery';
 import * as ImagePicker from 'expo-image-picker';
 
 const ClientCardView = ({ appointment }) => {
@@ -23,6 +24,8 @@ const ClientCardView = ({ appointment }) => {
   const [messages, setMessages] = useState([]);
   const [notes, setNotes] = useState([]);
   const [clientImages, setClientImages] = useState([]);
+  const [showGallery, setShowGallery] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   // Extract clientId from the appointment object
   const currentClientId = appointment.clientid;
@@ -324,7 +327,39 @@ const ClientCardView = ({ appointment }) => {
     });
   };
 
-  const pickImages = async () => {
+  const pickImage = async () => {
+    Alert.alert(
+      "Choose Image Source",
+      "Would you like to take a new photo or choose from your gallery?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Take Photo",
+          onPress: () => launchCamera()
+        },
+        {
+          text: "Choose from Gallery",
+          onPress: () => launchImageLibrary()
+        }
+      ]
+    );
+  };
+
+  const launchCamera = async () => {
+    let result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    handleImagePickerResult(result);
+  };
+
+  const launchImageLibrary = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
@@ -332,16 +367,21 @@ const ClientCardView = ({ appointment }) => {
       quality: 1,
     });
 
-    if (!result.canceled && result.assets.length > 0) {
-      uploadImages(result.assets.map(asset => asset.uri));
+    handleImagePickerResult(result);
+  };
+
+  const handleImagePickerResult = (result) => {
+    if (!result.canceled) {
+      const uris = result.assets.map(asset => asset.uri);
+      uploadImages(uris);
     }
   };
 
   const uploadImages = async (uris) => {
     try {
-      const response = await uploadClientImages(currentClientId, uris);
-      if (response.images) {
-        setClientImages(prevImages => [...response.images, ...prevImages]);
+      const result = await uploadClientImages(currentClientId, uris);
+      if (result.images) {
+        setClientImages(prevImages => [...result.images, ...prevImages]);
       }
       Alert.alert('Success', 'Images uploaded successfully');
     } catch (error) {
@@ -350,12 +390,18 @@ const ClientCardView = ({ appointment }) => {
     }
   };
 
-  const renderImageItem = ({ item }) => (
-    <Image 
-      source={item.image_url ? { uri: item.image_url } : avatarImage} 
-      style={styles.clientImage} 
-    />
-  );
+  const handleImagePress = useCallback((index) => {
+    console.log('Image pressed, index:', index);
+    setSelectedImageIndex(index);
+    setShowGallery(true);
+  }, []);
+
+  const handleCloseGallery = useCallback(() => {
+    console.log('handleCloseGallery called');
+    setShowGallery(false);
+  }, []);
+
+  console.log('ClientCardView rendered. showGallery:', showGallery);
 
   return (
     <ScrollView style={styles.cardView}>
@@ -381,18 +427,22 @@ const ClientCardView = ({ appointment }) => {
           </View>
         )}
 
-        <TouchableOpacity onPress={pickImages}>
-          <Text style={styles.uploadImagesText}>Upload Images</Text>
-        </TouchableOpacity>
+        <View style={styles.headerContainer}>
+          <TouchableOpacity 
+            style={styles.addPhotoButton}
+            onPress={pickImage}
+          >
+            <Text style={styles.addPhotoButtonText}>Add Photo</Text>
+          </TouchableOpacity>
+        </View>
         
         {clientImages.length > 0 ? (
-          <FlatList
-            data={clientImages}
-            renderItem={renderImageItem}
-            keyExtractor={(item) => item.id.toString()}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-          />
+          <TouchableOpacity onPress={() => handleImagePress(0)}>
+            <Image 
+              source={{ uri: clientImages[0].image_url }} 
+              style={styles.clientImage} 
+            />
+          </TouchableOpacity>
         ) : (
           <Image source={avatarImage} style={styles.clientImage} />
         )}
@@ -513,6 +563,12 @@ const ClientCardView = ({ appointment }) => {
           </TouchableOpacity>
         </View>
       </View>
+      <ImageGallery 
+        images={clientImages}
+        visible={showGallery}
+        onClose={handleCloseGallery}
+        initialIndex={selectedImageIndex}
+      />
       {renderAddNoteModal()}
       {renderPaymentModal()}
     </ScrollView>
@@ -536,7 +592,8 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     borderRadius: 75,
-    marginRight: 10,
+    alignSelf: 'center',
+    marginBottom: 10,
   },
   cardClientName: {
     fontSize: 24,
@@ -955,6 +1012,29 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     fontSize: 16,
     fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    width: '100%',
+    marginBottom: 10,
+  },
+  addPhotoButton: {
+    backgroundColor: '#007AFF',
+    padding: 8,
+    borderRadius: 5,
+  },
+  addPhotoButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  clientImage: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    alignSelf: 'center',
     marginBottom: 10,
   },
 });

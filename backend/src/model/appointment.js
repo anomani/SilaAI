@@ -7,7 +7,7 @@ async function createAppointment(appointmentType, acuityId, date, startTime, end
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id
     `;
-    const values = [appointmentType, acuityId, date, startTime, endTime, clientId, details, price];
+    const values = [appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod];
     try {
         const res = await db.query(sql, values);
         console.log('Appointment Created with ID:', res.rows[0].id);
