@@ -13,7 +13,6 @@ let expo = new Expo();
 function initializeCronJobs() {
     // Cron job for unpaid appointments notification, runs daily at 8:00 PM
     cron.schedule('0 20 * * *', async () => {
-        console.log('Cron job started at:', new Date().toISOString());
         try {        
             const today = new Date().toISOString().split('T')[0];
             const unpaidAppointments = await getUnpaidAppointmentsByDate(today);
