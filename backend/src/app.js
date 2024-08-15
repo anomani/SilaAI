@@ -10,6 +10,7 @@ const webhookRoutes = require('./routes/webhookRoutes');
 const aiPromptRoutes = require('./routes/aiPromptRoutes');
 const noteRoutes = require('./routes/notesRoutes');
 const cronJobs = require('./config/cronJobs');  // Import the cron jobs
+const imageRoutes = require('./routes/imageRoutes');
 
 const app = express();
 
@@ -27,7 +28,7 @@ app.use('/api', tokenRoutes);
 app.use('/webhook', webhookRoutes);
 app.use('/api/ai-prompt', aiPromptRoutes);
 app.use('/api/notes', noteRoutes);
-
+app.use('/api/images', imageRoutes);
 // Initialize cron jobs
 cronJobs.initializeCronJobs();
 

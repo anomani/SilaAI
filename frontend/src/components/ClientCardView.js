@@ -15,7 +15,7 @@ const ClientCardView = ({ appointment }) => {
     paid: false,
     paymentMethod: 'cash',
     tipAmount: '',
-  });
+  })
   const [newNote, setNewNote] = useState('');
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [clientAppointments, setClientAppointments] = useState([]);
@@ -27,7 +27,6 @@ const ClientCardView = ({ appointment }) => {
 
   useEffect(() => {
     if (currentClientId) {
-      console.log('Fetching data for client ID:', currentClientId);
       fetchClientAppointments();
       fetchNotes();
       fetchMessages();
@@ -37,10 +36,8 @@ const ClientCardView = ({ appointment }) => {
   }, [currentClientId]);
 
   const fetchClientAppointments = async () => {
-    console.log('Fetching client appointments...');
     try {
       const fetchedAppointments = await getClientAppointmentsAroundCurrent(currentClientId, appointment.id);
-      console.log('Fetched appointments:', fetchedAppointments);
       setClientAppointments(fetchedAppointments);
     } catch (error) {
       console.error('Error fetching client appointments:', error);
@@ -49,10 +46,8 @@ const ClientCardView = ({ appointment }) => {
   };
 
   const fetchNotes = async () => {
-    console.log('Fetching notes...');
     try {
       const fetchedNotes = await getNotesByClientId(currentClientId);
-      console.log('Fetched notes:', fetchedNotes);
       setNotes(fetchedNotes);
     } catch (error) {
       console.error('Error fetching notes:', error);
@@ -61,10 +56,8 @@ const ClientCardView = ({ appointment }) => {
   };
 
   const fetchMessages = async () => {
-    console.log('Fetching messages...');
     try {
       const fetchedMessages = await getMessagesByClientId(currentClientId);
-      console.log('Fetched messages:', fetchedMessages);
       // Sort messages by date, oldest first
       const sortedMessages = fetchedMessages.sort((a, b) => new Date(a.date) - new Date(b.date));
       setMessages(sortedMessages);
@@ -150,16 +143,17 @@ const ClientCardView = ({ appointment }) => {
                 <Text style={styles.paymentOptionLabel}>Payment Method:</Text>
                 <View style={styles.paymentMethodOptions}>
                   {['cash', 'e-transfer'].map((method) => (
-                    <TouchableOpacity
-                      key={method}
-                      style={styles.paymentMethodOption}
-                      onPress={() => setPaymentData({ ...paymentData, paymentMethod: method })}
-                    >
-                      <View style={styles.radioButton}>
-                        {paymentData.paymentMethod === method && <View style={styles.radioButtonInner} />}
-                      </View>
+                    <View key={method} style={styles.paymentMethodOption}>
+                      <TouchableOpacity
+                        style={styles.radioButtonTouchable}
+                        onPress={() => setPaymentData({ ...paymentData, paymentMethod: method })}
+                      >
+                        <View style={styles.radioButton}>
+                          {paymentData.paymentMethod === method && <View style={styles.radioButtonInner} />}
+                        </View>
+                      </TouchableOpacity>
                       <Text style={styles.paymentMethodText}>{method === 'cash' ? 'Cash' : 'E-Transfer'}</Text>
-                    </TouchableOpacity>
+                    </View>
                   ))}
                 </View>
 
@@ -303,7 +297,6 @@ const ClientCardView = ({ appointment }) => {
 
       const response = await getAppointmentsByDay(formattedDate);
       // Process the fetched appointments as needed
-      console.log('Fetched appointments:', response);
       // You might want to update some state here with the fetched appointments
     } catch (error) {
       console.error('Error fetching appointments:', error);
@@ -788,6 +781,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  radioButtonTouchable: {
+    padding: 8,  // Increase touch area
+  },
   radioButton: {
     height: 24,
     width: 24,
@@ -796,7 +792,6 @@ const styles = StyleSheet.create({
     borderColor: '#007AFF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
   },
   radioButtonInner: {
     height: 12,
@@ -807,6 +802,7 @@ const styles = StyleSheet.create({
   paymentMethodText: {
     color: '#fff',
     fontSize: 18,
+    marginLeft: 8,  // Add some space between the radio button and text
   },
   tipInputContainer: {
     flexDirection: 'row',
