@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Modal, Alert, TextInput, Switch, Keyboard, FlatList } from 'react-native';
-import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientImages, uploadClientImages } from '../services/api';
+import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientImages, uploadClientImages, deleteClientImage } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import avatarImage from '../../assets/avatar.png';
 import twilioAvatar from '../../assets/icon.png';
@@ -401,6 +401,14 @@ const ClientCardView = ({ appointment }) => {
     setShowGallery(false);
   }, []);
 
+  const handleImageDeleted = useCallback(async (deletedImageId) => {
+    // Remove the deleted image from the local state
+    setClientImages(prevImages => prevImages.filter(img => img.id !== deletedImageId));
+    
+    // Fetch the updated list of images
+    await fetchClientImages();
+  }, []);
+
   console.log('ClientCardView rendered. showGallery:', showGallery);
 
   return (
@@ -568,6 +576,8 @@ const ClientCardView = ({ appointment }) => {
         visible={showGallery}
         onClose={handleCloseGallery}
         initialIndex={selectedImageIndex}
+        onImageDeleted={handleImageDeleted}
+        clientId={currentClientId}
       />
       {renderAddNoteModal()}
       {renderPaymentModal()}
