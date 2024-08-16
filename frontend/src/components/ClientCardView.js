@@ -1026,9 +1026,10 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
     width: '100%',
     marginBottom: 10,
+    paddingLeft: 10,
   },
   addPhotoButton: {
     backgroundColor: '#007AFF',
