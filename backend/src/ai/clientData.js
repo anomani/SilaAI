@@ -393,10 +393,15 @@ async function handleUserInputData(userMessage) {
       role: "user",
       content: userMessage,
     });
-
-    const run = await openai.beta.threads.runs.create(thread.id, {
-      assistant_id: assistant.id
-    });
+    let run;
+    try {
+      run = await openai.beta.threads.runs.create(thread.id, {
+        assistant_id: assistant.id
+      });
+    } catch (error) {
+      console.error('Error creating run:', error);
+      throw new Error('Error creating run: ' + error.message);
+    }
 
     while (true) {
       await delay(1000);
@@ -457,7 +462,12 @@ async function handleUserInputData(userMessage) {
                 args.addOns || []
               );
             } else if (funcName === "getClientByName") {
-              output = await getClientByName(args.firstName, args.lastName);
+              const result = await getClientByName(args.firstName, args.lastName);
+              if (result === undefined || result === null) {
+                output = "No client found with the given name";
+              } else {
+                output = result;
+              }
             } else if (funcName === "getAvailability") {
               output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group);
             } else if (funcName === "cancelAppointmentById") {
