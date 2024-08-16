@@ -217,8 +217,8 @@ async function processDelayedResponse(phoneNumber) {
         }
         else {
           await sendNotificationToUser(
-            'AI Response Ready for ' + client.firstname,
-            responseMessage,
+            client.firstname + ' ' + client.lastname,
+            `"${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
             client.id,
             client.firstname + ' ' + client.lastname,
             lastMessage,

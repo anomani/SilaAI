@@ -278,7 +278,7 @@ AI: Aight bro come on in
 
 Example #10:
 Customer: I'm stuck in traffic
-AI: dont worry about it, just let me know when you here
+AI: Dont worry about it, just let me know when you here
 
 
 Recurring Appointments:
