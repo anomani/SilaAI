@@ -79,7 +79,7 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
         const acuityResponse = await rescheduleAppointmentWithAcuity(appointment.acuityid, newDate, newStartTime);
 
         // Update local database
-        await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime);
+        // await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime);
         
         return "Appointment rescheduled successfully"
     } catch (error) {

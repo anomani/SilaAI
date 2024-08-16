@@ -139,12 +139,12 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
         const client = await getClientByPhoneNumber(phone);
         if (client.id != '') {
             const clientId = client.id;
-            await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", price);
+            // await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", price);
         } else {
             console.log("Client does not exist");
             await createClient(fname, lname, phone, email, "");
             const newClient = await getClientByPhoneNumber(phone);
-            await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, newClient.id, "", price);
+            // await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, newClient.id, "", price);
         }
         return "Appointment booked successfully";
     } catch (error) {
