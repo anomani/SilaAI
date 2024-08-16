@@ -538,10 +538,10 @@ async function handleUserInput(userMessages, phoneNumber) {
       });
     }
 
-    const shouldRespond = await shouldAIRespond(userMessages, thread);
-    if (!shouldRespond) {
-      return "user"; // Indicate that human attention is required
-    }
+    // const shouldRespond = await shouldAIRespond(userMessages, thread);
+    // if (!shouldRespond) {
+    //   return "user"; // Indicate that human attention is required
+    // }
 
     let assistant;
     const currentDate = new Date(getCurrentDate());
@@ -595,8 +595,6 @@ async function handleUserInput(userMessages, phoneNumber) {
           const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
           return verifiedResponse
           
-          // For now, return the assistant's message directly
-          // return assistantMessage.content[0].text.value;
         } else {
           return "user";
         }
