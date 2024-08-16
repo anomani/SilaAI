@@ -551,11 +551,4 @@ function getStoredQuery(id) {
   return queryStore[id];
 }
 
-async function main() {
-  const userMessage = "hi";
-  const response = await handleUserInputData(userMessage);
-  console.log(response);
-}
-main()
-
 module.exports = { handleUserInputData, getStoredQuery };
