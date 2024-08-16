@@ -218,7 +218,7 @@ async function processDelayedResponse(phoneNumber) {
         else {
           await sendNotificationToUser(
             client.firstname + ' ' + client.lastname,
-            `"${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
+            responseMessage,
             client.id,
             client.firstname + ' ' + client.lastname,
             lastMessage,
@@ -264,8 +264,8 @@ async function sendNotificationToUser(title, body, clientId, clientName, clientM
   const notification = {
     to: pushToken,
     sound: 'default',
-    title: title,
-    body: body,
+    title: clientName,
+    body: clientMessage,
     data: { 
       clientId, 
       clientName, 
