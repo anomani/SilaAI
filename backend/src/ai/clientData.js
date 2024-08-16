@@ -464,7 +464,7 @@ async function handleUserInputData(userMessage) {
             } else if (funcName === "getClientByName") {
               const result = await getClientByName(args.firstName, args.lastName);
               if (result === undefined || result === null) {
-                output = "No client found with the given name";
+                output = "No client found with the given name. Check the name and you can try again";
               } else {
                 output = result;
               }
