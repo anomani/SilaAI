@@ -153,7 +153,7 @@ async function handleIncomingMessage(req, res) {
       const delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
       // Create a new random delay between 1 and 10 seconds
       const shortDelayInMs = Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000;
-      setTimeout(() => processDelayedResponse(Author), shortDelayInMs);
+      setTimeout(() => processDelayedResponse(Author), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
 
