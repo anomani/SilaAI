@@ -404,44 +404,53 @@ export const updateClientAutoRespond = async (clientId, autoRespond) => {
   }
 };
 
-export const uploadClientImages = async (clientId, imageUris) => {
+// Add these new functions at the end of the file
+
+export const uploadClientMedia = async (clientId, mediaUris) => {
   const formData = new FormData();
-  imageUris.forEach((uri, index) => {
-    formData.append('images', {
+  mediaUris.forEach((uri, index) => {
+    const fileType = uri.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg';
+    const fileName = `media_${index}${fileType === 'video/mp4' ? '.mp4' : '.jpg'}`;
+    formData.append('media', {
       uri: uri,
-      type: 'image/jpeg',
-      name: `image_${index}.jpg`,
+      type: fileType,
+      name: fileName,
     });
   });
 
   try {
-    const response = await api.post(`/images/upload/${clientId}`, formData, {
+    const response = await api.post(`/media/upload/${clientId}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
     return response.data;
   } catch (error) {
-    console.error('Error uploading client images:', error);
+    console.error('Error uploading client media:', error);
     throw error;
   }
 };
 
-export const getClientImages = async (clientId) => {
+export const getClientMedia = async (clientId) => {
   try {
-    const response = await api.get(`/images/${clientId}`);
+    const response = await api.get(`/media/${clientId}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching client images:', error);
+    console.error('Error fetching client media:', error);
     throw error;
   }
 };
 
-export const deleteClientImage = async (imageId) => {
+export const deleteClientMedia = async (mediaId) => {
   try {
-    await retryRequest(() => throttledRequest(() => api.delete(`/images/${imageId}`)));
+    await retryRequest(() => throttledRequest(() => api.delete(`/media/${mediaId}`)));
   } catch (error) {
-    console.error('Error deleting client image:', error);
+    console.error('Error deleting client media:', error);
     throw error;
   }
 };
+
+// Remove or comment out the old image-specific functions
+// export const uploadClientImages = async (clientId, imageUris) => { ... }
+// export const getClientImages = async (clientId) => { ... }
+// export const deleteClientImage = async (imageId) => { ... }

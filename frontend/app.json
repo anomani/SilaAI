@@ -36,6 +36,16 @@
     "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/89102495-37af-438a-aa98-b36be7e81690"
-    }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Uzi to access your camera",
+          "microphonePermission": "Allow Uzi to access your microphone",
+          "recordAudioAndroid": true
+        }
+      ]
+    ]
   }
 }
