@@ -449,8 +449,3 @@ export const deleteClientMedia = async (mediaId) => {
     throw error;
   }
 };
-
-// Remove or comment out the old image-specific functions
-// export const uploadClientImages = async (clientId, imageUris) => { ... }
-// export const getClientImages = async (clientId) => { ... }
-// export const deleteClientImage = async (imageId) => { ... }
