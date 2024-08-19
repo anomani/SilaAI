@@ -61,7 +61,7 @@ async function handleScheduledAppointment(appointmentDetails) {
         }),
         appointmentDetails.price,
         false,
-        null,
+        0,
         null,
         appointmentDetails.addOns
     );
