@@ -45,7 +45,7 @@ async function handleWebhook(req, res) {
 async function handleScheduledAppointment(appointmentDetails) {
     const client = await getOrCreateClient(appointmentDetails);
     const { date, startTime, endTime } = parseAppointmentDateTime(appointmentDetails);
-
+    console.log(appointmentDetails)
     await createAppointment(
         appointmentDetails.type,
         appointmentDetails.id,
@@ -59,9 +59,12 @@ async function handleScheduledAppointment(appointmentDetails) {
             dateCreated: appointmentDetails.dateCreated,
             datetimeCreated: appointmentDetails.datetimeCreated
         }),
-        appointmentDetails.price
+        appointmentDetails.price,
+        false,
+        null,
+        null,
+        appointmentDetails.addOns
     );
-
     console.log("Appointment created successfully");
 }
 
