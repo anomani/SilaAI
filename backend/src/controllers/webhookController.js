@@ -41,13 +41,22 @@ async function handleWebhook(req, res) {
     }
 }
 
-
 async function handleScheduledAppointment(appointmentDetails) {
     const client = await getOrCreateClient(appointmentDetails);
     const { date, startTime, endTime } = parseAppointmentDateTime(appointmentDetails);
-    console.log(appointmentDetails)
+    let appointmentType = appointmentDetails.type;
+    const appointmentParts = appointmentType.split('+').map(part => part.trim());
+    const parsedAppointmentType = appointmentParts[0];
+    // Update appointmentType and addOnArray
+    appointmentType = parsedAppointmentType;
+
+    // Update addOnArray with the rest of appointmentParts
+    const addOnArray = [];
+    if (appointmentParts.length > 1) {
+        addOnArray.push(...appointmentParts.slice(1));
+    }
     await createAppointment(
-        appointmentDetails.type,
+        appointmentType,
         appointmentDetails.id,
         date,
         startTime,
@@ -63,7 +72,7 @@ async function handleScheduledAppointment(appointmentDetails) {
         false,
         0,
         null,
-        appointmentDetails.addOns
+        addOnArray
     );
     console.log("Appointment created successfully");
 }
