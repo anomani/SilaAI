@@ -97,8 +97,5 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
         return "Unable to reschedule the appointment";
     }
 }
-async function main() {
-    await rescheduleAppointmentByPhoneAndDate('+12038324011', '2024-08-20', '2024-08-25', '10:00');
-}
-main()
+
 module.exports = {rescheduleAppointmentByPhoneAndDate};
