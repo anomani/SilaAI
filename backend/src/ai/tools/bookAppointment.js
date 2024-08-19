@@ -91,7 +91,7 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
   const endTime = moment(`${date} ${startTime}`).add(totalDuration, 'minutes').format('HH:mm');
 
   try {
-    await bookAppointment(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOns);
+    await bookAppointment(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOnArray);
     
     // await createAppointment(appointmentType, 2222222, date, startTime, endTime, clientId, "", totalPrice);
     
