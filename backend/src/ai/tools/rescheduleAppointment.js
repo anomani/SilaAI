@@ -61,31 +61,35 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
         // Update appointmentType and addOnArray
         appointmentType = parsedAppointmentType;
         console.log(appointmentType)
-        // const addOnArray = appointment.addOns || [];
 
-        // const appointmentTypeInfo = appointmentTypes[appointmentType];
-        // if (!appointmentTypeInfo) {
-        //     throw new Error(`Invalid appointment type: ${appointmentType}`);
-        // }
+        // Update addOnArray with the rest of appointmentParts
+        const addOnArray = [];
+        if (appointmentParts.length > 1) {
+            addOnArray.push(...appointmentParts.slice(1));
+        }
 
-        // const addOnInfo = addOnArray.map(addon => addOns[addon]);
-        // const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
+        const appointmentTypeInfo = appointmentTypes[appointmentType];
+        if (!appointmentTypeInfo) {
+            throw new Error(`Invalid appointment type: ${appointmentType}`);
+        }
 
-        // const newEndTime = addMinutes(newStartTime, totalDuration);
+        const addOnInfo = addOnArray.map(addon => addOns[addon]);
+        const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
 
-        // // Check availability
-        // const availability = await getAvailability(newDate, appointmentType, addOnArray);
-        // const availabilityCheck = isAppointmentAvailable(availability, newStartTime, newEndTime);
+        const newEndTime = addMinutes(newStartTime, totalDuration);
+
+        // Check availability
+        const availability = await getAvailability(newDate, appointmentType, addOnArray);
+        const availabilityCheck = isAppointmentAvailable(availability, newStartTime, newEndTime);
         
-        // if (availabilityCheck !== "Available") {
-        //     return availabilityCheck;
-        // }
+        if (availabilityCheck !== "Available") {
+            return availabilityCheck;
+        }
 
-        // // Reschedule with Acuity
-        // const acuityResponse = await rescheduleAppointmentWithAcuity(appointment.acuityid, newDate, newStartTime);
+        // Reschedule with Acuity
+        const acuityResponse = await rescheduleAppointmentWithAcuity(appointment.acuityid, newDate, newStartTime);
 
-        // Update local database
-        // await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime);
+        await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime);
         
         return "Appointment rescheduled successfully"
     } catch (error) {
