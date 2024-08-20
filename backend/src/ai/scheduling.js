@@ -2,20 +2,20 @@ const { OpenAI } = require('openai');
 const dotenv = require('dotenv');
 dotenv.config({ path: '../env' });
 const { getAvailability, getCurrentDate, findNextAvailableSlots } = require('./tools/getAvailability');
-const { bookAppointment } = require('./tools/bookAppointment');
-const {cancelAppointment} = require('./tools/cancelAppointment')
+const { bookAppointment, bookAppointmentInternal } = require('./tools/bookAppointment');
+const {cancelAppointment, cancelAppointmentInternal, cancelAppointmentByIdInternal} = require('./tools/cancelAppointment')
 const { getClientByPhoneNumber,getDaysSinceLastAppointment, createClient } = require('../model/clients');
 const {getMessagesByClientId} = require('../model/messages')
 const {getAllAppointmentsByClientId, getUpcomingAppointments} = require('../model/appointment')
 const fs = require('fs');
 const path = require('path');
-const { createRecurringAppointments } = require('./tools/recurringAppointments');
+const { createRecurringAppointments, createRecurringAppointmentsInternal, createRecurringAppointmentsAdminInternal } = require('./tools/recurringAppointments');
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt , deleteAIPrompt} = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { clearCustomPrompt } = require('./tools/clearCustomPrompt');
-const { rescheduleAppointmentByPhoneAndDate } = require('./tools/rescheduleAppointment');
+const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal } = require('./tools/rescheduleAppointment');
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -27,15 +27,7 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const assistants = new Map();
 const sessions = new Map();
-function getAppointmentDuration(appointment) {
-  const [startHour, startMinute] = appointment[0].starttime.split(':').map(Number);
-  const [endHour, endMinute] = appointment[0].endtime.split(':').map(Number);
 
-  const startTotalMinutes = startHour * 60 + startMinute;
-  const endTotalMinutes = endHour * 60 + endMinute;
-
-  return endTotalMinutes - startTotalMinutes;
-}
 const tools = [
   {
     type: "function",
@@ -505,6 +497,112 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
   return toolOutputs;
 }
 
+async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
+  console.log(requiredActions)
+  const toolOutputs = [];
+
+  for (const action of requiredActions.tool_calls) {
+    const funcName = action.function.name;
+    const args = JSON.parse(action.function.arguments);
+
+    let output;
+    let totalDuration;
+    switch (funcName) {
+      case "getAvailability":
+        const appointmentTypeInfo = appointmentTypes[args.appointmentType];
+        if (!appointmentTypeInfo) {
+          throw new Error(`Invalid appointment type: ${args.appointmentType}`);
+        }
+        totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
+        output = await getAvailability(args.day, args.appointmentType, args.addOns, client.id);
+        if (output.length === 0) {
+          output = {
+            requestedDay: args.day,
+            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns)
+          };
+        }
+        break;
+      case "bookAppointment":
+        const appointmentInfo = appointmentTypes[args.appointmentType];
+        const addOnInfo = args.addOns.map(addon => addOns[addon]);
+        const totalPrice = appointmentInfo.price + addOnInfo.reduce((sum, addon) => sum + addon.price, 0);
+        output = await bookAppointmentInternal(
+          args.date,
+          args.startTime,
+          client.firstname,
+          client.lastname,
+          client.phonenumber,
+          client.email,
+          args.appointmentType,
+          totalPrice,
+          args.addOns
+        );
+        break;
+      case "cancelAppointment":
+        output = await cancelAppointmentInternal(client.phonenumber, args.date);
+        break;
+      case "getAllAppointmentsByClientId":
+        output = await getAllAppointmentsByClientId(client.id);
+        break;
+      case "createClient":
+        console.log("creating client")
+        output = await createClient(args.firstName, args.lastName, phoneNumber);
+        break;
+      case "findRecurringAvailability":
+        output = await findRecurringAvailability(
+          args.initialDate,
+          args.appointmentDuration,
+          args.group,
+          args.recurrenceRule,
+          client.id
+        );
+        break;
+      case "createRecurringAppointments":
+        output = await createRecurringAppointmentsInternal(
+          args.initialDate,
+          args.startTime,
+          client.firstname,
+          client.lastname,
+          client.phonenumber,
+          client.email,
+          args.appointmentType,
+          args.appointmentDuration,
+          args.group,
+          args.price,
+          args.addOnArray,
+          args.recurrenceRule
+        );
+        break;
+      case "getUpcomingAppointments":
+        output = await getUpcomingAppointments(client.id, args.limit);
+        break;
+      case "getCurrentDate":
+        output = getCurrentDate();
+        break;
+      case "clearCustomPrompt":
+        console.log("clearing prompt!")
+        output = await deleteAIPrompt(client.id);
+        // Update the assistant instructions after clearing the custom prompt
+        await updateAssistantInstructions(client.phonenumber);
+        break;
+      case "rescheduleAppointmentByPhoneAndDate":
+        output = await rescheduleAppointmentByPhoneAndDateInternal(client.phonenumber, args.currentDate, args.newDate, args.newStartTime);
+        break;
+      default:
+        const functionDetails = requiredActions.tool_calls[0].function;
+        console.log(functionDetails);
+        throw new Error(`Unknown function: ${funcName}`);
+    }
+
+    toolOutputs.push({
+      tool_call_id: action.id,
+      output: JSON.stringify(output)
+    });
+  }
+
+  return toolOutputs;
+}
+
 // Add this new function to update assistant instructions
 async function updateAssistantInstructions(phoneNumber) {
   if (assistants.has(phoneNumber)) {
@@ -633,12 +731,6 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
         content: message,
       });
     }
-
-    // const shouldRespond = await shouldAIRespond(userMessages, thread);
-    // if (!shouldRespond) {
-    //   return "user"; // Indicate that human attention is required
-    // }
-
     let assistant;
     const currentDate = new Date(getCurrentDate());
     const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
@@ -695,7 +787,7 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
       } else if (runStatus.status === "requires_action") {
         console.log("requires action")
         const requiredActions = runStatus.required_action.submit_tool_outputs;
-        const toolOutputs = await handleToolCalls(requiredActions, client, phoneNumber);
+        const toolOutputs = await handleToolCallsInternal(requiredActions, client, phoneNumber);
 
         await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
           tool_outputs: toolOutputs

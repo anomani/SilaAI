@@ -151,6 +151,94 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     } 
 }
 
+async function bookAppointmentInternal(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray) {
+    console.log("Date:", date);
+    console.log("Start Time:", startTime);
+    console.log("First Name:", fname);
+    console.log("Last Name:", lname);
+    console.log("Phone:", phone);
+    console.log("Email:", email);
+    console.log("Appointment Type:", appointmentType);
+    console.log("Price:", price);
+    console.log("Add-Ons:", addOnArray);
+
+    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
+    }
+    const addOnInfo = addOnArray.map(addon => addOns[addon]);
+    const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
+
+    const endTime = addMinutes(startTime, totalDuration);
+
+    const availability = await getAvailability(date, appointmentType, addOnArray);
+    console.log(availability);
+
+    const availabilityCheck = isAppointmentAvailable(availability, startTime, endTime);
+    if (availabilityCheck !== "Available") {
+        return availabilityCheck;
+    }
+
+    try {
+        const client = await getClientByPhoneNumber(phone);
+        let clientId;
+        if (client.id !== '') {
+            clientId = client.id;
+        } else {
+            console.log("Client does not exist");
+            await createClient(fname, lname, phone, email, "");
+            const newClient = await getClientByPhoneNumber(phone);
+            clientId = newClient.id;
+        }
+        await createAppointment(appointmentType, null, date, startTime, endTime, clientId, "", price);
+        return "Appointment booked successfully";
+    } catch (error) {
+        console.error(error);
+        return "Unable to book the appointment";
+    } 
+}
+
+async function bookAppointmentAdminInternal(clientId, date, startTime, appointmentType, addOnArray = []) {
+    console.log("Client ID:", clientId);
+    console.log("Date:", date);
+    console.log("Start Time:", startTime);
+    console.log("Appointment Type:", appointmentType);
+    console.log("Add-Ons:", addOnArray);
+
+    const client = await getClientById(clientId);
+    if (!client) {
+        throw new Error(`Client not found with ID: ${clientId}`);
+    }
+
+    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
+    }
+
+    const addOnInfo = addOnArray.map(addon => {
+        const info = addOns[addon];
+        if (!info) {
+            console.warn(`Add-on not found: ${addon}`);
+            return null;
+        }
+        return info;
+    }).filter(Boolean);
+    console.log("Add-on Info:", addOnInfo);
+
+    const totalPrice = appointmentTypeInfo.price + addOnInfo.reduce((sum, addon) => sum + addon.price, 0);
+    const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
+
+    const endTime = moment(`${date} ${startTime}`).add(totalDuration, 'minutes').format('HH:mm');
+
+    try {
+        await createAppointment(appointmentType, null, date, startTime, endTime, clientId, "", totalPrice);
+        return "Appointment booked successfully";
+    } catch (error) {
+        console.error(error);
+        return "Unable to book the appointment";
+    }
+}
+
 function addMinutes(time, minutesToAdd) {
     const [hours, minutes] = time.split(':').map(Number);
     let newMinutes = minutes + minutesToAdd;
@@ -214,4 +302,4 @@ function isAppointmentAvailable(availability, startTime, endTime) {
 
 // runTestCases()
 
-module.exports = { bookAppointment, bookAppointmentWithAcuity, bookAppointmentAdmin, isAppointmentAvailable, addMinutes, isAfter };
+module.exports = { bookAppointment, bookAppointmentWithAcuity, bookAppointmentAdmin, isAppointmentAvailable, addMinutes, isAfter, bookAppointmentInternal, bookAppointmentAdminInternal };

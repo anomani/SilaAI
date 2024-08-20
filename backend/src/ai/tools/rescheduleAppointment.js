@@ -98,4 +98,54 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
     }
 }
 
-module.exports = {rescheduleAppointmentByPhoneAndDate};
+async function rescheduleAppointmentByPhoneAndDateInternal(phoneNumber, currentDate, newDate, newStartTime) {
+    try {
+        console.log("Current Date:", currentDate);
+        console.log("New Date:", newDate);
+        console.log("New Start Time:", newStartTime);
+        const client = await getClientByPhoneNumber(phoneNumber);
+        if (!client) {
+            return "Client not found";
+        }
+
+        const appointmentsForDay = await getAppointmentsByDay(currentDate);
+        const appointment = appointmentsForDay.find(appt => appt.clientid === client.id);
+        if (!appointment) {
+            return "Appointment not found";
+        }
+
+        let appointmentType = appointment.appointmenttype;
+        const appointmentParts = appointmentType.split('+').map(part => part.trim());
+        const parsedAppointmentType = appointmentParts[0];
+        appointmentType = parsedAppointmentType;
+        console.log(appointmentType)
+
+        const addOnArray = appointmentParts.length > 1 ? appointmentParts.slice(1) : [];
+
+        const appointmentTypeInfo = appointmentTypes[appointmentType];
+        if (!appointmentTypeInfo) {
+            throw new Error(`Invalid appointment type: ${appointmentType}`);
+        }
+
+        const addOnInfo = addOnArray.map(addon => addOns[addon]);
+        const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
+
+        const newEndTime = addMinutes(newStartTime, totalDuration);
+
+        const availability = await getAvailability(newDate, appointmentType, addOnArray);
+        const availabilityCheck = isAppointmentAvailable(availability, newStartTime, newEndTime);
+        
+        if (availabilityCheck !== "Available") {
+            return availabilityCheck;
+        }
+
+        await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime);
+        
+        return "Appointment rescheduled successfully"
+    } catch (error) {
+        console.error("Error rescheduling appointment:", error);
+        return "Unable to reschedule the appointment";
+    }
+}
+
+module.exports = {rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal};
