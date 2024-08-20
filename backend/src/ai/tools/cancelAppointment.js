@@ -96,4 +96,49 @@ async function cancelAppointmentById(clientId, date) {
     } 
 }
 
-module.exports = {cancelAppointment, cancelAcuityAppointment, cancelAppointmentById}
+async function cancelAppointmentInternal(phoneNumber, date) {
+    const client = await getClientByPhoneNumber(phoneNumber)
+    const appointmentsForDay = await getAppointmentsByDay(date)
+    const appointment = appointmentsForDay.find(appointment => appointment.clientid === client.id)
+
+    if (!appointment) {
+        return "Appointment not found"
+    }
+
+    try {
+        await deleteAppointment(appointment.id);
+        return "Appointment cancelled successfully";
+    } catch (error) {
+        console.error("Error cancelling appointment:", error);
+        throw error;
+    }
+}
+
+async function cancelAppointmentByIdInternal(clientId, date) {
+    try {
+        const client = await getClientById(clientId);
+        if (!client) {
+            return "Client not found";
+        }
+
+        const appointmentsForDay = await getAppointmentsByDay(date);
+        const appointment = appointmentsForDay.find(appointment => appointment.clientid === clientId);
+        if (!appointment) {
+            return "Appointment not found";
+        }
+
+        await deleteAppointment(appointment.id);
+        return "Appointment cancelled successfully";
+    } catch (error) {
+        console.error("Error cancelling appointment:", error);
+        return "Unable to cancel the appointment";
+    } 
+}
+
+module.exports = {
+    cancelAppointment,
+    cancelAcuityAppointment,
+    cancelAppointmentById,
+    cancelAppointmentInternal,
+    cancelAppointmentByIdInternal
+}
