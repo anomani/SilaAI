@@ -9,12 +9,11 @@ const {getMessagesByClientId} = require('../model/messages')
 const {getAllAppointmentsByClientId, getUpcomingAppointments} = require('../model/appointment')
 const fs = require('fs');
 const path = require('path');
-const { createRecurringAppointments, createRecurringAppointmentsInternal, createRecurringAppointmentsAdminInternal } = require('./tools/recurringAppointments');
+const { createRecurringAppointments, createRecurringAppointmentsInternal } = require('./tools/recurringAppointments');
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt , deleteAIPrompt} = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
-const { clearCustomPrompt } = require('./tools/clearCustomPrompt');
 const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal } = require('./tools/rescheduleAppointment');
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

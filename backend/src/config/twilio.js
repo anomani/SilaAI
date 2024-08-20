@@ -8,7 +8,7 @@ const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
-const { getUserPushToken } = require('../model/pushToken');
+const { getUserPushTokens } = require('../model/pushToken');
 const { getUserByPhoneNumber } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
@@ -254,15 +254,15 @@ async function sendNotificationToUser(title, body, clientId, clientName, clientM
     return;
   }
 
-  const pushToken = await getUserPushToken(barber.id);
+  const pushTokens = await getUserPushTokens(barber.id);
 
-  if (!pushToken) {
-    console.log('No push token found for the barber');
+  if (!pushTokens || pushTokens.length === 0) {
+    console.log('No push tokens found for the barber');
     return;
   }
-
-  const notification = {
-    to: pushToken,
+  
+  const notifications = pushTokens.map(token => ({
+    to: token,
     sound: 'default',
     title: clientName,
     body: clientMessage,
@@ -273,14 +273,14 @@ async function sendNotificationToUser(title, body, clientId, clientName, clientM
       suggestedResponse: isSuggestedResponse ? body : null,
       notificationType: isSuggestedResponse ? 'suggestedResponse' : 'clientMessage'
     },
-  };
+  }));
 
   try {
-    console.log(notification)
-    let ticketChunk = await expo.sendPushNotificationsAsync([notification]);
-    console.log(ticketChunk);
+    console.log('Sending notifications:', notifications);
+    let ticketChunks = await expo.sendPushNotificationsAsync(notifications);
+    console.log('Notification results:', ticketChunks);
   } catch (error) {
-    console.error('Error sending push notification:', error);
+    console.error('Error sending push notifications:', error);
   }
 }
 
