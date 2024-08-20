@@ -1,4 +1,4 @@
-const { handleUserInput } = require('../ai/scheduling');
+const { handleUserInput, handleUserInputInternal } = require('../ai/scheduling');
 const {handleUserInputData} = require('../ai/clientData');
 const { getMessagesByClientId, getAllMessages, saveMessage, setMessagesRead, getAllMessagesGroupedByClient } = require('../model/messages');
 const { sendMessage } = require('../config/twilio');
@@ -14,7 +14,7 @@ const handleChatRequest = async (req, res) => {
     const number = "+12038324011";
     const twilio = "+18446480598";
     
-    const responseMessage = await handleUserInput([message], number);
+    const responseMessage = await handleUserInputInternal([message], number);
 
     // Respond to the client with the actual response
     res.json({ message: responseMessage });

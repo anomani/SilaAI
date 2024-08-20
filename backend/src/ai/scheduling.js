@@ -619,6 +619,99 @@ async function handleUserInput(userMessages, phoneNumber) {
   }
 }
 
+async function handleUserInputInternal(userMessages, phoneNumber) {
+  try {
+    const client = await getClientByPhoneNumber(phoneNumber);
+    console.log(`Client found: ${JSON.stringify(client)}`);
+
+    let thread = await createThread(phoneNumber);
+
+    // Add all user messages to the thread
+    for (const message of userMessages) {
+      await openai.beta.threads.messages.create(thread.id, {
+        role: "user",
+        content: message,
+      });
+    }
+
+    // const shouldRespond = await shouldAIRespond(userMessages, thread);
+    // if (!shouldRespond) {
+    //   return "user"; // Indicate that human attention is required
+    // }
+
+    let assistant;
+    const currentDate = new Date(getCurrentDate());
+    const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
+    let fname, lname, email;
+
+    if (client.id == '') {
+      thread = await createThread(phoneNumber); 
+      assistant = await createTemporaryAssistant(phoneNumber);
+    } else {
+      const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1))[0];
+      let upcomingAppointment = '';
+      if (upcomingAppointmentJSON) {
+        const appointmentDate = upcomingAppointmentJSON.date;
+        const appointmentTime = upcomingAppointmentJSON.starttime;
+        upcomingAppointment = `Date: ${appointmentDate} Time: ${appointmentTime}`;
+      }
+
+      const messages = (await getMessagesByClientId(client.id)).slice(-10);
+      const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
+      let appointmentType = '';
+      if (appointment.length > 0) {
+        appointmentType = appointment[0].appointmenttype;
+      }
+      fname = client.firstname;
+      lname = client.lastname;
+      email = client.email;
+      const phone = client.phonenumber;   
+      thread = await createThread(phoneNumber); 
+      assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment);
+    }
+
+
+    const run = await openai.beta.threads.runs.create(thread.id, {
+      assistant_id: assistant.id,
+      additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate + "and the day of the week is"+ day,
+    });
+
+    while (true) {
+      await delay(1000);
+      const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+      console.log(runStatus.status)
+      if (runStatus.status === "completed") {
+        const messages = await openai.beta.threads.messages.list(thread.id);
+        const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+        if (assistantMessage) {
+          console.log(assistantMessage.content[0].text.value);
+          if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
+            return 'user';
+          }
+          return assistantMessage.content[0].text.value
+        } else {
+          return "user";
+        }
+      } else if (runStatus.status === "requires_action") {
+        console.log("requires action")
+        const requiredActions = runStatus.required_action.submit_tool_outputs;
+        const toolOutputs = await handleToolCalls(requiredActions, client, phoneNumber);
+
+        await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+          tool_outputs: toolOutputs
+        });
+      } else if (runStatus.status === "failed") {
+        console.error("Run failed");
+        throw new Error('Run failed');
+      } else {
+        await delay(1000);
+      }
+    }
+  } catch (error) {
+    console.error(`Error in handleUserInput for ${phoneNumber}:`, error);
+    return 'user'; 
+  }
+}
 function calculateTotalDuration(appointmentType, addOnArray) {
   const appointmentDuration = appointmentTypes[appointmentType].duration;
   const addOnsDuration = addOnArray.reduce((total, addOn) => total + addOns[addOn].duration, 0);
@@ -738,4 +831,4 @@ async function shouldAIRespond(userMessages, thread) {
 
 
 
-module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond };
+module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal};

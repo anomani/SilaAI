@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView, Switch } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
 import { addAppointment, searchClients } from '../services/api';
@@ -13,7 +13,8 @@ const AddAppointmentScreen = ({ navigation }) => {
     startTime: new Date(),
     endTime: new Date(),
     details: '',
-    price: ''
+    price: '',
+    addOns: []
   });
   const [filteredClients, setFilteredClients] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -59,7 +60,6 @@ const AddAppointmentScreen = ({ navigation }) => {
     }
     setFilteredClients([]);
   };
-
   const handleClientAdded = (clientId, clientData) => {
     setSelectedClientId(clientId);
     setSelectedClient(clientData);
@@ -88,9 +88,11 @@ const AddAppointmentScreen = ({ navigation }) => {
         appointmentType: appointment.appointmentType,
         details: appointment.details,
         price: parseFloat(appointment.price),
+        paid: null,
+        tipAmount: null,
+        paymentMethod: null,
+        addOns: appointment.addOns
       };
-
-      console.log(appointmentData);
       await addAppointment(appointmentData);
 
       console.log('Appointment added successfully');
@@ -286,6 +288,16 @@ const AddAppointmentScreen = ({ navigation }) => {
           returnKeyType="done"
           onSubmitEditing={() => Keyboard.dismiss()}
         />
+
+        <Text style={styles.label}>Add-ons</Text>
+        <TextInput
+          style={styles.input}
+          value={appointment.addOns.join(', ')}
+          onChangeText={(value) => handleInputChange('addOns', value.split(',').map(item => item.trim()))}
+          placeholder="Add-ons (comma-separated)"
+          placeholderTextColor="#888"
+        />
+
         <Button title="Add Appointment" onPress={handleAddAppointment} />
       </KeyboardAwareScrollView>
     </SafeAreaView>
