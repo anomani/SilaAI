@@ -260,7 +260,6 @@ async function sendNotificationToUser(title, body, clientId, clientName, clientM
     console.log('No push tokens found for the barber');
     return;
   }
-  
   const notifications = pushTokens.map(token => ({
     to: token,
     sound: 'default',
