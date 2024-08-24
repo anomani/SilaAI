@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView, Switch } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
 import { addAppointment, searchClients } from '../services/api';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+
+const Checkbox = ({ checked, onPress }) => (
+  <TouchableOpacity onPress={onPress}>
+    <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+      {checked && <Text style={styles.checkmark}>✓</Text>}
+    </View>
+  </TouchableOpacity>
+);
 
 const AddAppointmentScreen = ({ navigation }) => {
   const [appointment, setAppointment] = useState({
@@ -16,6 +24,7 @@ const AddAppointmentScreen = ({ navigation }) => {
     price: '',
     addOns: []
   });
+  
   const [filteredClients, setFilteredClients] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
@@ -23,6 +32,7 @@ const AddAppointmentScreen = ({ navigation }) => {
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
   const [showAppointmentTypePicker, setShowAppointmentTypePicker] = useState(false);
+  const [showAddOnsPicker, setShowAddOnsPicker] = useState(false);
 
   const handleInputChange = async (field, value) => {
     setAppointment({ ...appointment, [field]: value });
@@ -162,6 +172,58 @@ const AddAppointmentScreen = ({ navigation }) => {
     </Modal>
   );
 
+  const addOns = [
+    "Beard Grooming",
+    "Beard Grooming for Lineup + Taper",
+    "Colour Enhancement",
+    "Hot Towel + Black Mask Treatment for Clogged Pores",
+    "Wax - Hair Removal"
+  ];
+
+  const handleAddOnToggle = (addOn) => {
+    setAppointment(prevState => {
+      const updatedAddOns = prevState.addOns.includes(addOn)
+        ? prevState.addOns.filter(item => item !== addOn)
+        : [...prevState.addOns, addOn];
+      return { ...prevState, addOns: updatedAddOns };
+    });
+  };
+
+  const renderAddOnsPicker = () => (
+    <Modal
+      visible={showAddOnsPicker}
+      transparent={true}
+      animationType="slide"
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+          <FlatList
+            data={addOns}
+            keyExtractor={(item) => item}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.pickerItem}
+                onPress={() => handleAddOnToggle(item)}
+              >
+                <Text style={styles.pickerItemText}>{item}</Text>
+                <Checkbox
+                  checked={appointment.addOns.includes(item)}
+                  onPress={() => handleAddOnToggle(item)}
+                />
+              </TouchableOpacity>
+            )}
+          />
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowAddOnsPicker(false)}
+          >
+            <Text style={styles.closeButtonText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   const renderHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -290,13 +352,15 @@ const AddAppointmentScreen = ({ navigation }) => {
         />
 
         <Text style={styles.label}>Add-ons</Text>
-        <TextInput
+        <TouchableOpacity 
           style={styles.input}
-          value={appointment.addOns.join(', ')}
-          onChangeText={(value) => handleInputChange('addOns', value.split(',').map(item => item.trim()))}
-          placeholder="Add-ons (comma-separated)"
-          placeholderTextColor="#888"
-        />
+          onPress={() => setShowAddOnsPicker(true)}
+        >
+          <Text style={[styles.inputText, { color: '#fff' }]}>
+            {appointment.addOns.length > 0 ? appointment.addOns.join(', ') : 'Select Add-ons'}
+          </Text>
+        </TouchableOpacity>
+        {renderAddOnsPicker()}
 
         <Button title="Add Appointment" onPress={handleAddAppointment} />
       </KeyboardAwareScrollView>
@@ -403,6 +467,9 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   pickerItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#444',
@@ -410,6 +477,8 @@ const styles = StyleSheet.create({
   pickerItemText: {
     color: '#fff',
     fontSize: 16,
+    flex: 1,
+    marginRight: 10,
   },
   closeButton: {
     marginTop: 20,
@@ -419,6 +488,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#fff',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#007AFF',
+  },
+  checkmark: {
     color: '#fff',
     fontSize: 16,
   },
