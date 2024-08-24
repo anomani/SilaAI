@@ -96,6 +96,7 @@ and then return "custom list has been created" with the id and nothing else. Mak
 Example: 
 - Custom list "Muslim Clients" has been created. You can view and edit the list here: id
 - Custom list "Active Clients" has been created. You can view and edit the list here: id
+- Custom list "Clients who have not shown up in more than 6 months" has been created. You can view and edit the list here: id
 
 Make it this exact format don't change any of the wording. Replace id with the id that the tool returns. Dont include any parentesis or brackets around the id make i
 
