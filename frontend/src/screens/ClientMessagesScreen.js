@@ -41,26 +41,7 @@ const ClientMessagesScreen = ({ route }) => {
 
   useEffect(() => {
     if (isFocused) {
-      fetchMessages(clientid);
-      fetchClientDetails(clientid);
-      scrollToBottom();
-      setMessagesAsRead();
-      
-      // Start polling when the screen is focused
-      const pollInterval = setInterval(() => {
-        fetchMessages(clientid);
-      }, 5000); // Poll every 5 seconds
-      setPolling(pollInterval);
-
-      // Only prefill the input for AI-suggested responses
-      if (suggestedResponse) {
-        setNewMessage(suggestedResponse);
-      } else {
-        const draftMessage = getDraftMessage(clientid);
-        if (draftMessage !== newMessage) {
-          setNewMessage(draftMessage);
-        }
-      }
+      fetchMessagesAndSetup();
     } else {
       // Stop polling when the screen is not focused
       if (polling) {
@@ -79,6 +60,34 @@ const ClientMessagesScreen = ({ route }) => {
       setDraftMessage(clientid, newMessage);
     };
   }, [clientid, isFocused, suggestedResponse, clientMessage]);
+
+  const fetchMessagesAndSetup = useCallback(async () => {
+    try {
+      const data = await getMessagesByClientId(clientid);
+      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort in ascending order
+      setMessages(sortedMessages);
+      
+      fetchClientDetails(clientid);
+      setMessagesAsRead();
+      
+      // Start polling after initial fetch
+      const pollInterval = setInterval(() => {
+        fetchMessages(clientid);
+      }, 5000);
+      setPolling(pollInterval);
+
+      // Scroll to bottom after a short delay to ensure rendering is complete
+      setTimeout(scrollToBottom, 100);
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  }, [clientid, scrollToBottom]);
+
+  const scrollToBottom = useCallback(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToEnd({ animated: false });
+    }
+  }, []);
 
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
@@ -139,7 +148,7 @@ const ClientMessagesScreen = ({ route }) => {
   const fetchMessages = useCallback(async (clientid) => {
     try {
       const data = await getMessagesByClientId(clientid);
-      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort in ascending order
       setMessages(prevMessages => {
         // Only update if there are new messages
         if (JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages)) {
@@ -218,14 +227,6 @@ const ClientMessagesScreen = ({ route }) => {
       setAutoRespond(value);
     } catch (error) {
       console.error('Error updating auto-respond:', error);
-    }
-  };
-
-  const scrollToBottom = () => {
-    if (flatListRef.current) {
-      setTimeout(() => {
-        flatListRef.current.scrollToEnd({ animated: false });
-      }, 100);
     }
   };
 
@@ -382,26 +383,25 @@ const ClientMessagesScreen = ({ route }) => {
           styles.contentContainer, 
           keyboardVisible && styles.contentContainerKeyboardVisible
         ]}>
-          
-            <FlatList
-              ref={flatListRef}
-              data={groupMessagesByDate([...messages, ...localMessages])}
-              renderItem={renderItem}
-              keyExtractor={useCallback((item) => item.date, [])}
-              initialNumToRender={10}
-              maxToRenderPerBatch={10}
-              windowSize={10}
-              removeClippedSubviews={true}
-              onContentSizeChange={scrollToBottom}
-              onLayout={scrollToBottom}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              style={styles.messageList}
-              contentContainerStyle={[
-                styles.messageListContent,
-                { paddingBottom: keyboardHeight + 16 }
-              ]}
-            />
+          <FlatList
+            ref={flatListRef}
+            data={groupMessagesByDate([...messages, ...localMessages])}
+            renderItem={renderItem}
+            keyExtractor={useCallback((item) => item.date, [])}
+            initialNumToRender={20}
+            maxToRenderPerBatch={20}
+            windowSize={21}
+            removeClippedSubviews={false}
+            onContentSizeChange={scrollToBottom}
+            onLayout={scrollToBottom}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            style={styles.messageList}
+            contentContainerStyle={[
+              styles.messageListContent,
+              { paddingBottom: keyboardHeight + 16 }
+            ]}
+          />
           {showScrollButton && (
             <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
               <Text style={styles.scrollButtonText}>↓</Text>

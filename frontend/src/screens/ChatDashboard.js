@@ -86,6 +86,28 @@ const ChatDashboard = ({ navigation }) => {
     return new Date(year, month - 1, day, adjustedHours, minutes, seconds);
   };
 
+  const formatTimestamp = (dateString) => {
+    const [datePart, timePart] = dateString.split(', ');
+    const [month, day, year] = datePart.split('/');
+    const [time, period] = timePart.split(' ');
+    const [hours, minutes] = time.split(':');
+
+    let adjustedHours = parseInt(hours, 10);
+    let adjustedPeriod = period;
+
+    if (adjustedHours < 0) {
+      adjustedHours += 12;
+      adjustedPeriod = period === 'AM' ? 'PM' : 'AM';
+    } else if (adjustedHours === 0) {
+      adjustedHours = 12;
+    } else if (adjustedHours > 12) {
+      adjustedHours -= 12;
+      adjustedPeriod = 'PM';
+    }
+
+    return `${month}/${day}/${year}, ${adjustedHours}:${minutes} ${adjustedPeriod}`;
+  };
+
   const filteredClients = Object.keys(groupedMessages)
     .filter(clientid =>
       clientNames[clientid]?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -105,23 +127,7 @@ const ChatDashboard = ({ navigation }) => {
     const senderName = lastMessage.from === '18446480598' ? 'UZI' : clientNames[clientid];
     const unreadMessagesCount = messages.filter(message => !message.read).length;
 
-    // Parse the date string and adjust by 4 hours
-    const [datePart, timePart] = lastMessage.date.split(', ');
-    const [month, day, year] = datePart.split('/');
-    const [time, period] = timePart.split(' ');
-    const [hours, minutes] = time.split(':');
-
-    let adjustedHours = parseInt(hours, 10) - 4;
-    let adjustedPeriod = period;
-
-    if (adjustedHours < 0) {
-      adjustedHours += 12;
-      adjustedPeriod = period === 'AM' ? 'PM' : 'AM';
-    } else if (adjustedHours === 0) {
-      adjustedHours = 12;
-    }
-
-    const adjustedDate = `${month}/${day}/${year}, ${adjustedHours.toString().padStart(2, '0')}:${minutes} ${adjustedPeriod}`;
+    const formattedDateTime = formatTimestamp(lastMessage.date);
 
     return (
       <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid, clientName: clientNames[clientid] })}>
@@ -129,7 +135,7 @@ const ChatDashboard = ({ navigation }) => {
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.clientContent}>
             <Text style={styles.clientName}>{senderName}</Text>
-            <Text style={styles.messageTime}>{adjustedDate}</Text>
+            <Text style={styles.messageTime}>{formattedDateTime}</Text>
           </View>
           {unreadMessagesCount > 0 && (
             <View style={styles.unreadCountContainer}>
