@@ -323,7 +323,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
   // Place aiPrompt before assistantInstructions
   let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
   fullInstructions = fullInstructions
-    .replace('${appointment}', JSON.stringify(appointment, null, 2))
+    .replace('${appointment}', appointment)
     .replace('${fname}', fname)
     .replace('${lname}', lname)
     .replace('${phone}', phone)
@@ -635,11 +635,6 @@ async function handleUserInput(userMessages, phoneNumber) {
       });
     }
 
-    // const shouldRespond = await shouldAIRespond(userMessages, thread);
-    // if (!shouldRespond) {
-    //   return "user"; // Indicate that human attention is required
-    // }
-
     let assistant;
     const currentDate = new Date(getCurrentDate());
     const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
@@ -659,10 +654,13 @@ async function handleUserInput(userMessages, phoneNumber) {
 
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
+      console.log("appointment", appointment)
+
       let appointmentType = '';
       if (appointment.length > 0) {
         appointmentType = appointment[0].appointmenttype;
       }
+      console.log(appointmentType)
       fname = client.firstname;
       lname = client.lastname;
       email = client.email;
@@ -677,39 +675,56 @@ async function handleUserInput(userMessages, phoneNumber) {
       additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate + "and the day of the week is"+ day,
     });
 
-    while (true) {
-      await delay(1000);
-      const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-      console.log(runStatus.status)
-      if (runStatus.status === "completed") {
-        const messages = await openai.beta.threads.messages.list(thread.id);
-        const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
-        if (assistantMessage) {
-          console.log(assistantMessage.content[0].text.value);
-          if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
-            return 'user';
-          }
-          const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
-          return verifiedResponse
-          
-        } else {
-          return "user";
-        }
-      } else if (runStatus.status === "requires_action") {
-        console.log("requires action")
-        const requiredActions = runStatus.required_action.submit_tool_outputs;
-        const toolOutputs = await handleToolCalls(requiredActions, client, phoneNumber);
+    const MAX_RETRIES = 3;
+    let retryCount = 0;
 
-        await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
-          tool_outputs: toolOutputs
-        });
-      } else if (runStatus.status === "failed") {
-        console.error("Run failed");
-        throw new Error('Run failed');
-      } else {
+    while (retryCount < MAX_RETRIES) {
+      try {
         await delay(1000);
+        const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+        console.log(runStatus.status)
+        if (runStatus.status === "completed") {
+          const messages = await openai.beta.threads.messages.list(thread.id);
+          const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+          if (assistantMessage) {
+            console.log(assistantMessage.content[0].text.value);
+            if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
+              return 'user';
+            }
+            const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
+            return verifiedResponse
+            
+          } else {
+            return "user";
+          }
+        } else if (runStatus.status === "requires_action") {
+          console.log("requires action")
+          const requiredActions = runStatus.required_action.submit_tool_outputs;
+          const toolOutputs = await handleToolCalls(requiredActions, client, phoneNumber);
+
+          await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+            tool_outputs: toolOutputs
+          });
+        } else if (runStatus.status === "failed") {
+          console.error("Run failed");
+          throw new Error('Run failed');
+        } else {
+          await delay(1000);
+        }
+      } catch (error) {
+        if (error.status === 503) {
+          retryCount++;
+          console.log(`OpenAI service temporarily unavailable. Retry ${retryCount} of ${MAX_RETRIES}...`);
+          await delay(5000);
+          continue;
+        }
+        throw error;  // Re-throw if it's not a 503 error
       }
     }
+
+    // If we've exhausted all retries
+    return "I'm sorry, but I'm having persistent issues connecting to my brain. Please try again later or contact support.";
+
   } catch (error) {
     console.error(`Error in handleUserInput for ${phoneNumber}:`, error);
     return 'user'; 
@@ -749,9 +764,10 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
 
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
       const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
+      console.log("appointment", appointment)
       let appointmentType = '';
       if (appointment.length > 0) {
-        appointmentType = appointment[0].appointmenttype;
+        appointmentType = appointment[5].appointmenttype;
       }
       fname = client.firstname;
       lname = client.lastname;
@@ -767,39 +783,60 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
       additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate + "and the day of the week is"+ day,
     });
 
-    while (true) {
-      await delay(1000);
-      const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
-      console.log(runStatus.status)
-      if (runStatus.status === "completed") {
-        const messages = await openai.beta.threads.messages.list(thread.id);
-        const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
-        if (assistantMessage) {
-          console.log(assistantMessage.content[0].text.value);
-          if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
-            return 'user';
-          }
-          return assistantMessage.content[0].text.value
-        } else {
-          return "user";
-        }
-      } else if (runStatus.status === "requires_action") {
-        console.log("requires action")
-        const requiredActions = runStatus.required_action.submit_tool_outputs;
-        const toolOutputs = await handleToolCallsInternal(requiredActions, client, phoneNumber);
+    const MAX_RETRIES = 3;
+    let retryCount = 0;
 
-        await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
-          tool_outputs: toolOutputs
-        });
-      } else if (runStatus.status === "failed") {
-        console.error("Run failed");
-        throw new Error('Run failed');
-      } else {
+    while (retryCount < MAX_RETRIES) {
+      try {
         await delay(1000);
+        const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+        console.log(runStatus.status)
+        if (runStatus.status === "completed") {
+          const messages = await openai.beta.threads.messages.list(thread.id);
+          const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+          if (assistantMessage) {
+            console.log(assistantMessage.content[0].text.value);
+            if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
+              return 'user';
+            }
+            const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
+            return verifiedResponse;
+          } else {
+            return "user";
+          }
+        } else if (runStatus.status === "requires_action") {
+          console.log("requires action")
+          const requiredActions = runStatus.required_action.submit_tool_outputs;
+          const toolOutputs = await handleToolCallsInternal(requiredActions, client, phoneNumber);
+
+          await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+            tool_outputs: toolOutputs
+          });
+        } else if (runStatus.status === "failed") {
+          console.error("Run failed");
+          throw new Error('Run failed');
+        } else {
+          await delay(1000);
+        }
+      } catch (error) {
+        if (error.status === 503) {
+          retryCount++;
+          console.log(`OpenAI service temporarily unavailable. Retry ${retryCount} of ${MAX_RETRIES}...`);
+          await delay(5000);
+          continue;
+        }
+        throw error;  // Re-throw if it's not a 503 error
       }
     }
+
+    // If we've exhausted all retries
+    return "I'm sorry, but I'm having persistent issues connecting to my brain. Please try again later or contact support.";
+
   } catch (error) {
     console.error(`Error in handleUserInput for ${phoneNumber}:`, error);
+    if (error.status === 503) {
+      return "I apologize, but I'm having trouble connecting to my brain at the moment. Please try again in a few minutes.";
+    }
     return 'user'; 
   }
 }
@@ -920,5 +957,11 @@ async function shouldAIRespond(userMessages, thread) {
   }
 }
 
+async function main() {
+  const response = await handleUserInput(["hi"], "9055996656");
+  console.log(response);
+}
+
+main();
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal};

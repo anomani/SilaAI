@@ -100,7 +100,6 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
   }
 }
 
-
 async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray) {
     console.log("Date:", date);
     console.log("Start Time:", startTime);
