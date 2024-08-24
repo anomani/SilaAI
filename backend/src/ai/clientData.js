@@ -64,20 +64,6 @@ const tools = [
         }
       },
       required: ["name", "query"]
-    },
-    response_format: {
-      type: "object",
-      properties: {
-        message: {
-          type: "string",
-          description: "A fixed message indicating the list has been created"
-        },
-        id: {
-          type: "string",
-          description: "The unique identifier for the created list"
-        }
-      },
-      required: ["message", "id"]
     }
   }
 },
@@ -369,7 +355,7 @@ async function createAssistant(date) {
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions + `\nDate: ${date}`,
       name: "Client Data",
-      model: "gpt-4o-2024-08-06",
+      model: "gpt-4o",
       tools: tools,
       temperature: 1
     });
@@ -456,10 +442,9 @@ async function handleUserInputData(userMessage) {
               const list = await createCustomList(args.name, args.query);
               const queryId = uuidv4();
               queryStore[queryId] = args.query;
-              output = {
-                message: "Custom list has been created",
-                id: queryId
-              };
+              const listLink = `/custom-list?id=${queryId}`;
+              console.log(listLink);
+              output = queryId;
             } else if (funcName === "getMuslimClients") {
               console.log("getMuslimClients");
               const list = await getMuslimClients();
@@ -575,12 +560,5 @@ function getStoredQuery(id) {
   console.log(queryStore);
   return queryStore[id];
 }
-
-// async function main() {
-//   const response = await handleUserInputData("create a custom list of all the clients that have booked an appointment with me in the past week");
-//   console.log(response);
-// }
-
-// main();
 
 module.exports = { handleUserInputData, getStoredQuery };

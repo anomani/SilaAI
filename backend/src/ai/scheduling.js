@@ -957,11 +957,4 @@ async function shouldAIRespond(userMessages, thread) {
   }
 }
 
-async function main() {
-  const response = await handleUserInput(["hi"], "9055996656");
-  console.log(response);
-}
-
-main();
-
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal};
