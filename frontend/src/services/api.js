@@ -450,7 +450,7 @@ export const deleteClientMedia = async (mediaId) => {
 
 export const getSuggestedResponse = async (clientId) => {
   try {
-    const response = await axios.get(`${API_URL}/suggested-response/${clientId}`);
+    const response = await axios.get(`${API_URL}/chat/suggested-response/${clientId}`);
     return response.data.suggestedResponse;
   } catch (error) {
     console.error('Error fetching suggested response:', error);
@@ -460,7 +460,7 @@ export const getSuggestedResponse = async (clientId) => {
 
 export const clearSuggestedResponse = async (clientId) => {
   try {
-    await axios.delete(`${API_URL}/suggested-response/${clientId}`);
+    await axios.delete(`${API_URL}/chat/suggested-response/${clientId}`);
   } catch (error) {
     console.error('Error clearing suggested response:', error);
     throw error;

@@ -183,8 +183,10 @@ const ClientMessagesScreen = ({ route }) => {
   const handleSendMessage = async () => {
     console.log('handleSendMessage called', { newMessage, clientDetails });
 
-    if (typeof newMessage !== 'string' || newMessage.trim() === '') {
-      console.log('newMessage is not a valid string', newMessage);
+    const messageToSend = newMessage || currentSuggestedResponse;
+
+    if (typeof messageToSend !== 'string' || messageToSend.trim() === '') {
+      console.log('messageToSend is not a valid string', messageToSend);
       return;
     }
 
@@ -202,11 +204,11 @@ const ClientMessagesScreen = ({ route }) => {
       const adjustedDateString = adjustedDate.toLocaleString();
       
       // Check if the message is the same as the current suggested response
-      const isAI = newMessage === currentSuggestedResponse;
+      const isAI = messageToSend === currentSuggestedResponse;
 
       const tempMessage = {
         id: tempId,
-        body: newMessage,
+        body: messageToSend,
         fromtext: '+18446480598',
         totext: recipient,
         date: adjustedDateString,
@@ -219,7 +221,7 @@ const ClientMessagesScreen = ({ route }) => {
       scrollToBottom();
 
       console.log('Sending message via API');
-      await sendMessage(recipient, newMessage, false, !isAI);
+      await sendMessage(recipient, messageToSend, false, !isAI);
       
       console.log('Message sent successfully');
 
@@ -452,9 +454,9 @@ const ClientMessagesScreen = ({ route }) => {
                   console.log('Send button pressed');
                   handleSendMessage();
                 }}
-                disabled={!clientDetails || newMessage.trim() === ''}
+                disabled={!clientDetails || (newMessage.trim() === '' && currentSuggestedResponse.trim() === '')}
               >
-                <Icon name="send" size={20} color={(clientDetails && newMessage.trim() !== '') ? "#195de6" : "#9da6b8"} />
+                <Icon name="send" size={20} color={(clientDetails && (newMessage.trim() !== '' || currentSuggestedResponse.trim() !== '')) ? "#195de6" : "#9da6b8"} />
               </TouchableOpacity>
             </View>
           </View>
