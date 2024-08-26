@@ -215,12 +215,11 @@ const ClientMessagesScreen = ({ route }) => {
         is_ai: isAI,
       };
 
-      console.log('Adding temp message to localMessages', tempMessage);
       setLocalMessages(prev => [...prev, tempMessage]);
       setNewMessage('');
       scrollToBottom();
 
-      console.log('Sending message via API');
+      console.log('Sending message via API'+ messageToSend);
       await sendMessage(recipient, messageToSend, false, !isAI);
       
       console.log('Message sent successfully');

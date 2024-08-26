@@ -2,7 +2,7 @@ const twilio = require('twilio');
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
 const { handleUserInput, createThread } = require('../ai/scheduling');
-const { saveMessage, toggleLastMessageReadStatus, saveSuggestedResponse } = require('../model/messages');
+const { saveMessage, toggleLastMessageReadStatus, saveSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
 const { getClientByPhoneNumber, getClientAutoRespond } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -72,7 +72,7 @@ async function sendMessage(to, body, initialMessage = true, manual = true) {
     });
 
     // Clear the suggested response after sending a message
-    await saveSuggestedResponse(clientId, null);
+    await clearSuggestedResponse(clientId);
   }
   
   return client.messages.create({
