@@ -6,19 +6,31 @@ async function saveMessage(from, to, body, date, clientid, read = true, isAI = f
   }
   const db = dbUtils.getDB();
 
-  const sql = `
-    INSERT INTO Messages (fromText, toText, body, date, clientid, read, is_ai)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
-    RETURNING id
-  `;
-  const values = [from, to, body, date, clientid, read, isAI];
+  // Start a transaction
+  await db.query('BEGIN');
+
   try {
+    // Save the message
+    const sql = `
+      INSERT INTO Messages (fromText, toText, body, date, clientid, read, is_ai)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id
+    `;
+    const values = [from, to, body, date, clientid, read, isAI];
     const res = await db.query(sql, values);
     const newId = res.rows[0].id;
     console.log("Message saved with id:", newId);
+
+    // Clear the suggested response for this client
+    await clearSuggestedResponse(clientid);
+
+    // Commit the transaction
+    await db.query('COMMIT');
     
     return { id: newId };
   } catch (err) {
+    // If there's an error, roll back the transaction
+    await db.query('ROLLBACK');
     console.error('Error saving message:', err.message);
     throw err;
   }
@@ -179,7 +191,7 @@ async function clearSuggestedResponse(clientId) {
     console.log(`Suggested response cleared for clientId: ${clientId}`);
   } catch (err) {
     console.error('Error clearing suggested response:', err.message);
-    throw err;
+    // Don't throw the error, just log it
   }
 }
 
