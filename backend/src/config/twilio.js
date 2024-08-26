@@ -32,7 +32,6 @@ function formatPhoneNumber(phoneNumber) {
   } else {
     return null;
   }
-  
   return '+' + cleaned;
 }
 
