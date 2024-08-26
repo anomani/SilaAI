@@ -2,7 +2,7 @@ const twilio = require('twilio');
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
 const { handleUserInput, createThread } = require('../ai/scheduling');
-const { saveMessage, toggleLastMessageReadStatus } = require('../model/messages');
+const { saveMessage, toggleLastMessageReadStatus, saveSuggestedResponse } = require('../model/messages');
 const { getClientByPhoneNumber, getClientAutoRespond } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -70,6 +70,9 @@ async function sendMessage(to, body, initialMessage = true, manual = true) {
       console.log(`Content: ${message.content[0].text.value}`);
       console.log('---');
     });
+
+    // Clear the suggested response after sending a message
+    await saveSuggestedResponse(clientId, null);
   }
   
   return client.messages.create({
@@ -149,10 +152,19 @@ async function handleIncomingMessage(req, res) {
     // Add message to pending messages
     if (!pendingMessages.has(Author)) {
       pendingMessages.set(Author, []);
-      // Schedule processing after a random delay between 1 and 5 minutes
-      const delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
-      // Create a new random delay between 1 and 10 seconds
-      const shortDelayInMs = Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000;
+      
+      // Check if the number is the special case
+      const formattedAuthor = formatPhoneNumber(Author);
+      let delayInMs;
+      
+      if (formattedAuthor === '+12038324011') {
+        // Short delay for special number (1-10 seconds)
+        delayInMs = Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000;
+      } else {
+        // Normal delay for other numbers (1-5 minutes)
+        delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
+      }
+      
       setTimeout(() => processDelayedResponse(Author), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
@@ -179,33 +191,7 @@ async function processDelayedResponse(phoneNumber) {
       const client = await getClientByPhoneNumber(phoneNumber);
       if (client.id != '') {
         await toggleLastMessageReadStatus(client.id);
-        // Check if the response contains any numbers or is a user response
-        // if (/\d/.test(responseMessage)) {
-        //   // Send a notification for AI suggested response
-        //   await sendNotificationToUser(
-        //     'Confirm AI Response for ' + client.firstname + ' ' + client.lastname,
-        //     responseMessage,
-        //     client.id,
-        //     client.firstname + ' ' + client.lastname,
-        //     lastMessage,
-        //     true
-        //   );
-        // } else if (responseMessage === "user" || responseMessage === "User") {
-        //   // Send a notification for client message
-        //   await sendNotificationToUser(
-        //     'New Client Message',
-        //     `${client.firstname} ${client.lastname}: ${lastMessage}`,
-        //     client.id,
-        //     client.firstname + ' ' + client.lastname,
-        //     lastMessage,
-        //     false
-        //   );
-        // } else {
-        //   // Send the AI response to the client
-        //     await sendMessage(phoneNumber, responseMessage, false, false);
-        //   }
         if (responseMessage === "user" || responseMessage === "User") {
-          // Send a notification for client message
           await sendNotificationToUser(
             'New Message from ' + client.firstname,
             `${client.firstname} ${client.lastname}: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
@@ -216,6 +202,8 @@ async function processDelayedResponse(phoneNumber) {
           );
         }
         else {
+          // Save the suggested response
+          await saveSuggestedResponse(client.id, responseMessage);
           await sendNotificationToUser(
             client.firstname + ' ' + client.lastname,
             responseMessage,
@@ -278,6 +266,11 @@ async function sendNotificationToUser(title, body, clientId, clientName, clientM
     console.log('Sending notifications:', notifications);
     let ticketChunks = await expo.sendPushNotificationsAsync(notifications);
     console.log('Notification results:', ticketChunks);
+
+    // If it's a suggested response, save it to the database
+    if (isSuggestedResponse) {
+      await saveSuggestedResponse(clientId, body);
+    }
   } catch (error) {
     console.error('Error sending push notifications:', error);
   }

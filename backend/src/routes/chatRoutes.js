@@ -2,6 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClientController, sendMessageController, setMessagesReadController, getCustomListController, sendMessagesToSelectedClients } = require('../controllers/chatController');
 const { handleIncomingMessage } = require('../config/twilio');
+const {
+  saveSuggestedResponseController,
+  getSuggestedResponseController,
+  clearSuggestedResponseController
+} = require('../controllers/chatController');
 
 router.post('/schedule', handleChatRequest);
 router.post('/incoming', handleIncomingMessage);
@@ -12,5 +17,8 @@ router.post('/send-message', sendMessageController);
 router.post('/set-messages-read/:clientId', setMessagesReadController);
 router.get('/custom-list', getCustomListController);
 router.post('/send-messages-to-selected-clients', sendMessagesToSelectedClients);
+router.post('/suggested-response', saveSuggestedResponseController);
+router.get('/suggested-response/:clientId', getSuggestedResponseController);
+router.delete('/suggested-response/:clientId', clearSuggestedResponseController);
 
 module.exports = router;

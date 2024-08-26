@@ -137,6 +137,52 @@ async function getAllMessagesGroupedByClient() {
   }
 }
 
+async function saveSuggestedResponse(clientId, response) {
+  const db = dbUtils.getDB();
+  const sql = `
+    INSERT INTO SuggestedResponses (clientId, response)
+    VALUES ($1, $2)
+    ON CONFLICT (clientId) DO UPDATE
+    SET response = EXCLUDED.response, updatedAt = CURRENT_TIMESTAMP
+    RETURNING *
+  `;
+  const values = [clientId, response];
+  try {
+    const res = await db.query(sql, values);
+    console.log(`Suggested response saved for clientId: ${clientId}`);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error saving suggested response:', err.message);
+    throw err;
+  }
+}
+
+async function getSuggestedResponse(clientId) {
+  const db = dbUtils.getDB();
+  const sql = 'SELECT response FROM SuggestedResponses WHERE clientId = $1';
+  const values = [clientId];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0] ? res.rows[0].response : null;
+  } catch (err) {
+    console.error('Error fetching suggested response:', err.message);
+    throw err;
+  }
+}
+
+async function clearSuggestedResponse(clientId) {
+  const db = dbUtils.getDB();
+  const sql = 'DELETE FROM SuggestedResponses WHERE clientId = $1';
+  const values = [clientId];
+  try {
+    await db.query(sql, values);
+    console.log(`Suggested response cleared for clientId: ${clientId}`);
+  } catch (err) {
+    console.error('Error clearing suggested response:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   saveMessage,
   getAllMessages,
@@ -144,5 +190,8 @@ module.exports = {
   deleteMessagesByClientId,
   toggleLastMessageReadStatus,
   setMessagesRead,
-  getAllMessagesGroupedByClient
+  getAllMessagesGroupedByClient,
+  saveSuggestedResponse,
+  getSuggestedResponse,
+  clearSuggestedResponse
 };

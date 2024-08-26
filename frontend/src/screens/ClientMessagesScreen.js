@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond } from '../services/api';
+import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond, getSuggestedResponse, clearSuggestedResponse } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
@@ -23,7 +23,7 @@ const Header = ({ clientName, navigation }) => {
 };
 
 const ClientMessagesScreen = ({ route }) => {
-  const { clientid, clientName, suggestedResponse, clientMessage } = route.params;
+  const { clientid, clientName, suggestedResponse: initialSuggestedResponse, clientMessage } = route.params;
   const [messages, setMessages] = useState([]);
   const { getDraftMessage, setDraftMessage } = useMessage();
   const [newMessage, setNewMessage] = useState('');
@@ -38,10 +38,12 @@ const ClientMessagesScreen = ({ route }) => {
   const [inputHeight, setInputHeight] = useState(60);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [currentSuggestedResponse, setCurrentSuggestedResponse] = useState(initialSuggestedResponse || '');
 
   useEffect(() => {
     if (isFocused) {
       fetchMessagesAndSetup();
+      fetchSuggestedResponse();
     } else {
       // Stop polling when the screen is not focused
       if (polling) {
@@ -59,7 +61,7 @@ const ClientMessagesScreen = ({ route }) => {
       // Save draft message when component unmounts
       setDraftMessage(clientid, newMessage);
     };
-  }, [clientid, isFocused, suggestedResponse, clientMessage]);
+  }, [clientid, isFocused, initialSuggestedResponse, clientMessage]);
 
   const fetchMessagesAndSetup = useCallback(async () => {
     try {
@@ -169,6 +171,15 @@ const ClientMessagesScreen = ({ route }) => {
     }
   };
 
+  const fetchSuggestedResponse = async () => {
+    try {
+      const response = await getSuggestedResponse(clientid);
+      setCurrentSuggestedResponse(response || '');
+    } catch (error) {
+      console.error('Error fetching suggested response:', error);
+    }
+  };
+
   const handleSendMessage = async () => {
     console.log('handleSendMessage called', { newMessage, clientDetails });
 
@@ -190,8 +201,8 @@ const ClientMessagesScreen = ({ route }) => {
       const adjustedDate = new Date();
       const adjustedDateString = adjustedDate.toLocaleString();
       
-      // Check if the message is the same as the suggested response
-      const isAI = newMessage === suggestedResponse;
+      // Check if the message is the same as the current suggested response
+      const isAI = newMessage === currentSuggestedResponse;
 
       const tempMessage = {
         id: tempId,
@@ -215,6 +226,11 @@ const ClientMessagesScreen = ({ route }) => {
       await fetchMessages(clientid);
       
       setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
+      
+      // Clear the suggested response after sending
+      setCurrentSuggestedResponse('');
+      // Also clear it from the backend
+      await clearSuggestedResponse(clientid);
     } catch (error) {
       console.error('Error sending message:', error);
       setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
@@ -423,7 +439,7 @@ const ClientMessagesScreen = ({ route }) => {
                 scrollEnabled={true}
                 placeholder="Write a message"
                 placeholderTextColor="#9da6b8"
-                value={newMessage}
+                value={newMessage || currentSuggestedResponse}
                 onChangeText={handleInputChange}
                 multiline={true}
                 numberOfLines={4}
