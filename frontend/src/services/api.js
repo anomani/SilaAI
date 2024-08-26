@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -45,7 +45,6 @@ export const sendFollowUpMessages = async () => {
     throw error;
   }
 };
-
 
 export const getClients = async () => {
   try {
@@ -445,6 +444,25 @@ export const deleteClientMedia = async (mediaId) => {
     await retryRequest(() => throttledRequest(() => api.delete(`/media/${mediaId}`)));
   } catch (error) {
     console.error('Error deleting client media:', error);
+    throw error;
+  }
+};
+
+export const getSuggestedResponse = async (clientId) => {
+  try {
+    const response = await axios.get(`${API_URL}/suggested-response/${clientId}`);
+    return response.data.suggestedResponse;
+  } catch (error) {
+    console.error('Error fetching suggested response:', error);
+    throw error;
+  }
+};
+
+export const clearSuggestedResponse = async (clientId) => {
+  try {
+    await axios.delete(`${API_URL}/suggested-response/${clientId}`);
+  } catch (error) {
+    console.error('Error clearing suggested response:', error);
     throw error;
   }
 };

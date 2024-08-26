@@ -7,6 +7,7 @@ const { getClientById } = require('../model/clients');
 const { getStoredQuery } = require('../ai/clientData');
 const { handleUserInputClaude } = require('../ai/claude-chat');
 const messageQueue = new Map();
+const { saveSuggestedResponse, getSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
 
 const handleChatRequest = async (req, res) => {
   try {
@@ -135,4 +136,50 @@ const sendMessagesToSelectedClients = async (req, res) => {
     res.status(500).json({ error: 'Error sending messages' });
   }
 }
-module.exports = { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClientController, sendMessageController, setMessagesReadController, getCustomListController, sendMessagesToSelectedClients };
+
+const saveSuggestedResponseController = async (req, res) => {
+  try {
+    const { clientId, response } = req.body;
+    const savedResponse = await saveSuggestedResponse(clientId, response);
+    res.status(200).json(savedResponse);
+  } catch (error) {
+    console.error('Error saving suggested response:', error);
+    res.status(500).json({ error: 'Error saving suggested response' });
+  }
+};
+
+const getSuggestedResponseController = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const suggestedResponse = await getSuggestedResponse(clientId);
+    res.status(200).json({ suggestedResponse });
+  } catch (error) {
+    console.error('Error fetching suggested response:', error);
+    res.status(500).json({ error: 'Error fetching suggested response' });
+  }
+};
+
+const clearSuggestedResponseController = async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    await clearSuggestedResponse(clientId);
+    res.status(200).json({ message: 'Suggested response cleared' });
+  } catch (error) {
+    console.error('Error clearing suggested response:', error);
+    res.status(500).json({ error: 'Error clearing suggested response' });
+  }
+};
+
+module.exports = { 
+  handleChatRequest, 
+  handleUserInputDataController, 
+  getMessagesByClientIdController, 
+  getAllMessagesGroupedByClientController, 
+  sendMessageController, 
+  setMessagesReadController, 
+  getCustomListController, 
+  sendMessagesToSelectedClients, 
+  saveSuggestedResponseController, 
+  getSuggestedResponseController, 
+  clearSuggestedResponseController 
+};
