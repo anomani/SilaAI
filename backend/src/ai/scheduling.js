@@ -15,6 +15,8 @@ const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt , deleteAIPrompt} = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal } = require('./tools/rescheduleAppointment');
+const { getThreadByPhoneNumber, saveThread, updateThreadId } = require('../model/threads');
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -300,11 +302,29 @@ const tools = [
 ];
 
 async function createThread(phoneNumber, initialMessage = false) {
-  if (initialMessage || !sessions.has(phoneNumber)) {
-    const thread = await openai.beta.threads.create();
+  try {
+    let thread;
+    
+    // Check if a thread already exists for this phone number
+    const existingThread = await getThreadByPhoneNumber(phoneNumber);
+
+    if (existingThread && !initialMessage) {
+      // Thread exists, retrieve it from OpenAI
+      thread = await openai.beta.threads.retrieve(existingThread.thread_id);
+    } else {
+      // Create a new thread
+      thread = await openai.beta.threads.create();
+      
+      // Store the new thread in the database
+      await saveThread(phoneNumber, thread.id);
+    }
+
     sessions.set(phoneNumber, thread);
+    return thread;
+  } catch (error) {
+    console.error(`Error in createThread for ${phoneNumber}:`, error);
+    throw error;
   }
-  return sessions.get(phoneNumber);
 }
 
 async function createAssistant(fname, lname, phone, messages, appointment, day, client, upcomingAppointment) {
@@ -767,7 +787,7 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
       console.log("appointment", appointment)
       let appointmentType = '';
       if (appointment.length > 0) {
-        appointmentType = appointment[5].appointmenttype;
+        appointmentType = appointment[0].appointmenttype;
       }
       fname = client.firstname;
       lname = client.lastname;
