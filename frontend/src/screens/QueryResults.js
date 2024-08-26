@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, Image, ActivityIndicator, TouchableOpacity, TextInput, SafeAreaView, ScrollView } from 'react-native';
-import { getCustomList, sendMessagesToSelectedClients, updateClientOutreachDate, setAIPrompt } from '../services/api';
+import { getCustomList } from '../services/api';
 import Checkbox from 'expo-checkbox';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
