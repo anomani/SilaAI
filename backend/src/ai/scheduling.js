@@ -428,7 +428,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
         }
         totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
         output = await getAvailability(args.day, args.appointmentType, args.addOns, client.id);
-        if (output.availableSlots.length === 0) {
+        if (output.length === 0) {
           output = {
             requestedDay: args.day,
             nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns)
@@ -517,6 +517,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
 }
 
 async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
+  console.log(requiredActions)
   const toolOutputs = [];
 
   for (const action of requiredActions.tool_calls) {
@@ -533,8 +534,7 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
         }
         totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
         output = await getAvailability(args.day, args.appointmentType, args.addOns, client.id);
-        
-        if (output.availableSlots.length === 0) {
+        if (output.length === 0) {
           output = {
             requestedDay: args.day,
             nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns)

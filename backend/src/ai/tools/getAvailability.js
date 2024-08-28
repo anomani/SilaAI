@@ -36,13 +36,6 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
         const now = new Date();
         const isToday = now.toDateString() === date.toDateString();
 
-        const result = {
-            date: day,
-            appointmentType: appointmentType,
-            addOns: addOnArray,
-            availableSlots: []
-        };
-
         for (const slot of groupAvailability) {
             const startOfSlot = new Date(`${day}T${slot.start}`);
             const endOfSlot = new Date(`${day}T${slot.end}`);
@@ -62,7 +55,7 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
                     const slotDuration = slotEndTime - currentTime;
 
                     if (slotDuration >= duration * 60000) {
-                        result.availableSlots.push({
+                        availableSlots.push({
                             startTime: new Date(currentTime).toTimeString().slice(0, 5),
                             endTime: slotEndTime.toTimeString().slice(0, 5)
                         });
@@ -73,8 +66,8 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
                 if (currentTime >= endOfSlot) break;
             }
         }
-        console.log(result);
-        return result;
+        console.log({date: day, availableSlots: availableSlots});
+        return availableSlots;
     } catch (error) {
         console.error("Error:", error);
         return [];
@@ -153,5 +146,6 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, num
 
   return availableSlots;
 }
+
 
 module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots}
