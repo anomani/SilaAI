@@ -104,16 +104,12 @@ const ChatScreen = () => {
     setIsAITyping(true);
 
     try {
-      const responsePromise = handleUserInput(text);
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timed out')), 60000) // 60 seconds timeout
-      );
-
-      const response = await Promise.race([responsePromise, timeoutPromise]);
-      setMessages([...newMessages, { text: response, sender: 'bot' }]);
+      const response = await handleUserInput(text);
+      const responseMessage = typeof response === 'string' ? response : response.message;
+      setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages([...newMessages, { text: error.message || 'Sorry, there was an error processing your request. Please try again later.', sender: 'bot' }]);
+      setMessages([...newMessages, { text: 'Sorry, there was an error processing your request.', sender: 'bot' }]);
     } finally {
       setIsAITyping(false);
     }
