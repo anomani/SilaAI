@@ -108,7 +108,7 @@ const ChatScreen = () => {
       setMessages([...newMessages, { text: response, sender: 'bot' }]);
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages([...newMessages, { text: 'Sorry, there was an error processing your request.', sender: 'bot' }]);
+      setMessages([...newMessages, { text: error.message || 'Sorry, there was an error processing your request. Please try again later.', sender: 'bot' }]);
     } finally {
       setIsAITyping(false);
     }

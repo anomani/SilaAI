@@ -10,7 +10,39 @@ const messageQueue = new Map();
 const { saveSuggestedResponse, getSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
 const { getMessageMetrics } = require('../model/messages');
 const Queue = require('bull');
-const chatQueue = new Queue('chat-queue');
+const Redis = require('ioredis');
+const Bull = require('bull');
+
+const redisClient = new Redis(process.env.REDIS_URL, {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+  retryStrategy(times) {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
+});
+
+const chatQueue = new Bull('chat-queue', {
+  redis: redisClient,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 1000,
+    },
+  },
+});
+
+const checkRedisConnection = async () => {
+  try {
+    await redisClient.ping();
+    console.log('Redis connection successful');
+    return true;
+  } catch (error) {
+    console.error('Redis connection failed:', error);
+    return false;
+  }
+};
 
 const handleChatRequest = async (req, res) => {
   try {
@@ -36,13 +68,17 @@ const handleUserInputDataController = async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
     
-    // Add job to queue instead of processing immediately
+    const isRedisConnected = await checkRedisConnection();
+    if (!isRedisConnected) {
+      return res.status(503).json({ error: 'Service temporarily unavailable. Please try again later.' });
+    }
+
     const job = await chatQueue.add({ message });
     
     res.json({ jobId: job.id, message: 'Your request is being processed' });
   } catch (error) {
     console.error('Error handling user input data:', error);
-    res.status(500).json({ error: 'Error processing request' });
+    res.status(500).json({ error: 'Error processing request. Please try again later.' });
   }
 };
 
@@ -195,6 +231,12 @@ chatQueue.process(async (job) => {
 const checkJobStatus = async (req, res) => {
   try {
     const { jobId } = req.params;
+    
+    const isRedisConnected = await checkRedisConnection();
+    if (!isRedisConnected) {
+      return res.status(503).json({ error: 'Service temporarily unavailable. Please try again later.' });
+    }
+
     const job = await chatQueue.getJob(jobId);
     
     if (!job) {
@@ -207,7 +249,7 @@ const checkJobStatus = async (req, res) => {
     res.json({ jobId, state, result });
   } catch (error) {
     console.error('Error checking job status:', error);
-    res.status(500).json({ error: 'Error checking job status' });
+    res.status(500).json({ error: 'Error checking job status. Please try again later.' });
   }
 };
 
