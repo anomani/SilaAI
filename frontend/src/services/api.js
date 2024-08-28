@@ -169,17 +169,17 @@ export const handleUserInput = async (message) => {
     
     while (attempts < maxAttempts) {
       const statusResponse = await retryRequest(() => throttledRequest(() => api.get(`/chat/job-status/${jobId}`)));
-      const { state, result } = statusResponse.data;
+      const { status, result, error } = statusResponse.data;
 
-      if (state === 'completed') {
+      if (status === 'completed') {
         return result;
-      } else if (state === 'failed') {
-        throw new Error('Job processing failed');
+      } else if (status === 'failed') {
+        throw new Error(error || 'Job processing failed');
+      } else if (status === 'pending' || status === 'processing') {
+        // Job is still in progress, wait before next poll
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        attempts++;
       }
-
-      // Wait for 5 seconds before next poll
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      attempts++;
     }
 
     throw new Error('Job timed out');
