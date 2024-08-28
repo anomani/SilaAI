@@ -24,6 +24,7 @@ import EditClientScreen from './src/screens/EditClientScreen';
 import ChatDashboard from './src/screens/ChatDashboard';
 import ClientMessagesScreen from './src/screens/ClientMessagesScreen';
 import InitiateConversation from './src/screens/InitiateConversation';
+import MetricsScreen from './src/screens/MetricsScreen'; // Add this import
 
 const Stack = createStackNavigator();
 
@@ -151,6 +152,7 @@ const AppContent: React.FC = () => {
         initialParams={{ clientid: 0, clientName: '', suggestedResponse: false }}
       />
       <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
+      <Stack.Screen name="Metrics" component={MetricsScreen} /> 
     </Stack.Navigator>
   );
 };

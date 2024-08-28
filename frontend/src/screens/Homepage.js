@@ -45,6 +45,13 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Metrics')}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Metrics</Text>
+            <Text style={styles.menuSubtitle}>View message analytics and insights</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
       <Footer navigation={navigation} />
     </View>

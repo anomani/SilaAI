@@ -195,6 +195,62 @@ async function clearSuggestedResponse(clientId) {
   }
 }
 
+async function getMessageMetrics() {
+  const db = dbUtils.getDB();
+  const metrics = {};
+
+  try {
+    // Total number of messages
+    const totalMessagesQuery = 'SELECT COUNT(*) FROM Messages';
+    const totalMessagesResult = await db.query(totalMessagesQuery);
+    metrics.totalMessages = parseInt(totalMessagesResult.rows[0].count);
+
+    // Messages per day (last 30 days)
+    const messagesPerDayQuery = `
+      SELECT DATE(TO_TIMESTAMP(date, 'MM/DD/YYYY, HH24:MI:SS')) as day, COUNT(*) as count
+      FROM Messages
+      WHERE TO_TIMESTAMP(date, 'MM/DD/YYYY, HH24:MI:SS') >= NOW() - INTERVAL '30 days'
+      GROUP BY DATE(TO_TIMESTAMP(date, 'MM/DD/YYYY, HH24:MI:SS'))
+      ORDER BY day
+    `;
+    const messagesPerDayResult = await db.query(messagesPerDayQuery);
+    metrics.messagesPerDay = messagesPerDayResult.rows;
+
+    // Distribution of messages between human and AI responses
+    const messageDistributionQuery = `
+      SELECT is_ai, COUNT(*) as count
+      FROM Messages
+      GROUP BY is_ai
+    `;
+    const messageDistributionResult = await db.query(messageDistributionQuery);
+    metrics.messageDistribution = messageDistributionResult.rows;
+
+    // Number of unique clients
+    const uniqueClientsQuery = 'SELECT COUNT(DISTINCT clientid) FROM Messages';
+    const uniqueClientsResult = await db.query(uniqueClientsQuery);
+    metrics.uniqueClients = parseInt(uniqueClientsResult.rows[0].count);
+
+    // Average messages per client
+    metrics.avgMessagesPerClient = metrics.totalMessages / metrics.uniqueClients;
+
+    // Most active clients (top 5)
+    const activeClientsQuery = `
+      SELECT clientid, COUNT(*) as message_count
+      FROM Messages
+      GROUP BY clientid
+      ORDER BY message_count DESC
+      LIMIT 5
+    `;
+    const activeClientsResult = await db.query(activeClientsQuery);
+    metrics.mostActiveClients = activeClientsResult.rows;
+
+    return metrics;
+  } catch (err) {
+    console.error('Error fetching message metrics:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   saveMessage,
   getAllMessages,
@@ -205,5 +261,6 @@ module.exports = {
   getAllMessagesGroupedByClient,
   saveSuggestedResponse,
   getSuggestedResponse,
-  clearSuggestedResponse
+  clearSuggestedResponse,
+  getMessageMetrics
 };

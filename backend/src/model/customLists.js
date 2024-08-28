@@ -4,7 +4,6 @@ async function createCustomList(name, query) {
   const db = dbUtils.getDB();
   try {
     const clients = await db.query(query);
-    console.log(clients.rows);
     return clients.rows;
   } catch (err) {
     console.error('Error creating custom list:', err.message);

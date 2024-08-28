@@ -63,7 +63,7 @@ const tools = [
           description: "The SQL query to create the custom list"
         }
       },
-      required: ["name", "query"]
+      required: ["name", "query"],
     }
   }
 },
@@ -355,7 +355,7 @@ async function createAssistant(date) {
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions + `\nDate: ${date}`,
       name: "Client Data",
-      model: "gpt-4o",
+      model: "gpt-4o-2024-08-06",
       tools: tools,
       temperature: 1
     });
@@ -412,6 +412,7 @@ async function handleUserInputData(userMessage) {
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
         if (assistantMessage) {
+          console.log(assistantMessage.content[0].text.value);
           return assistantMessage.content[0].text.value;
         }
       } else if (runStatus.status === "requires_action") {
@@ -439,11 +440,8 @@ async function handleUserInputData(userMessage) {
               output = await sendMessages(args.clients, args.message);
             } else if (funcName === "createCustomList") {
               console.log("createCustomList", args.name, args.query);
-              const list = await createCustomList(args.name, args.query);
-              const queryId = uuidv4();
+            const queryId = uuidv4();
               queryStore[queryId] = args.query;
-              const listLink = `/custom-list?id=${queryId}`;
-              console.log(listLink);
               output = queryId;
             } else if (funcName === "getMuslimClients") {
               console.log("getMuslimClients");
@@ -560,5 +558,12 @@ function getStoredQuery(id) {
   console.log(queryStore);
   return queryStore[id];
 }
+
+// async function main() {
+//   const resp = await handleUserInputData("Make a list of clients with an appointment next Friday through next Monday");
+//   console.log(resp);
+// }
+
+// main();
 
 module.exports = { handleUserInputData, getStoredQuery };

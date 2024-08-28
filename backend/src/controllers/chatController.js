@@ -8,6 +8,9 @@ const { getStoredQuery } = require('../ai/clientData');
 const { handleUserInputClaude } = require('../ai/claude-chat');
 const messageQueue = new Map();
 const { saveSuggestedResponse, getSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
+const { getMessageMetrics } = require('../model/messages');
+const Queue = require('bull');
+const chatQueue = new Queue('chat-queue');
 
 const handleChatRequest = async (req, res) => {
   try {
@@ -29,12 +32,14 @@ const handleChatRequest = async (req, res) => {
 const handleUserInputDataController = async (req, res) => {
   try {
     const { message } = req.body;
-    console.log(message)
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
-    const responseMessage = await handleUserInputData(message);
-    res.json({ message: responseMessage });
+    
+    // Add job to queue instead of processing immediately
+    const job = await chatQueue.add({ message });
+    
+    res.json({ jobId: job.id, message: 'Your request is being processed' });
   } catch (error) {
     console.error('Error handling user input data:', error);
     res.status(500).json({ error: 'Error processing request' });
@@ -170,6 +175,42 @@ const clearSuggestedResponseController = async (req, res) => {
   }
 };
 
+const getMessageMetricsController = async (req, res) => {
+  try {
+    const metrics = await getMessageMetrics();
+    res.status(200).json(metrics);
+  } catch (error) {
+    console.error('Error fetching message metrics:', error);
+    res.status(500).json({ error: 'Error fetching message metrics' });
+  }
+};
+
+// Process jobs in the background
+chatQueue.process(async (job) => {
+  const { message } = job.data;
+  const responseMessage = await handleUserInputData(message);
+  return responseMessage;
+});
+
+const checkJobStatus = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await chatQueue.getJob(jobId);
+    
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+    
+    const state = await job.getState();
+    const result = job.returnvalue;
+    
+    res.json({ jobId, state, result });
+  } catch (error) {
+    console.error('Error checking job status:', error);
+    res.status(500).json({ error: 'Error checking job status' });
+  }
+};
+
 module.exports = { 
   handleChatRequest, 
   handleUserInputDataController, 
@@ -181,5 +222,7 @@ module.exports = {
   sendMessagesToSelectedClients, 
   saveSuggestedResponseController, 
   getSuggestedResponseController, 
-  clearSuggestedResponseController 
+  clearSuggestedResponseController, 
+  getMessageMetricsController, 
+  checkJobStatus 
 };

@@ -105,8 +105,7 @@ const ChatScreen = () => {
 
     try {
       const response = await handleUserInput(text);
-      const responseMessage = typeof response === 'string' ? response : response.message;
-      setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
+      setMessages([...newMessages, { text: response, sender: 'bot' }]);
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages([...newMessages, { text: 'Sorry, there was an error processing your request.', sender: 'bot' }]);
@@ -125,32 +124,39 @@ const ChatScreen = () => {
     handleSend(prompt);
   };
 
-  const renderItem = ({ item }) => (
-    <View
-      style={[
-        styles.messageContainer,
-        item.sender === 'user' ? styles.userMessage : styles.botMessage
-      ]}
-    >
-      {item.sender === 'bot' && item.text.toLowerCase().includes('custom list') ? (
-        <Text style={styles.messageText}>
-          {item.text.split('here:')[0]}
-          <Text
-            style={styles.link}
-            onPress={() => {
-              const id = item.text.split('here:')[1].trim();
-              handleLinkPress(id);
-            }}
-          >
-            here
+  const renderItem = ({ item }) => {
+    // Regex to match the ID format
+    const idRegex = /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i;
+    
+    // Extract the ID from the message text
+    const match = item.text.match(idRegex);
+    const id = match ? match[1] : null;
+
+    return (
+      <View
+        style={[
+          styles.messageContainer,
+          item.sender === 'user' ? styles.userMessage : styles.botMessage
+        ]}
+      >
+        {item.sender === 'bot' && id ? (
+          <Text style={styles.messageText}>
+            {item.text.replace(id, '').trim()}
+            {' '}
+            <Text
+              style={styles.link}
+              onPress={() => handleLinkPress(id)}
+            >
+              View list
+            </Text>
+            {' here.'}
           </Text>
-          .
-        </Text>
-      ) : (
-        <Text style={styles.messageText}>{item.text}</Text>
-      )}
-    </View>
-  );
+        ) : (
+          <Text style={styles.messageText}>{item.text}</Text>
+        )}
+      </View>
+    );
+  };
 
   const renderIntro = () => (
     <View style={styles.introContainer}>

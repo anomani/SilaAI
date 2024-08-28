@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, StatusBar } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,12 +14,12 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ visible, onClose, onC
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView | null>(null);
 
-  const toggleCameraFacing = () => {
+  const toggleCameraFacing = useCallback(() => {
     setFacing(current => (current === 'back' ? 'front' : 'back'));
     console.log('Camera facing toggled');
-  };
+  }, []);
 
-  const handleCameraCapture = async () => {
+  const handleCameraCapture = useCallback(async () => {
     console.log('Capture button pressed');
     if (cameraRef.current) {
       try {
@@ -33,7 +33,12 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ visible, onClose, onC
     } else {
       console.log('Camera ref is null');
     }
-  };
+  }, [onCapture, onClose]);
+
+  const handleClose = useCallback(() => {
+    console.log('Close button pressed');
+    onClose();
+  }, [onClose]);
 
   if (!permission) {
     return null;
@@ -50,11 +55,6 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ visible, onClose, onC
     );
   }
 
-  const handleClose = () => {
-    console.log('Close button pressed');
-    onClose();
-  };
-
   return (
     <Modal
       animationType="slide"
@@ -67,13 +67,25 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ visible, onClose, onC
         {permission.granted ? (
           <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
             <View style={styles.cameraButtonContainer}>
-              <TouchableOpacity style={styles.cameraButton} onPress={toggleCameraFacing}>
+              <TouchableOpacity 
+                style={styles.cameraButton} 
+                onPress={toggleCameraFacing}
+                activeOpacity={0.7}
+              >
                 <Ionicons name="camera-reverse" size={30} color="white" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.captureButton} onPress={handleCameraCapture}>
+              <TouchableOpacity 
+                style={styles.captureButton} 
+                onPress={handleCameraCapture}
+                activeOpacity={0.7}
+              >
                 <View style={styles.captureButtonInner} />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cameraButton} onPress={handleClose}>
+              <TouchableOpacity 
+                style={styles.cameraButton} 
+                onPress={handleClose}
+                activeOpacity={0.7}
+              >
                 <Ionicons name="close" size={30} color="white" />
               </TouchableOpacity>
             </View>
