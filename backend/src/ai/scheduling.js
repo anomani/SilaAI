@@ -517,7 +517,6 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
 }
 
 async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
-  console.log(requiredActions)
   const toolOutputs = [];
 
   for (const action of requiredActions.tool_calls) {
