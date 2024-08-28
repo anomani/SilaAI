@@ -104,7 +104,12 @@ const ChatScreen = () => {
     setIsAITyping(true);
 
     try {
-      const response = await handleUserInput(text);
+      const responsePromise = handleUserInput(text);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timed out')), 60000) // 60 seconds timeout
+      );
+
+      const response = await Promise.race([responsePromise, timeoutPromise]);
       setMessages([...newMessages, { text: response, sender: 'bot' }]);
     } catch (error) {
       console.error('Error sending message:', error);

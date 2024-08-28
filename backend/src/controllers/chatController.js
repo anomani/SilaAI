@@ -67,18 +67,55 @@ const handleUserInputDataController = async (req, res) => {
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
-    
-    const isRedisConnected = await checkRedisConnection();
-    if (!isRedisConnected) {
-      return res.status(503).json({ error: 'Service temporarily unavailable. Please try again later.' });
-    }
 
-    const job = await chatQueue.add({ message });
-    
-    res.json({ jobId: job.id, message: 'Your request is being processed' });
+    const jobId = Date.now().toString();
+    const job = {
+      id: jobId,
+      status: 'pending',
+      result: null,
+      error: null,
+    };
+
+    pendingJobs.set(jobId, job);
+
+    // Respond immediately with the job ID
+    res.json({ jobId, message: 'Your request is being processed' });
+
+    // Calculate delay (between 5 to 20 seconds)
+    const delayInMs = 1;
+
+    // Schedule the job processing
+    setTimeout(() => processJob(job, message), delayInMs);
+
+    // Set a timeout to automatically fail the job after JOB_TIMEOUT
+    setTimeout(() => {
+      if (job.status === 'pending' || job.status === 'processing') {
+        job.status = 'failed';
+        job.error = 'Job timed out';
+      }
+    }, JOB_TIMEOUT);
+
   } catch (error) {
     console.error('Error handling user input data:', error);
     res.status(500).json({ error: 'Error processing request. Please try again later.' });
+  }
+};
+
+const processJob = async (job, message) => {
+  try {
+    job.status = 'processing';
+    const result = await handleUserInputData(message);
+    job.status = 'completed';
+    job.result = result;
+  } catch (error) {
+    console.error('Error processing job:', error);
+    job.status = 'failed';
+    job.error = error.message || 'An error occurred while processing the request';
+  } finally {
+    // Clean up the job after a delay (e.g., 5 minutes)
+    setTimeout(() => {
+      pendingJobs.delete(job.id);
+    }, 300000); // 5 minutes
   }
 };
 
