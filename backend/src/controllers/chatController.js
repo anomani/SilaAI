@@ -9,91 +9,6 @@ const { handleUserInputClaude } = require('../ai/claude-chat');
 const messageQueue = new Map();
 const { saveSuggestedResponse, getSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
 const { getMessageMetrics } = require('../model/messages');
-const Queue = require('bull');
-const Redis = require('ioredis');
-const Bull = require('bull');
-
-const pendingJobs = new Map();
-const JOB_TIMEOUT = 300000; // 5 minutes in milliseconds
-
-const handleUserInputDataController = async (req, res) => {
-  try {
-    const { message } = req.body;
-    if (!message) {
-      return res.status(400).json({ error: 'Message is required' });
-    }
-
-    const jobId = Date.now().toString();
-    const job = {
-      id: jobId,
-      status: 'pending',
-      result: null,
-      error: null,
-    };
-
-    pendingJobs.set(jobId, job);
-
-    // Respond immediately with the job ID
-    res.json({ jobId, message: 'Your request is being processed' });
-
-    // Calculate delay (between 5 to 20 seconds)
-    const delayInMs = 1;
-
-    // Schedule the job processing
-    setTimeout(() => processJob(job, message), delayInMs);
-
-    // Set a timeout to automatically fail the job after JOB_TIMEOUT
-    setTimeout(() => {
-      if (job.status === 'pending' || job.status === 'processing') {
-        job.status = 'failed';
-        job.error = 'Job timed out';
-      }
-    }, JOB_TIMEOUT);
-
-  } catch (error) {
-    console.error('Error handling user input data:', error);
-    res.status(500).json({ error: 'Error processing request. Please try again later.' });
-  }
-};
-
-const processJob = async (job, message) => {
-  try {
-    job.status = 'processing';
-    const result = await handleUserInputData(message);
-    job.status = 'completed';
-    job.result = result;
-  } catch (error) {
-    console.error('Error processing job:', error);
-    job.status = 'failed';
-    job.error = error.message || 'An error occurred while processing the request';
-  } finally {
-    // Clean up the job after a delay (e.g., 5 minutes)
-    setTimeout(() => {
-      pendingJobs.delete(job.id);
-    }, 300000); // 5 minutes
-  }
-};
-
-const checkJobStatus = async (req, res) => {
-  try {
-    const { jobId } = req.params;
-    const job = pendingJobs.get(jobId);
-
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-
-    res.json({
-      jobId,
-      status: job.status,
-      result: job.result,
-      error: job.error,
-    });
-  } catch (error) {
-    console.error('Error checking job status:', error);
-    res.status(500).json({ error: 'Error checking job status. Please try again later.' });
-  }
-};
 
 const handleChatRequest = async (req, res) => {
   try {
@@ -108,6 +23,21 @@ const handleChatRequest = async (req, res) => {
 
   } catch (error) {
     console.error('Error handling chat request:', error);
+    res.status(500).json({ error: 'Error processing request' });
+  }
+};
+
+const handleUserInputDataController = async (req, res) => {
+  try {
+    const { message } = req.body;
+    console.log(message)
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    const responseMessage = await handleUserInputData(message);
+    res.json({ message: responseMessage });
+  } catch (error) {
+    console.error('Error handling user input data:', error);
     res.status(500).json({ error: 'Error processing request' });
   }
 };
@@ -263,6 +193,5 @@ module.exports = {
   saveSuggestedResponseController, 
   getSuggestedResponseController, 
   clearSuggestedResponseController, 
-  getMessageMetricsController, 
-  checkJobStatus 
+  getMessageMetricsController 
 };
