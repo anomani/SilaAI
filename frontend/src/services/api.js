@@ -159,35 +159,10 @@ export const deleteAppointment = async (appointmentId) => {
 
 export const handleUserInput = async (message) => {
   try {
-    // Start the job
-    const jobResponse = await retryRequest(() => throttledRequest(() => api.post('/chat/handle-user-input', { message })));
-    const jobId = jobResponse.data.jobId;
-
-    // Poll for job completion
-    const maxAttempts = 60; // 5 minutes (5 * 60 seconds / 5 second interval)
-    let attempts = 0;
-    
-    while (attempts < maxAttempts) {
-      const statusResponse = await retryRequest(() => throttledRequest(() => api.get(`/chat/job-status/${jobId}`)));
-      const { status, result, error } = statusResponse.data;
-
-      if (status === 'completed') {
-        return result;
-      } else if (status === 'failed') {
-        throw new Error(error || 'Job processing failed');
-      } else if (status === 'pending' || status === 'processing') {
-        // Job is still in progress, wait before next poll
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        attempts++;
-      }
-    }
-
-    throw new Error('Job timed out');
+    const response = await retryRequest(() => throttledRequest(() => api.post('/chat/handle-user-input', { message })));
+    return response.data;
   } catch (error) {
     console.error('Error handling user input:', error);
-    if (error.response && error.response.status === 503) {
-      throw new Error('Service is temporarily unavailable. Please try again later.');
-    }
     throw error;
   }
 };
@@ -495,20 +470,7 @@ export const clearSuggestedResponse = async (clientId) => {
 export const getMessageMetrics = async () => {
   try {
     const response = await retryRequest(() => throttledRequest(() => api.get('/chat/metrics')));
-    const metrics = response.data;
-
-    // Fetch client names for most active clients
-    const clientPromises = metrics.mostActiveClients.map(async (client) => {
-      const clientData = await getClientById(client.clientid);
-      return {
-        ...client,
-        name: `${clientData.firstname} ${clientData.lastname}`
-      };
-    });
-
-    metrics.mostActiveClients = await Promise.all(clientPromises);
-
-    return metrics;
+    return response.data;
   } catch (error) {
     console.error('Error fetching message metrics:', error);
     throw error;
