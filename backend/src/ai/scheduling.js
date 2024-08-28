@@ -534,7 +534,7 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
         }
         totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
         output = await getAvailability(args.day, args.appointmentType, args.addOns, client.id);
-        if (output.length === 0) {
+        if (output.availableSlots.length === 0) {
           output = {
             requestedDay: args.day,
             nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns)
