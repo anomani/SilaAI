@@ -13,53 +13,8 @@ const Queue = require('bull');
 const Redis = require('ioredis');
 const Bull = require('bull');
 
-const redisClient = new Redis(process.env.REDIS_URL, {
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false,
-  retryStrategy(times) {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  }
-});
-
-const chatQueue = new Bull('chat-queue', {
-  redis: redisClient,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 1000,
-    },
-  },
-});
-
-const checkRedisConnection = async () => {
-  try {
-    await redisClient.ping();
-    console.log('Redis connection successful');
-    return true;
-  } catch (error) {
-    console.error('Redis connection failed:', error);
-    return false;
-  }
-};
-
-const handleChatRequest = async (req, res) => {
-  try {
-    const { message } = req.body;
-    const number = "+12038324011";
-    const twilio = "+18446480598";
-    
-    const responseMessage = await handleUserInputInternal([message], number);
-
-    // Respond to the client with the actual response
-    res.json({ message: responseMessage });
-
-  } catch (error) {
-    console.error('Error handling chat request:', error);
-    res.status(500).json({ error: 'Error processing request' });
-  }
-};
+const pendingJobs = new Map();
+const JOB_TIMEOUT = 300000; // 5 minutes in milliseconds
 
 const handleUserInputDataController = async (req, res) => {
   try {
@@ -116,6 +71,44 @@ const processJob = async (job, message) => {
     setTimeout(() => {
       pendingJobs.delete(job.id);
     }, 300000); // 5 minutes
+  }
+};
+
+const checkJobStatus = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = pendingJobs.get(jobId);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    res.json({
+      jobId,
+      status: job.status,
+      result: job.result,
+      error: job.error,
+    });
+  } catch (error) {
+    console.error('Error checking job status:', error);
+    res.status(500).json({ error: 'Error checking job status. Please try again later.' });
+  }
+};
+
+const handleChatRequest = async (req, res) => {
+  try {
+    const { message } = req.body;
+    const number = "+12038324011";
+    const twilio = "+18446480598";
+    
+    const responseMessage = await handleUserInputInternal([message], number);
+
+    // Respond to the client with the actual response
+    res.json({ message: responseMessage });
+
+  } catch (error) {
+    console.error('Error handling chat request:', error);
+    res.status(500).json({ error: 'Error processing request' });
   }
 };
 
@@ -255,38 +248,6 @@ const getMessageMetricsController = async (req, res) => {
   } catch (error) {
     console.error('Error fetching message metrics:', error);
     res.status(500).json({ error: 'Error fetching message metrics' });
-  }
-};
-
-// Process jobs in the background
-chatQueue.process(async (job) => {
-  const { message } = job.data;
-  const responseMessage = await handleUserInputData(message);
-  return responseMessage;
-});
-
-const checkJobStatus = async (req, res) => {
-  try {
-    const { jobId } = req.params;
-    
-    const isRedisConnected = await checkRedisConnection();
-    if (!isRedisConnected) {
-      return res.status(503).json({ error: 'Service temporarily unavailable. Please try again later.' });
-    }
-
-    const job = await chatQueue.getJob(jobId);
-    
-    if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
-    }
-    
-    const state = await job.getState();
-    const result = job.returnvalue;
-    
-    res.json({ jobId, state, result });
-  } catch (error) {
-    console.error('Error checking job status:', error);
-    res.status(500).json({ error: 'Error checking job status. Please try again later.' });
   }
 };
 
