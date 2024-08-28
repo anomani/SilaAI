@@ -260,7 +260,13 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
     });
   };
 
-  const handleAddMediaPress = () => {
+  const handleAddMediaPress = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please grant permission to access your media library.');
+      return;
+    }
+
     Alert.alert(
       "Add Media",
       "Choose an option",
@@ -271,11 +277,25 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
         },
         {
           text: "Take Photo",
-          onPress: () => setShowCamera(true)
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status === 'granted') {
+              setShowCamera(true);
+            } else {
+              Alert.alert('Permission required', 'Please grant permission to use the camera.');
+            }
+          }
         },
         {
           text: "Record Video",
-          onPress: () => launchVideoRecorder()
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status === 'granted') {
+              launchVideoRecorder();
+            } else {
+              Alert.alert('Permission required', 'Please grant permission to use the camera.');
+            }
+          }
         },
         {
           text: "Choose from Gallery",
