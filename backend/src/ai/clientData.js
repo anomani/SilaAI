@@ -559,11 +559,11 @@ function getStoredQuery(id) {
   return queryStore[id];
 }
 
-async function main() {
-  const resp = await handleUserInputData("Make a list of clients with an appointment next Friday through next Monday");
-  console.log(resp);
-}
+// async function main() {
+//   const resp = await handleUserInputData("Make a list of clients with an appointment next Friday through next Monday");
+//   console.log(resp);
+// }
 
-main();
+// main();
 
 module.exports = { handleUserInputData, getStoredQuery };
