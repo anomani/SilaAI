@@ -355,7 +355,7 @@ async function createAssistant(date) {
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions + `\nDate: ${date}`,
       name: "Client Data",
-      model: "gpt-4o-2024-08-06",
+      model: "gpt-4o",
       tools: tools,
       temperature: 1
     });
@@ -559,11 +559,11 @@ function getStoredQuery(id) {
   return queryStore[id];
 }
 
-// async function main() {
-//   const resp = await handleUserInputData("Make a list of clients with an appointment next Friday through next Monday");
-//   console.log(resp);
-// }
+async function main() {
+  const resp = await handleUserInputData("Make a list of clients with an appointment next Friday through next Monday");
+  console.log(resp);
+}
 
-// main();
+main();
 
 module.exports = { handleUserInputData, getStoredQuery };
