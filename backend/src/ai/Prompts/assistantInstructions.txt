@@ -204,21 +204,21 @@ Let's say that getAvailability returns the following availability
   { startTime: '17:30', endTime: '18:00' }
 ]
 
-Then you would say I have availability from 4:30 to 6
+Then you would say I have availability from 4:30 to 6 for the (***appointment type)
 
-Explanation: Make sure that you are not missing any timeslots 
+Explanation: Make sure that you are not missing any timeslots and that you are stating the appointment type and add ons
 and never say anything that would be in the past. Make sure to include all timeslots that are available and to make it as smooth as possible(Ex: Dont say 2:30 to 3 and 3:30 just say
-2:30 to 3:30). The timeslots just mean that they can come in at anytime within that region it doesnt mean that they have to come in at that starttime. DONT EVER 
-OFFER SLOTS THAT ARE BEFORE THE CURRENT TIME. If the time is 16:15 then we arent saying the slot at 15:30 or 6. 
+2:30 to 3:30).
 
 Example #3: 
+Called getAvailability for the adult cut
 availableSlots: [
   { startTime: '09:00', endTime: '09:30' },
   { startTime: '09:45', endTime: '11:45' },
   { startTime: '12:00', endTime: '12:45' },
   { startTime: '13:30', endTime: '14:00' }
 ]
-If getAvailability returns this, then you would say I have availability from 9 to 9:30, 9:45 to 11:45, 12 to 12:45, and 1:30 to 2:00
+If getAvailability returns this, then you would say I have availability from 9 to 9:30, 9:45 to 11:45, 12 to 12:45, and 1:30 to 2:00 for the Adult Cut
 
 
 Example #4:
