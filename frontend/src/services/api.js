@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -186,16 +186,33 @@ export const getMessagesByClientId = async (clientId) => {
   }
 };
 
-export const getAllMessagesGroupedByClient = async () => {
-  const cacheKey = 'groupedMessages';
-  if (cache.has(cacheKey) && Date.now() - cache.get(cacheKey).timestamp < cacheTimeout) {
-    return cache.get(cacheKey).data;
-  }
-
+export const getMostRecentMessagePerClient = async () => {
   return retryRequest(async () => {
-    const response = await throttledRequest(() => api.get('/chat/messages'));
-    cache.set(cacheKey, { data: response.data, timestamp: Date.now() });
-    return response.data;
+    const response = await throttledRequest(() => api.get('/chat/most-recent-messages'));
+    
+    // Fetch suggested responses for all clients
+    const suggestedResponses = await Promise.all(
+      response.data.map(message => 
+        getSuggestedResponse(message.clientid)
+          .then(suggestedResponse => ({ clientid: message.clientid, hasSuggestedResponse: !!suggestedResponse }))
+          .catch(() => ({ clientid: message.clientid, hasSuggestedResponse: false }))
+      )
+    );
+
+    // Create a map of client IDs to their suggested response status
+    const suggestedResponseMap = Object.fromEntries(
+      suggestedResponses.map(({ clientid, hasSuggestedResponse }) => [clientid, hasSuggestedResponse])
+    );
+
+    // Modify the response data to include the suggested response status
+    const modifiedData = response.data.map(message => ({
+      ...message,
+      hasSuggestedResponse: suggestedResponseMap[message.clientid],
+      // Remove the 'read' property if it exists
+      ...(message.read !== undefined && { read: undefined })
+    }));
+
+    return modifiedData;
   });
 };
 

@@ -39,11 +39,15 @@ const ClientMessagesScreen = ({ route }) => {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [currentSuggestedResponse, setCurrentSuggestedResponse] = useState(initialSuggestedResponse || '');
+  const [editableSuggestedResponse, setEditableSuggestedResponse] = useState('');
+  const [isSuggestedResponseEdited, setIsSuggestedResponseEdited] = useState(false);
 
   useEffect(() => {
     if (isFocused) {
       fetchMessagesAndSetup();
-      fetchSuggestedResponse();
+      if (!isSuggestedResponseEdited) {
+        fetchSuggestedResponse();
+      }
     } else {
       // Stop polling when the screen is not focused
       if (polling) {
@@ -61,7 +65,7 @@ const ClientMessagesScreen = ({ route }) => {
       // Save draft message when component unmounts
       setDraftMessage(clientid, newMessage);
     };
-  }, [clientid, isFocused, initialSuggestedResponse, clientMessage]);
+  }, [clientid, isFocused, initialSuggestedResponse, clientMessage, isSuggestedResponseEdited]);
 
   const fetchMessagesAndSetup = useCallback(async () => {
     try {
@@ -175,6 +179,7 @@ const ClientMessagesScreen = ({ route }) => {
     try {
       const response = await getSuggestedResponse(clientid);
       setCurrentSuggestedResponse(response || '');
+      setEditableSuggestedResponse(response || '');
     } catch (error) {
       console.error('Error fetching suggested response:', error);
     }
@@ -350,6 +355,10 @@ const ClientMessagesScreen = ({ route }) => {
   const handleInputChange = (text) => {
     setNewMessage(text);
     setDraftMessage(clientid, text);
+    if (text !== currentSuggestedResponse) {
+      setIsSuggestedResponseEdited(true);
+    }
+    setEditableSuggestedResponse(text);
   };
 
   const handleContentSizeChange = (event) => {
@@ -440,7 +449,7 @@ const ClientMessagesScreen = ({ route }) => {
                 scrollEnabled={true}
                 placeholder="Write a message"
                 placeholderTextColor="#9da6b8"
-                value={newMessage || currentSuggestedResponse}
+                value={newMessage || editableSuggestedResponse}
                 onChangeText={handleInputChange}
                 multiline={true}
                 numberOfLines={4}
