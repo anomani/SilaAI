@@ -3,8 +3,8 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../env' });
 const { getAvailability, getCurrentDate, findNextAvailableSlots } = require('./tools/getAvailability');
 const { bookAppointment, bookAppointmentInternal } = require('./tools/bookAppointment');
-const {cancelAppointment, cancelAppointmentInternal, cancelAppointmentByIdInternal} = require('./tools/cancelAppointment')
-const { getClientByPhoneNumber,getDaysSinceLastAppointment, createClient } = require('../model/clients');
+const {cancelAppointment, cancelAppointmentInternal} = require('./tools/cancelAppointment')
+const { getClientByPhoneNumber, createClient } = require('../model/clients');
 const {getMessagesByClientId} = require('../model/messages')
 const {getAllAppointmentsByClientId, getUpcomingAppointments} = require('../model/appointment')
 const fs = require('fs');
@@ -15,7 +15,7 @@ const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt , deleteAIPrompt} = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal } = require('./tools/rescheduleAppointment');
-const { getThreadByPhoneNumber, saveThread, updateThreadId } = require('../model/threads');
+const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
