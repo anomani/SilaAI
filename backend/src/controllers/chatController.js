@@ -9,6 +9,7 @@ const { handleUserInputClaude } = require('../ai/claude-chat');
 const messageQueue = new Map();
 const { saveSuggestedResponse, getSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
 const { getMessageMetrics } = require('../model/messages');
+const { getMostRecentMessagePerClient } = require('../model/messages');
 
 const handleChatRequest = async (req, res) => {
   try {
@@ -181,6 +182,16 @@ const getMessageMetricsController = async (req, res) => {
   }
 };
 
+const getMostRecentMessagePerClientController = async (req, res) => {
+  try {
+    const recentMessages = await getMostRecentMessagePerClient();
+    res.status(200).json(recentMessages);
+  } catch (error) {
+    console.error('Error fetching most recent messages per client:', error);
+    res.status(500).json({ error: 'Error fetching most recent messages' });
+  }
+};
+
 module.exports = { 
   handleChatRequest, 
   handleUserInputDataController, 
@@ -193,5 +204,6 @@ module.exports = {
   saveSuggestedResponseController, 
   getSuggestedResponseController, 
   clearSuggestedResponseController, 
-  getMessageMetricsController 
+  getMessageMetricsController, 
+  getMostRecentMessagePerClientController 
 };

@@ -251,6 +251,27 @@ async function getMessageMetrics() {
   }
 }
 
+async function getMostRecentMessagePerClient() {
+  const db = dbUtils.getDB();
+  const sql = `
+    SELECT *
+    FROM (
+    SELECT DISTINCT ON (clientid)
+        *
+    FROM Messages
+    ORDER BY clientid, id DESC
+) subquery
+ORDER BY id DESC
+  `;
+  try {
+    const res = await db.query(sql);
+    return res.rows;
+  } catch (err) {
+    console.error('Error fetching most recent messages per client:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   saveMessage,
   getAllMessages,
@@ -262,5 +283,6 @@ module.exports = {
   saveSuggestedResponse,
   getSuggestedResponse,
   clearSuggestedResponse,
-  getMessageMetrics
+  getMessageMetrics,
+  getMostRecentMessagePerClient
 };

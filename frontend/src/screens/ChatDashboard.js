@@ -1,74 +1,60 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
-import { getAllMessagesGroupedByClient, getClientById } from '../services/api';
+import { getMostRecentMessagePerClient, getClientById } from '../services/api';
 import Footer from '../components/Footer'; 
 import { useIsFocused } from '@react-navigation/native';
 import { format } from 'date-fns';
-import { useNavigation } from '@react-navigation/native'; // Add this import
+import { useNavigation } from '@react-navigation/native';
 
 const ChatDashboard = ({ navigation }) => {
-  const [groupedMessages, setGroupedMessages] = useState({});
-  const [clientNames, setClientNames] = useState({});
+  const [dashboardData, setDashboardData] = useState({ recentMessages: [], clientNames: {} });
   const [searchQuery, setSearchQuery] = useState('');
-  const [polling, setPolling] = useState(null);
-  const isFocused = useIsFocused();
   const [lastUpdated, setLastUpdated] = useState(null);
+  const isFocused = useIsFocused();
+  // Remove this line:
+  // const updateCount = useRef(0);
+  const prevDataRef = useRef(null);
 
   const handleBackPress = () => {
     navigation.goBack();
   };
 
-  useEffect(() => {
-    if (isFocused) {
-      fetchMessages();
-      
-      // Start polling when the screen is focused
-      const pollInterval = setInterval(fetchMessages, 5000); // Poll every 5 seconds
-      setPolling(pollInterval);
-    } else {
-      // Stop polling when the screen is not focused
-      if (polling) {
-        clearInterval(polling);
-        setPolling(null);
-      }
-    }
-
-    return () => {
-      if (polling) {
-        clearInterval(polling);
-      }
-    };
-  }, [isFocused]);
-
-  const fetchMessages = useCallback(async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
-      const data = await getAllMessagesGroupedByClient();
-      setGroupedMessages(prevMessages => {
-        // Update lastUpdated time on every poll
-        setLastUpdated(new Date());
-        
-        // Only update messages if there are changes
-        if (JSON.stringify(prevMessages) !== JSON.stringify(data)) {
-          fetchClientNames(Object.keys(data));
-          return data;
-        }
-        return prevMessages;
+      const recentMessages = await getMostRecentMessagePerClient();
+      
+      const clientNamesPromises = recentMessages.map(async (message) => {
+        const client = await getClientById(message.clientid);
+        return [message.clientid, `${client.firstname} ${client.lastname}`];
       });
+
+      const clientNamesArray = await Promise.all(clientNamesPromises);
+      const clientNames = Object.fromEntries(clientNamesArray);
+
+
+      const newData = { recentMessages, clientNames };
+      setDashboardData(newData);
+      setLastUpdated(new Date());
+      // Remove this line:
+      // updateCount.current += 1;
+
+      // Remove this line:
+      // console.log('Update count:', updateCount.current);
     } catch (error) {
-      console.error('Error fetching messages:', error);
+      console.error('Error fetching dashboard data:', error);
     }
   }, []);
 
-  const fetchClientNames = async (clientIds) => {
-    const namePromises = clientIds.map(async (clientId) => {
-      const client = await getClientById(clientId);
-      return [clientId, `${client.firstname} ${client.lastname}`];
-    });
+  useEffect(() => {
+    fetchDashboardData(); // Fetch data immediately when component mounts
 
-    const namesArray = await Promise.all(namePromises);
-    const names = Object.fromEntries(namesArray);
-    setClientNames(names);
-  };
+    const intervalId = setInterval(() => {
+      fetchDashboardData();
+    }, 5000); // Fetch data every 5 seconds
+
+    // Clean up the interval when the component unmounts
+    return () => clearInterval(intervalId);
+  }, [fetchDashboardData]);
 
   const parseDate = (dateString) => {
     const [datePart, timePart] = dateString.split(', ');
@@ -108,49 +94,45 @@ const ChatDashboard = ({ navigation }) => {
     return `${month}/${day}/${year}, ${adjustedHours}:${minutes} ${adjustedPeriod}`;
   };
 
-  const filteredClients = Object.keys(groupedMessages)
-    .filter(clientid =>
-      clientNames[clientid]?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      const lastMessageA = groupedMessages[a][groupedMessages[a].length - 1];
-      const lastMessageB = groupedMessages[b][groupedMessages[b].length - 1];
-      const dateA = parseDate(lastMessageA.date);
-      const dateB = parseDate(lastMessageB.date);
-      return dateB - dateA;
-    });
+  const filteredClients = React.useMemo(() => {
+    return dashboardData.recentMessages
+      .filter(message =>
+        dashboardData.clientNames[message.clientid]?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+      .sort((a, b) => {
+        const dateA = parseDate(a.date);
+        const dateB = parseDate(b.date);
+        return dateB - dateA;
+      });
+  }, [dashboardData, searchQuery]);
 
-  const renderClient = ({ item: clientid }) => {
-    const messages = groupedMessages[clientid];
-    const lastMessage = messages[messages.length - 1];
-    const avatar = lastMessage.from === '18446480598' ? require('../../assets/uzi.png') : require('../../assets/avatar.png');
-    const senderName = lastMessage.from === '18446480598' ? 'UZI' : clientNames[clientid];
-    const unreadMessagesCount = messages.filter(message => !message.read).length;
-
-    const formattedDateTime = formatTimestamp(lastMessage.date);
+  const renderClient = useCallback(({ item: message }) => {
+    const avatar = message.fromText === '+18446480598' ? require('../../assets/uzi.png') : require('../../assets/avatar.png');
+    const senderName = message.fromText === '+18446480598' ? 'UZI' : dashboardData.clientNames[message.clientid];
+    const formattedDateTime = formatTimestamp(message.date);
 
     return (
-      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid, clientName: clientNames[clientid] })}>
+      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid: message.clientid, clientName: dashboardData.clientNames[message.clientid] })}>
         <View style={styles.clientContainer}>
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.clientContent}>
             <Text style={styles.clientName}>{senderName}</Text>
             <Text style={styles.messageTime}>{formattedDateTime}</Text>
           </View>
-          {unreadMessagesCount > 0 && (
-            <View style={styles.unreadCountContainer}>
-              <Text style={styles.unreadCountText}>{unreadMessagesCount}</Text>
+          {message.hasSuggestedResponse && (
+            <View style={styles.suggestedResponseContainer}>
+              <Text style={styles.suggestedResponseText}>Pending confirmation</Text>
             </View>
           )}
         </View>
-        <Text style={styles.messageText}>{lastMessage.body}</Text>
+        <Text style={styles.messageText}>{message.body}</Text>
       </TouchableOpacity>
     );
-  };
+  }, [dashboardData, navigation]);
 
-  const handleRefresh = useCallback(() => {
-    fetchMessages();
-  }, [fetchMessages]);
+  const handleRefresh = () => {
+    fetchDashboardData();
+  };
 
   return (
     <View style={styles.container}>
@@ -182,8 +164,9 @@ const ChatDashboard = ({ navigation }) => {
       <FlatList
         data={filteredClients}
         renderItem={renderClient}
-        keyExtractor={(item) => item}
+        keyExtractor={(item) => item.id.toString()}
         style={styles.flatList}
+        extraData={dashboardData}
       />
       <Footer navigation={navigation} /> 
     </View>
@@ -286,6 +269,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginTop: -4,
   },
+  suggestedResponseContainer: {
+    backgroundColor: '#292e38',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  suggestedResponseText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
 });
 
-export default React.memo(ChatDashboard);
+export default ChatDashboard;
