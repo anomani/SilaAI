@@ -46,8 +46,7 @@ async function sendMessage(to, body, initialMessage = true, manual = true) {
   const customer = await getClientByPhoneNumber(to);
   const localDate = new Date().toLocaleString();
   const adjustedDate = adjustDate(localDate);
-  console.log("lolocalDate", localDate)
-  console.log("loladjustedDate", adjustedDate)
+
   let clientId;
   if (customer.id != '') {
     clientId = customer.id
@@ -114,63 +113,45 @@ async function handleIncomingMessage(req, res) {
   }
 
   try {
-    const client = await getClientByPhoneNumber(Author);
+    let client = await getClientByPhoneNumber(Author);
     let clientId = '';
     const localDate = new Date().toLocaleString();
     const adjustedDate = adjustDate(localDate);
-    if (client && client.id != '') {
+
+    if (!client || client.id === '') {
+      // Create a new client if one doesn't exist
+      clientId = await createClient('', '', Author, '', '');
+      client = await getClientByPhoneNumber(Author);
+    } else {
       clientId = client.id;
-      try {
-        // Set isAI to true for incoming messages
-        await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, adjustedDate, clientId, true);
-      } catch (saveError) {
-        if (saveError.code !== '23505') {
-          console.error('Error saving message:', saveError);
-        } else {
-          console.log('Duplicate message detected, skipping save');
-        }
-      }
-
-      // Check auto_respond status
-      const autoRespond = await getClientAutoRespond(clientId);
-      if (!autoRespond) {
-        // If auto_respond is false, don't process the message with AI
-        await toggleLastMessageReadStatus(clientId);
-        await sendNotificationToUser(
-          'New Message from ' + client.firstname,
-          `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
-          clientId,
-          client.firstname + ' ' + client.lastname,
-          Body,
-          false
-        );
-        return res.status(200).send('Message received');
-      }
     }
 
-    // Add message to pending messages
-    if (!pendingMessages.has(Author)) {
-      pendingMessages.set(Author, []);
-      
-      // Check if the number is the special case
-      const formattedAuthor = formatPhoneNumber(Author);
-      let delayInMs;
-      
-      if (formattedAuthor === '+12038324011') {
-        // Short delay for special number (1-10 seconds)
-        delayInMs = Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000;
+    try {
+      // Set isAI to true for incoming messages
+      await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, adjustedDate, clientId, true);
+    } catch (saveError) {
+      if (saveError.code !== '23505') {
+        console.error('Error saving message:', saveError);
       } else {
-        // Normal delay for other numbers (1-5 minutes)
-        delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
+        console.log('Duplicate message detected, skipping save');
       }
-      
-      setTimeout(() => processDelayedResponse(Author), delayInMs);
     }
-    pendingMessages.get(Author).push(Body);
 
-    // Immediately respond to Twilio
-    res.status(200).send('Message received');
-
+    // Check auto_respond status
+    const autoRespond = await getClientAutoRespond(clientId);
+    if (!autoRespond) {
+      // If auto_respond is false, don't process the message with AI
+      await toggleLastMessageReadStatus(clientId);
+      await sendNotificationToUser(
+        'New Message from ' + client.firstname,
+        `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
+        clientId,
+        client.firstname + ' ' + client.lastname,
+        Body,
+        false
+      );
+      return res.status(200).send('Message received');
+    }
   } catch (error) {
     console.error('Error handling incoming message:', error);
     res.status(500).send('Error processing message');
