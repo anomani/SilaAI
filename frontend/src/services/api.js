@@ -496,7 +496,7 @@ export const getMessageMetrics = async () => {
 
 export const getAppointmentMetrics = async () => {
   try {
-    const response = await retryRequest(() => throttledRequest(() => api.get('/appointments/metrics')));
+    const response = await retryRequest(() => throttledRequest(() => api.get('/metrics')));
     return response.data;
   } catch (error) {
     console.error('Error fetching appointment metrics:', error);
