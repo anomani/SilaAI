@@ -4,22 +4,33 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Keyboard } 
 const PaymentModal = ({ isVisible, onClose, onSubmit, initialPaymentData, appointmentPrice }) => {
   const [paymentData, setPaymentData] = useState({
     ...initialPaymentData,
-    price: Number(appointmentPrice ?? initialPaymentData.price),
-    tipAmount: Number(initialPaymentData.tipAmount),
-    totalAmount: Number(appointmentPrice ?? initialPaymentData.price) + Number(initialPaymentData.tipAmount),
+    price: Math.round(Number(appointmentPrice ?? initialPaymentData.price)),
+    tipAmount: Math.round(Number(initialPaymentData.tipAmount)),
+    totalAmount: Math.round(Number(appointmentPrice ?? initialPaymentData.price) + Number(initialPaymentData.tipAmount)),
+    paymentMethod: initialPaymentData.paymentMethod || 'cash',
+    paid: initialPaymentData.paid || false,
   });
 
   useEffect(() => {
     setPaymentData({
       ...initialPaymentData,
-      price: Number(appointmentPrice ?? initialPaymentData.price),
-      tipAmount: Number(initialPaymentData.tipAmount),
-      totalAmount: Number(appointmentPrice ?? initialPaymentData.price) + Number(initialPaymentData.tipAmount),
+      price: Math.round(Number(appointmentPrice ?? initialPaymentData.price)),
+      tipAmount: Math.round(Number(initialPaymentData.tipAmount)),
+      totalAmount: Math.round(Number(appointmentPrice ?? initialPaymentData.price) + Number(initialPaymentData.tipAmount)),
+      paymentMethod: initialPaymentData.paymentMethod || 'cash',
+      paid: initialPaymentData.paid || false,
     });
   }, [initialPaymentData, appointmentPrice]);
 
   const handleNumberChange = (field, value) => {
-    const numericValue = parseFloat(value) || 0;
+    let numericValue;
+    if (field === 'price') {
+      // For price, treat empty string as 0, but don't allow setting to 0
+      numericValue = value === '' ? 0 : Math.max(1, Math.round(parseFloat(value) || 0));
+    } else {
+      // For other fields (tip and total), allow 0
+      numericValue = Math.round(parseFloat(value) || 0);
+    }
     let newPaymentData = { ...paymentData, [field]: numericValue };
 
     if (field === 'price' || field === 'tipAmount') {
@@ -45,21 +56,58 @@ const PaymentModal = ({ isVisible, onClose, onSubmit, initialPaymentData, appoin
         <View style={styles.paymentModalContent}>
           <Text style={styles.paymentModalTitle}>Log Payment</Text>
           
-          <Text style={styles.paymentOptionLabel}>Payment Method:</Text>
-          <View style={[styles.paymentMethodOptions, { marginBottom: 24 }]}>
-            {['cash', 'e-transfer'].map((method) => (
-              <View key={method} style={styles.paymentMethodOption}>
-                <TouchableOpacity
-                  style={styles.radioButtonTouchable}
-                  onPress={() => setPaymentData({ ...paymentData, paymentMethod: method })}
-                >
-                  <View style={styles.radioButton}>
-                    {paymentData.paymentMethod === method && <View style={styles.radioButtonInner} />}
-                  </View>
-                </TouchableOpacity>
-                <Text style={styles.paymentMethodText}>{method === 'cash' ? 'Cash' : 'E-Transfer'}</Text>
-              </View>
-            ))}
+          <View style={styles.paymentOption}>
+            <Text style={styles.paymentOptionLabel}>Price:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.dollarSign}>$</Text>
+              <TextInput
+                style={styles.input}
+                value={paymentData.price.toString()}
+                onChangeText={(value) => handleNumberChange('price', value)}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor="#999"
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                // Removed onFocus for price
+              />
+            </View>
+          </View>
+
+          <View style={styles.paymentOption}>
+            <Text style={styles.paymentOptionLabel}>Tip Amount:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.dollarSign}>$</Text>
+              <TextInput
+                style={styles.input}
+                value={paymentData.tipAmount.toString()}
+                onChangeText={(value) => handleNumberChange('tipAmount', value)}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor="#999"
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                onFocus={(event) => event.target.clear()}
+              />
+            </View>
+          </View>
+
+          <View style={styles.paymentOption}>
+            <Text style={styles.paymentOptionLabel}>Total Amount:</Text>
+            <View style={styles.inputContainer}>
+              <Text style={styles.dollarSign}>$</Text>
+              <TextInput
+                style={styles.input}
+                value={paymentData.totalAmount.toString()}
+                onChangeText={(value) => handleNumberChange('totalAmount', value)}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor="#999"
+                returnKeyType="done"
+                onSubmitEditing={() => Keyboard.dismiss()}
+                onFocus={(event) => event.target.clear()}
+              />
+            </View>
           </View>
 
           <Text style={styles.paymentOptionLabel}>Paid:</Text>
@@ -79,55 +127,21 @@ const PaymentModal = ({ isVisible, onClose, onSubmit, initialPaymentData, appoin
             ))}
           </View>
 
-          <View style={styles.paymentOption}>
-            <Text style={styles.paymentOptionLabel}>Price:</Text>
-            <View style={styles.inputContainer}>
-              <Text style={styles.dollarSign}>$</Text>
-              <TextInput
-                style={styles.input}
-                value={typeof paymentData.price === 'number' ? paymentData.price.toFixed(2) : '0.00'}
-                onChangeText={(value) => handleNumberChange('price', value)}
-                keyboardType="numeric"
-                placeholder="0.00"
-                placeholderTextColor="#999"
-                returnKeyType="done"
-                onSubmitEditing={() => Keyboard.dismiss()}
-              />
-            </View>
-          </View>
-
-          <View style={styles.paymentOption}>
-            <Text style={styles.paymentOptionLabel}>Tip Amount:</Text>
-            <View style={styles.inputContainer}>
-              <Text style={styles.dollarSign}>$</Text>
-              <TextInput
-                style={styles.input}
-                value={paymentData.tipAmount.toFixed(2)}
-                onChangeText={(value) => handleNumberChange('tipAmount', value)}
-                keyboardType="numeric"
-                placeholder="0.00"
-                placeholderTextColor="#999"
-                returnKeyType="done"
-                onSubmitEditing={() => Keyboard.dismiss()}
-              />
-            </View>
-          </View>
-
-          <View style={styles.paymentOption}>
-            <Text style={styles.paymentOptionLabel}>Total Amount:</Text>
-            <View style={styles.inputContainer}>
-              <Text style={styles.dollarSign}>$</Text>
-              <TextInput
-                style={styles.input}
-                value={paymentData.totalAmount.toFixed(2)}
-                onChangeText={(value) => handleNumberChange('totalAmount', value)}
-                keyboardType="numeric"
-                placeholder="0.00"
-                placeholderTextColor="#999"
-                returnKeyType="done"
-                onSubmitEditing={() => Keyboard.dismiss()}
-              />
-            </View>
+          <Text style={styles.paymentOptionLabel}>Payment Method:</Text>
+          <View style={[styles.paymentMethodOptions, { marginBottom: 24 }]}>
+            {['cash', 'e-transfer'].map((method) => (
+              <View key={method} style={styles.paymentMethodOption}>
+                <TouchableOpacity
+                  style={styles.radioButtonTouchable}
+                  onPress={() => setPaymentData({ ...paymentData, paymentMethod: method })}
+                >
+                  <View style={styles.radioButton}>
+                    {paymentData.paymentMethod === method && <View style={styles.radioButtonInner} />}
+                  </View>
+                </TouchableOpacity>
+                <Text style={styles.paymentMethodText}>{method === 'cash' ? 'Cash' : 'E-Transfer'}</Text>
+              </View>
+            ))}
           </View>
 
           <View style={styles.paymentModalButtons}>

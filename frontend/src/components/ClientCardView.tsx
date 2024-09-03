@@ -432,7 +432,6 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
         
         <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
         
-        <Text style={styles.cardDate}>{formatAppointmentDate(appointment.date)}</Text>
         <Text style={styles.cardTime}>{appointment.startTime || 'No Start'} - {appointment.endTime || 'No End'}</Text>
         <Text 
           style={styles.cardType} 

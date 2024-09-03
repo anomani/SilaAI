@@ -312,7 +312,13 @@ const ClientMessagesScreen = ({ route }) => {
   const renderMessage = useCallback((message) => {
     const isAssistant = message.fromtext === '+18446480598';
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
-    const senderName = isAssistant ? 'Assistant' : clientName || 'Client';
+    let senderName = isAssistant ? 'Assistant' : clientName;
+    
+    // If senderName is empty for a client message, use the client's phone number
+    if (!isAssistant && senderName === ' ') {
+      senderName = message.fromtext;
+    }
+    
     const isAI = message.is_ai;
     const messageKey = message.id || `${message.date}-${message.fromtext}-${Math.random()}`;
 
