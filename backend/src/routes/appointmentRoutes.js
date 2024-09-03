@@ -22,6 +22,6 @@ router.post('/appointments/blocked-time', createBlockedTimeController);
 router.get('/appointments/client/:clientId/around-current/:currentAppointmentId', getClientAppointmentsAroundCurrentController);
 router.put('/appointments/:appointmentId/payment', updateAppointmentPaymentController);
 router.put('/appointments/:appointmentId/reschedule', rescheduleAppointmentController);
-router.get('/metrics', getAppointmentMetricsController);
+router.get('/appointments/metrics', getAppointmentMetricsController);
 
 module.exports = router;
