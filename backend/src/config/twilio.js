@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config({ path: '../../.env' });
 const { handleUserInput, createThread } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus, saveSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
-const { getClientByPhoneNumber, getClientAutoRespond, createClient } = require('../model/clients');
+const { createClient, getClientByPhoneNumber, getClientAutoRespond } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -152,6 +152,30 @@ async function handleIncomingMessage(req, res) {
       );
       return res.status(200).send('Message received');
     }
+
+    // Add message to pending messages
+    if (!pendingMessages.has(Author)) {
+      pendingMessages.set(Author, []);
+      
+      // Check if the number is the special case
+      const formattedAuthor = formatPhoneNumber(Author);
+      let delayInMs;
+      
+      if (formattedAuthor === '+12038324011') {
+        // Short delay for special number (1-10 seconds)
+        delayInMs = Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000;
+      } else {
+        // Normal delay for other numbers (1-5 minutes)
+        delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
+      }
+      
+      setTimeout(() => processDelayedResponse(Author), delayInMs);
+    }
+    pendingMessages.get(Author).push(Body);
+
+    // Immediately respond to Twilio
+    res.status(200).send('Message received');
+
   } catch (error) {
     console.error('Error handling incoming message:', error);
     res.status(500).send('Error processing message');
