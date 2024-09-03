@@ -285,10 +285,13 @@ async function getAppointmentMetrics() {
   const db = dbUtils.getDB();
   const metrics = {};
   try {
+    console.log("Starting to fetch appointment metrics");
+
     // Total number of appointments
     const totalAppointmentsQuery = 'SELECT COUNT(*) FROM Appointment';
     const totalAppointmentsResult = await db.query(totalAppointmentsQuery);
     metrics.totalAppointments = parseInt(totalAppointmentsResult.rows[0].count);
+    console.log("Total appointments:", metrics.totalAppointments);
 
     // Appointments per day (last 30 days)
     const appointmentsPerDayQuery = `
@@ -300,6 +303,7 @@ async function getAppointmentMetrics() {
     `;
     const appointmentsPerDayResult = await db.query(appointmentsPerDayQuery);
     metrics.appointmentsPerDay = appointmentsPerDayResult.rows;
+    console.log("Appointments per day:", metrics.appointmentsPerDay);
 
     // Distribution of appointment types
     const appointmentTypeDistributionQuery = `
@@ -310,14 +314,17 @@ async function getAppointmentMetrics() {
     `;
     const appointmentTypeDistributionResult = await db.query(appointmentTypeDistributionQuery);
     metrics.appointmentTypeDistribution = appointmentTypeDistributionResult.rows;
+    console.log("Appointment type distribution:", metrics.appointmentTypeDistribution);
 
     // Number of unique clients
     const uniqueClientsQuery = 'SELECT COUNT(DISTINCT clientid) FROM Appointment';
     const uniqueClientsResult = await db.query(uniqueClientsQuery);
     metrics.uniqueClients = parseInt(uniqueClientsResult.rows[0].count);
+    console.log("Unique clients:", metrics.uniqueClients);
 
     // Average appointments per client
     metrics.avgAppointmentsPerClient = metrics.totalAppointments / metrics.uniqueClients;
+    console.log("Average appointments per client:", metrics.avgAppointmentsPerClient);
 
     // Most frequent clients (top 5)
     const frequentClientsQuery = `
@@ -329,14 +336,17 @@ async function getAppointmentMetrics() {
     `;
     const frequentClientsResult = await db.query(frequentClientsQuery);
     metrics.mostFrequentClients = frequentClientsResult.rows;
+    console.log("Most frequent clients:", metrics.mostFrequentClients);
 
     // Total revenue
     const totalRevenueQuery = 'SELECT SUM(price) as total_revenue FROM Appointment';
     const totalRevenueResult = await db.query(totalRevenueQuery);
     metrics.totalRevenue = parseFloat(totalRevenueResult.rows[0].total_revenue);
+    console.log("Total revenue:", metrics.totalRevenue);
 
     // Average appointment price
     metrics.avgAppointmentPrice = metrics.totalRevenue / metrics.totalAppointments;
+    console.log("Average appointment price:", metrics.avgAppointmentPrice);
 
     // Payment method distribution
     const paymentMethodDistributionQuery = `
@@ -348,6 +358,7 @@ async function getAppointmentMetrics() {
     `;
     const paymentMethodDistributionResult = await db.query(paymentMethodDistributionQuery);
     metrics.paymentMethodDistribution = paymentMethodDistributionResult.rows;
+    console.log("Payment method distribution:", metrics.paymentMethodDistribution);
 
     // Paid vs Unpaid appointments
     const paidVsUnpaidQuery = `
@@ -357,20 +368,24 @@ async function getAppointmentMetrics() {
     `;
     const paidVsUnpaidResult = await db.query(paidVsUnpaidQuery);
     metrics.paidVsUnpaid = paidVsUnpaidResult.rows;
+    console.log("Paid vs Unpaid appointments:", metrics.paidVsUnpaid);
 
     // Total tips
     const totalTipsQuery = 'SELECT SUM(tipamount) as total_tips FROM Appointment WHERE tipamount IS NOT NULL';
     const totalTipsResult = await db.query(totalTipsQuery);
     metrics.totalTips = parseFloat(totalTipsResult.rows[0].total_tips);
+    console.log("Total tips:", metrics.totalTips);
 
     // Average tip amount
     const avgTipQuery = 'SELECT AVG(tipamount) as avg_tip FROM Appointment WHERE tipamount IS NOT NULL';
     const avgTipResult = await db.query(avgTipQuery);
     metrics.avgTipAmount = parseFloat(avgTipResult.rows[0].avg_tip);
+    console.log("Average tip amount:", metrics.avgTipAmount);
 
+    console.log("Finished fetching all metrics:", metrics);
     return metrics;
   } catch (err) {
-    console.error('Error fetching appointment metrics:', err.message);
+    console.error('Error fetching appointment metrics:', err);
     throw err;
   }
 }

@@ -141,11 +141,13 @@ async function rescheduleAppointmentController(req, res) {
 
 async function getAppointmentMetricsController(req, res) {
     try {
+        console.log("getAppointmentMetricsController started");
         const metrics = await getAppointmentMetrics();
-        console.log(metrics)
+        console.log("Metrics received:", metrics);
         res.status(200).json(metrics);
     } catch (error) {
         console.error('Error fetching appointment metrics:', error);
+        console.error(error.stack);  // This will log the full stack trace
         res.status(500).send(`Error fetching appointment metrics: ${error.message}`);
     }
 }
