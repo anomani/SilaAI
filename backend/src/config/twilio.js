@@ -3,7 +3,7 @@ const path = require('path');
 require('dotenv').config({ path: '../../.env' });
 const { handleUserInput, createThread } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus, saveSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
-const { getClientByPhoneNumber, getClientAutoRespond } = require('../model/clients');
+const { getClientByPhoneNumber, getClientAutoRespond, createClient } = require('../model/clients');
 const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
