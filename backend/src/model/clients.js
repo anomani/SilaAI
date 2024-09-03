@@ -271,6 +271,25 @@ async function updateClientAutoRespond(clientId, autoRespond) {
     }
 }
 
+async function updateClientNames(clientId, firstName, lastName) {
+    const db = dbUtils.getDB();
+    const sql = `
+        UPDATE Client
+        SET firstName = $1, lastName = $2
+        WHERE id = $3
+        RETURNING *
+    `;
+    const values = [firstName, lastName, clientId];
+    try {
+        const res = await db.query(sql, values);
+        console.log(`Client Names Updated: ${res.rowCount} changes made`);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error updating client names:', err.message);
+        throw err;
+    }
+}
+
 module.exports = {
     createClient,
     getClientById,
@@ -286,5 +305,6 @@ module.exports = {
     updateClientOutreachDate,
     getClientByName,
     getClientAutoRespond,
-    updateClientAutoRespond
+    updateClientAutoRespond,
+    updateClientNames
 };

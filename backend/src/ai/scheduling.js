@@ -4,7 +4,7 @@ dotenv.config({ path: '../env' });
 const { getAvailability, getCurrentDate, findNextAvailableSlots } = require('./tools/getAvailability');
 const { bookAppointment, bookAppointmentInternal } = require('./tools/bookAppointment');
 const {cancelAppointment, cancelAppointmentInternal} = require('./tools/cancelAppointment')
-const { getClientByPhoneNumber, createClient } = require('../model/clients');
+const { getClientByPhoneNumber, createClient, updateClientNames } = require('../model/clients');
 const {getMessagesByClientId} = require('../model/messages')
 const {getAllAppointmentsByClientId, getUpcomingAppointments} = require('../model/appointment')
 const fs = require('fs');
@@ -382,10 +382,6 @@ tempTools = [{
           type: "string",
           description: "The last name of the client"
         },
-        phoneNumber: {
-          type: "string",
-          description: "The phone number of the client"
-        },
         email: {
           type: "string",
           description: "The email address of the client"
@@ -395,7 +391,7 @@ tempTools = [{
           description: "Any additional notes about the client"
         }
       },
-      required: ["firstName", "lastName", "phoneNumber"]
+      required: ["firstName", "lastName"]
     }
   }
 }]
@@ -459,7 +455,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
         break;
       case "createClient":
         console.log("creating client")
-        output = await createClient(args.firstName, args.lastName, phoneNumber);
+        output = await updateClientNames(client.id, args.firstName, args.lastName);
         break;
       case "findRecurringAvailability":
         output = await findRecurringAvailability(
