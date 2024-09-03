@@ -108,25 +108,24 @@ const ChatDashboard = ({ navigation }) => {
 
   const renderClient = useCallback(({ item: message }) => {
     const avatar = message.fromText === '+18446480598' ? require('../../assets/uzi.png') : require('../../assets/avatar.png');
-    const isUzi = message.fromText === '+18446480598';
-    
-    // Determine the display name
-    let displayName;
-    if (isUzi) {
-      displayName = 'UZI';
-    } else {
-      const clientName = dashboardData.clientNames[message.clientid];
-      displayName = clientName.trim() ? clientName : message.fromText;
+    let senderName = message.fromText === '+18446480598' ? 'UZI' : dashboardData.clientNames[message.clientid];
+    // If senderName is empty, use the client's phone number
+    if (senderName === ' ') {
+      if (message.fromtext === '+18446480598') {
+        senderName = message.totext;
+      } else {
+        senderName = message.fromtext;
+      }
     }
-
+    
     const formattedDateTime = formatTimestamp(message.date);
 
     return (
-      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid: message.clientid, clientName: displayName })}>
+      <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid: message.clientid, clientName: dashboardData.clientNames[message.clientid] })}>
         <View style={styles.clientContainer}>
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.clientContent}>
-            <Text style={styles.clientName}>{displayName}</Text>
+            <Text style={styles.clientName}>{senderName}</Text>
             <Text style={styles.messageTime}>{formattedDateTime}</Text>
           </View>
           {message.hasSuggestedResponse && (

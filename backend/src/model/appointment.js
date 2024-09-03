@@ -284,7 +284,6 @@ async function rescheduleAppointment(appointmentId, newDate, newStartTime, newEn
 async function getAppointmentMetrics() {
   const db = dbUtils.getDB();
   const metrics = {};
-
   try {
     // Total number of appointments
     const totalAppointmentsQuery = 'SELECT COUNT(*) FROM Appointment';

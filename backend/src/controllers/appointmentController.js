@@ -142,6 +142,7 @@ async function rescheduleAppointmentController(req, res) {
 async function getAppointmentMetricsController(req, res) {
     try {
         const metrics = await getAppointmentMetrics();
+        console.log(metrics)
         res.status(200).json(metrics);
     } catch (error) {
         console.error('Error fetching appointment metrics:', error);
