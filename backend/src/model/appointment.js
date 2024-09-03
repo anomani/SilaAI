@@ -281,6 +281,101 @@ async function rescheduleAppointment(appointmentId, newDate, newStartTime, newEn
     }
 }
 
+async function getAppointmentMetrics() {
+  const db = dbUtils.getDB();
+  const metrics = {};
+
+  try {
+    // Total number of appointments
+    const totalAppointmentsQuery = 'SELECT COUNT(*) FROM Appointment';
+    const totalAppointmentsResult = await db.query(totalAppointmentsQuery);
+    metrics.totalAppointments = parseInt(totalAppointmentsResult.rows[0].count);
+
+    // Appointments per day (last 30 days)
+    const appointmentsPerDayQuery = `
+      SELECT date, COUNT(*) as count
+      FROM Appointment
+      WHERE TO_DATE(date, 'YYYY-MM-DD') >= CURRENT_DATE - INTERVAL '30 days'
+      GROUP BY date
+      ORDER BY date
+    `;
+    const appointmentsPerDayResult = await db.query(appointmentsPerDayQuery);
+    metrics.appointmentsPerDay = appointmentsPerDayResult.rows;
+
+    // Distribution of appointment types
+    const appointmentTypeDistributionQuery = `
+      SELECT appointmenttype, COUNT(*) as count
+      FROM Appointment
+      GROUP BY appointmenttype
+      ORDER BY count DESC
+    `;
+    const appointmentTypeDistributionResult = await db.query(appointmentTypeDistributionQuery);
+    metrics.appointmentTypeDistribution = appointmentTypeDistributionResult.rows;
+
+    // Number of unique clients
+    const uniqueClientsQuery = 'SELECT COUNT(DISTINCT clientid) FROM Appointment';
+    const uniqueClientsResult = await db.query(uniqueClientsQuery);
+    metrics.uniqueClients = parseInt(uniqueClientsResult.rows[0].count);
+
+    // Average appointments per client
+    metrics.avgAppointmentsPerClient = metrics.totalAppointments / metrics.uniqueClients;
+
+    // Most frequent clients (top 5)
+    const frequentClientsQuery = `
+      SELECT clientid, COUNT(*) as appointment_count
+      FROM Appointment
+      GROUP BY clientid
+      ORDER BY appointment_count DESC
+      LIMIT 5
+    `;
+    const frequentClientsResult = await db.query(frequentClientsQuery);
+    metrics.mostFrequentClients = frequentClientsResult.rows;
+
+    // Total revenue
+    const totalRevenueQuery = 'SELECT SUM(price) as total_revenue FROM Appointment';
+    const totalRevenueResult = await db.query(totalRevenueQuery);
+    metrics.totalRevenue = parseFloat(totalRevenueResult.rows[0].total_revenue);
+
+    // Average appointment price
+    metrics.avgAppointmentPrice = metrics.totalRevenue / metrics.totalAppointments;
+
+    // Payment method distribution
+    const paymentMethodDistributionQuery = `
+      SELECT paymentmethod, COUNT(*) as count
+      FROM Appointment
+      WHERE paymentmethod IS NOT NULL
+      GROUP BY paymentmethod
+      ORDER BY count DESC
+    `;
+    const paymentMethodDistributionResult = await db.query(paymentMethodDistributionQuery);
+    metrics.paymentMethodDistribution = paymentMethodDistributionResult.rows;
+
+    // Paid vs Unpaid appointments
+    const paidVsUnpaidQuery = `
+      SELECT paid, COUNT(*) as count
+      FROM Appointment
+      GROUP BY paid
+    `;
+    const paidVsUnpaidResult = await db.query(paidVsUnpaidQuery);
+    metrics.paidVsUnpaid = paidVsUnpaidResult.rows;
+
+    // Total tips
+    const totalTipsQuery = 'SELECT SUM(tipamount) as total_tips FROM Appointment WHERE tipamount IS NOT NULL';
+    const totalTipsResult = await db.query(totalTipsQuery);
+    metrics.totalTips = parseFloat(totalTipsResult.rows[0].total_tips);
+
+    // Average tip amount
+    const avgTipQuery = 'SELECT AVG(tipamount) as avg_tip FROM Appointment WHERE tipamount IS NOT NULL';
+    const avgTipResult = await db.query(avgTipQuery);
+    metrics.avgTipAmount = parseFloat(avgTipResult.rows[0].avg_tip);
+
+    return metrics;
+  } catch (err) {
+    console.error('Error fetching appointment metrics:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -295,5 +390,6 @@ module.exports = {
     getClientAppointmentsAroundCurrent,
     updateAppointmentPayment,
     getUnpaidAppointmentsByDate,
-    rescheduleAppointment
+    rescheduleAppointment,
+    getAppointmentMetrics
 };

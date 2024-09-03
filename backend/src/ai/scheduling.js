@@ -660,7 +660,7 @@ async function handleUserInput(userMessages, phoneNumber) {
     const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
     let fname, lname, email;
 
-    if (client.id == '') {
+    if (!client.firstname && !client.lastname) {
       thread = await createThread(phoneNumber); 
       assistant = await createTemporaryAssistant(phoneNumber);
     } else {
@@ -770,7 +770,7 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
     const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
     let fname, lname, email;
 
-    if (client.id == '') {
+    if (!client.firstname && !client.lastname) {
       thread = await createThread(phoneNumber); 
       assistant = await createTemporaryAssistant(phoneNumber);
     } else {

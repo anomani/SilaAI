@@ -2,6 +2,7 @@ const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment, g
 const { createAppointment, createBlockedTime } = require('../model/appointment');
 const dbUtils = require('../model/dbUtils');
 const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
+const { getAppointmentMetrics } = require('../model/appointment');
 
 async function createNewAppointment(req, res) {
   try {
@@ -138,4 +139,14 @@ async function rescheduleAppointmentController(req, res) {
     }
 }
 
-module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController, rescheduleAppointmentController };
+async function getAppointmentMetricsController(req, res) {
+    try {
+        const metrics = await getAppointmentMetrics();
+        res.status(200).json(metrics);
+    } catch (error) {
+        console.error('Error fetching appointment metrics:', error);
+        res.status(500).send(`Error fetching appointment metrics: ${error.message}`);
+    }
+}
+
+module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController, rescheduleAppointmentController, getAppointmentMetricsController };

@@ -2,8 +2,8 @@
 import axios from 'axios';
 
 // Replace with your backend API URL
-const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -490,6 +490,16 @@ export const getMessageMetrics = async () => {
     return response.data;
   } catch (error) {
     console.error('Error fetching message metrics:', error);
+    throw error;
+  }
+};
+
+export const getAppointmentMetrics = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.get('/appointments/metrics')));
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching appointment metrics:', error);
     throw error;
   }
 };
