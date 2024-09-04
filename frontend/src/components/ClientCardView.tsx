@@ -410,25 +410,35 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
           </TouchableOpacity>
         </View>
         
-        {clientMedia.length > 0 ? (
-          <TouchableOpacity onPress={() => handleMediaPress(0)}>
-            {clientMedia[0].media_type === 'image' ? (
-              <Image 
-                source={{ uri: clientMedia[0].media_url }} 
-                style={styles.clientMedia} 
-              />
-            ) : (
-              <Video
-                source={{ uri: clientMedia[0].media_url }}
-                style={styles.clientMedia}
-                useNativeControls
-                resizeMode="contain"
-              />
-            )}
-          </TouchableOpacity>
-        ) : (
-          <Image source={avatarImage} style={styles.clientMedia} />
-        )}
+        <View style={styles.mediaContainer}>
+          {clientMedia.length > 0 ? (
+            <>
+              <TouchableOpacity onPress={() => handleMediaPress(0)}>
+                {clientMedia[0].media_type === 'image' ? (
+                  <Image 
+                    source={{ uri: clientMedia[0].media_url }} 
+                    style={styles.clientMedia} 
+                  />
+                ) : (
+                  <View style={styles.clientMedia}>
+                    <Ionicons name="videocam" size={50} color="#007AFF" />
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.galleryButton}
+                onPress={() => setShowGallery(true)}
+              >
+                <Ionicons name="images" size={24} color="#007AFF" />
+                <Text style={styles.galleryButtonText}>
+                  View Gallery ({clientMedia.length})
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Image source={avatarImage} style={styles.clientMedia} />
+          )}
+        </View>
         
         <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
         
@@ -1098,6 +1108,29 @@ const styles = StyleSheet.create({
     height: 70,
     borderRadius: 35,
     backgroundColor: 'white',
+  },
+  mediaContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  clientMedia: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    marginBottom: 10,
+  },
+  galleryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    padding: 8,
+    borderRadius: 20,
+  },
+  galleryButtonText: {
+    color: '#007AFF',
+    marginLeft: 5,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });
 

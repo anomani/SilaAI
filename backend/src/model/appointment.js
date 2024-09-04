@@ -19,16 +19,16 @@ async function createAppointment(appointmentType, acuityId, date, startTime, end
 }
 
 // async function main() {
-//     await createAppointment('Adult Cut', 0, '2024-08-03', '14:00', '14:30', 3504, 'Adult Cut', 55);
-//     await createAppointment('Adult Cut', 0, '2023-07-27', '14:00', '15:00', 3504, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2024-08-03', '14:00', '14:30', 3670, 'Adult Cut', 55);
+//     await createAppointment('Adult Cut', 0, '2023-07-27', '14:00', '15:00', 3670, 'test', 55);
 
-//     await createAppointment('Adult Cut', 0, '2022-07-27', '14:00', '15:00', 3504, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2022-07-27', '14:00', '15:00', 3670, 'test', 55);
 
-//     await createAppointment('Adult Cut', 0, '2021-07-27', '14:00', '15:00', 3504, 'test', 55);
-//     await createAppointment('Adult Cut', 0, '2020-07-27', '14:00', '15:00', 3504, 'test', 55);
-//     await createAppointment('Adult Cut', 0, '2019-07-27', '14:00', '15:00', 3504, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2021-07-27', '14:00', '15:00', 3670, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2020-07-27', '14:00', '15:00', 3670, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2019-07-27', '14:00', '15:00', 3670, 'test', 55);
 
-//     await createAppointment('Adult Cut', 0, '2018-07-27', '14:00', '15:00', 3504, 'test', 55);
+//     await createAppointment('Adult Cut', 0, '2018-07-27', '14:00', '15:00', 3670, 'test', 55);
 
 // }
 
@@ -111,6 +111,13 @@ async function getAllAppointmentsByClientId(clientId) {
         throw err;
     }
 }
+
+async function main() {
+    const appointments = (await getAllAppointmentsByClientId(2770)).slice(0,5);
+    console.log(appointments);
+}
+
+main();
 
 async function findAppointmentByClientAndTime(clientId, date, startTime) {
     const db = dbUtils.getDB();

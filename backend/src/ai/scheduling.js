@@ -335,11 +335,6 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
 
-  // Format messages for better readability
-  const formattedMessages = messages.map(msg => 
-    `From: ${msg.fromtext}\nTo: ${msg.totext}\nDate: ${msg.date}\nMessage: ${msg.body}`
-  ).join('\n\n');
-
   // Place aiPrompt before assistantInstructions
   let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
   fullInstructions = fullInstructions
@@ -347,7 +342,6 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
     .replace('${fname}', fname)
     .replace('${lname}', lname)
     .replace('${phone}', phone)
-    .replace('${messages}', formattedMessages)
     .replace('${day}', day)
     .replace('${upcomingAppointment}', upcomingAppointment);
 
@@ -669,7 +663,7 @@ async function handleUserInput(userMessages, phoneNumber) {
       }
 
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
-      const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
+      const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0,5);
       console.log("appointment", appointment)
 
       let appointmentType = '';
@@ -779,7 +773,7 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
       }
 
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
-      const appointment = (await getAllAppointmentsByClientId(client.id)).slice(-5);
+      const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0,5);
       console.log("appointment", appointment)
       let appointmentType = '';
       if (appointment.length > 0) {
