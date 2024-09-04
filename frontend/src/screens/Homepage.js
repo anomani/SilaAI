@@ -48,7 +48,7 @@ const Homepage = ({ navigation }) => {
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Metrics')}>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Metrics</Text>
-            <Text style={styles.menuSubtitle}>View message analytics and insights</Text>
+            <Text style={styles.menuSubtitle}>View message and appointment analytics</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
