@@ -10,6 +10,7 @@ const storage = new Storage({
 const bucket = storage.bucket('image-buckets-uzi');
 
 async function uploadClientMedia(req, res) {
+  console.log('uploadClientMedia', req.files);
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).send('No files uploaded.');
