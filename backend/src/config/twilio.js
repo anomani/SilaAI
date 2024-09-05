@@ -163,7 +163,7 @@ async function handleIncomingMessage(req, res) {
       
       if (formattedAuthor === '+12038324011') {
         // Short delay for special number (1-10 seconds)
-        delayInMs = Math.floor(Math.random() * (10000 - 1000 + 1)) + 1000;
+        delayInMs = 20000; // 20 seconds delay
       } else {
         // Normal delay for other numbers (1-5 minutes)
         delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
