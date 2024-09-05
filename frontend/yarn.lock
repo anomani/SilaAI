@@ -6310,7 +6310,7 @@ react-native-snap-carousel@^1.3.1:
   resolved "https://registry.npmjs.org/react-native-snap-carousel/-/react-native-snap-carousel-1.3.1.tgz"
   integrity sha512-3i5oR6Z1nH7mejw1LIki9NR8/T2tO+ZK9RkrDCcAGBxwflnoRrCi0B23qhp30XLS819w9l0KaLRsf6sqnQKKcA==
 
-"react-native-svg@> 6.4.1":
+react-native-svg@^15.6.0, "react-native-svg@> 6.4.1":
   version "15.6.0"
   resolved "https://registry.npmjs.org/react-native-svg/-/react-native-svg-15.6.0.tgz"
   integrity sha512-TUtR+h+yi1ODsd8FHdom1TpjfWOmnaK5pri5rnSBXnMqpzq8o2zZfonHTjPX+nS3wb/Pu2XsoARgYaHNjVWXhQ==
