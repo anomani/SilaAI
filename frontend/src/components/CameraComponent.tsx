@@ -71,6 +71,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ visible, onClose, onC
                 style={styles.cameraButton} 
                 onPress={toggleCameraFacing}
                 activeOpacity={0.7}
+                hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
               >
                 <Ionicons name="camera-reverse" size={30} color="white" />
               </TouchableOpacity>
@@ -78,6 +79,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ visible, onClose, onC
                 style={styles.captureButton} 
                 onPress={handleCameraCapture}
                 activeOpacity={0.7}
+                hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
               >
                 <View style={styles.captureButtonInner} />
               </TouchableOpacity>
@@ -85,6 +87,7 @@ const CameraComponent: React.FC<CameraComponentProps> = ({ visible, onClose, onC
                 style={styles.cameraButton} 
                 onPress={handleClose}
                 activeOpacity={0.7}
+                hitSlop={{top: 20, bottom: 20, left: 20, right: 20}}
               >
                 <Ionicons name="close" size={30} color="white" />
               </TouchableOpacity>
@@ -137,6 +140,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 20,
+    zIndex: 1,
   },
   cameraButton: {
     alignItems: 'center',
@@ -145,6 +149,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    zIndex: 2,
   },
   captureButton: {
     width: 80,
@@ -153,6 +158,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 2,
   },
   captureButtonInner: {
     width: 70,
