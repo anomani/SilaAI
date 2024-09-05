@@ -11,13 +11,21 @@ import * as Notifications from 'expo-notifications';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-const Header = ({ clientName, navigation }) => {
+const Header = ({ clientName, navigation, onClearSuggestedResponse, hasSuggestedResponse }) => {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>{clientName}</Text>
+      {hasSuggestedResponse && (
+        <TouchableOpacity
+          style={styles.clearButton}
+          onPress={onClearSuggestedResponse}
+        >
+          <Text style={styles.clearButtonText}>Clear response</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -403,9 +411,25 @@ const ClientMessagesScreen = ({ route }) => {
     </View>
   );
 
+  const handleClearSuggestedResponse = useCallback(async () => {
+    try {
+      await clearSuggestedResponse(clientid);
+      setCurrentSuggestedResponse('');
+      setEditableSuggestedResponse('');
+      setIsSuggestedResponseEdited(false);
+    } catch (error) {
+      console.error('Error clearing suggested response:', error);
+    }
+  }, [clientid]);
+
   return (
     <SafeAreaView style={styles.container}>
-      <Header clientName={clientName} navigation={navigation} />
+      <Header 
+        clientName={clientName} 
+        navigation={navigation} 
+        onClearSuggestedResponse={handleClearSuggestedResponse}
+        hasSuggestedResponse={!!currentSuggestedResponse}
+      />
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
@@ -491,6 +515,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
     backgroundColor: '#111318',
     borderBottomWidth: 1,
@@ -502,6 +527,15 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  clearButton: {
+    padding: 8,
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: 'bold',
   },
   contentContainer: {
@@ -598,6 +632,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     padding: 12,
+    position: 'relative',
   },
   input: {
     flex: 1,
@@ -611,6 +646,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     maxHeight: 300,
     minHeight: 100,
+    paddingRight: 40,
   },
   sendButton: {
     width: 48,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image, Pressable } from 'react-native';
 import { getMostRecentMessagePerClient, getClientById } from '../services/api';
 import Footer from '../components/Footer'; 
 import { useIsFocused } from '@react-navigation/native';
@@ -9,11 +9,9 @@ import { useNavigation } from '@react-navigation/native';
 const ChatDashboard = ({ navigation }) => {
   const [dashboardData, setDashboardData] = useState({ recentMessages: [], clientNames: {} });
   const [searchQuery, setSearchQuery] = useState('');
-  const [lastUpdated, setLastUpdated] = useState(null);
   const isFocused = useIsFocused();
-  // Remove this line:
-  // const updateCount = useRef(0);
   const prevDataRef = useRef(null);
+  const [activeTab, setActiveTab] = useState('all');
 
   const handleBackPress = () => {
     navigation.goBack();
@@ -31,15 +29,8 @@ const ChatDashboard = ({ navigation }) => {
       const clientNamesArray = await Promise.all(clientNamesPromises);
       const clientNames = Object.fromEntries(clientNamesArray);
 
-
       const newData = { recentMessages, clientNames };
       setDashboardData(newData);
-      setLastUpdated(new Date());
-      // Remove this line:
-      // updateCount.current += 1;
-
-      // Remove this line:
-      // console.log('Update count:', updateCount.current);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     }
@@ -94,17 +85,39 @@ const ChatDashboard = ({ navigation }) => {
     return `${month}/${day}/${year}, ${adjustedHours}:${minutes} ${adjustedPeriod}`;
   };
 
+  const TabSelector = () => (
+    <View style={styles.tabContainer}>
+      <Pressable
+        style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+        onPress={() => setActiveTab('all')}
+      >
+        <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>All Messages</Text>
+      </Pressable>
+      <Pressable
+        style={[styles.tab, activeTab === 'pending' && styles.activeTab]}
+        onPress={() => setActiveTab('pending')}
+      >
+        <Text style={[styles.tabText, activeTab === 'pending' && styles.activeTabText]}>Pending</Text>
+      </Pressable>
+    </View>
+  );
+
   const filteredClients = React.useMemo(() => {
-    return dashboardData.recentMessages
+    let filtered = dashboardData.recentMessages
       .filter(message =>
         dashboardData.clientNames[message.clientid]?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .sort((a, b) => {
-        const dateA = parseDate(a.date);
-        const dateB = parseDate(b.date);
-        return dateB - dateA;
-      });
-  }, [dashboardData, searchQuery]);
+      );
+    
+    if (activeTab === 'pending') {
+      filtered = filtered.filter(message => message.hasSuggestedResponse);
+    }
+
+    return filtered.sort((a, b) => {
+      const dateA = parseDate(a.date);
+      const dateB = parseDate(b.date);
+      return dateB - dateA;
+    });
+  }, [dashboardData, searchQuery, activeTab]);
 
   const renderClient = useCallback(({ item: message }) => {
     const avatar = message.fromText === '+18446480598' ? require('../../assets/uzi.png') : require('../../assets/avatar.png');
@@ -165,11 +178,7 @@ const ChatDashboard = ({ navigation }) => {
           <Text style={styles.refreshIcon}>⟳</Text>
         </TouchableOpacity>
       </View>
-      {lastUpdated && (
-        <Text style={styles.lastUpdatedText}>
-          Last updated: {format(lastUpdated, 'hh:mm:ss a')}
-        </Text>
-      )}
+      <TabSelector />
       <FlatList
         data={filteredClients}
         renderItem={renderClient}
@@ -271,15 +280,8 @@ const styles = StyleSheet.create({
   flatList: {
     flex: 1,
   },
-  lastUpdatedText: {
-    color: '#9da6b8',
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: 8,
-    marginTop: -4,
-  },
   suggestedResponseContainer: {
-    backgroundColor: '#292e38',
+    backgroundColor: '#FF0000', // Changed to red
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -288,6 +290,28 @@ const styles = StyleSheet.create({
   suggestedResponseText: {
     color: 'white',
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 10,
+  },
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#ffffff',
+  },
+  tabText: {
+    color: '#9da6b8',
+    fontSize: 14,
+  },
+  activeTabText: {
+    color: '#ffffff',
     fontWeight: 'bold',
   },
 });
