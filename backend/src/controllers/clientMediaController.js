@@ -2,6 +2,10 @@ const { Storage } = require('@google-cloud/storage');
 const path = require('path');
 const { addClientMedia, getClientMedia, deleteClientMedia } = require('../model/clientMedia');
 const mime = require('mime-types');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
 const storage = new Storage({
   keyFilename: path.join(__dirname, '../keys/uzi-imaging-project-33fdba88c16b.json'),
@@ -9,6 +13,36 @@ const storage = new Storage({
 });
 
 const bucket = storage.bucket('image-buckets-uzi');
+
+async function generateThumbnail(file) {
+  return new Promise((resolve, reject) => {
+    const thumbnailFileName = `thumbnail-${Date.now()}.jpg`;
+    const thumbnailFilePath = `/tmp/${thumbnailFileName}`;
+
+    ffmpeg(file.buffer)
+      .screenshots({
+        timestamps: ['00:00:01'],
+        filename: thumbnailFileName,
+        folder: '/tmp',
+        size: '320x240'
+      })
+      .on('end', async () => {
+        try {
+          await bucket.upload(thumbnailFilePath, {
+            destination: thumbnailFileName,
+            metadata: {
+              contentType: 'image/jpeg'
+            }
+          });
+          const thumbnailUrl = `https://storage.googleapis.com/${bucket.name}/${thumbnailFileName}`;
+          resolve(thumbnailUrl);
+        } catch (error) {
+          reject(error);
+        }
+      })
+      .on('error', reject);
+  });
+}
 
 async function uploadClientMedia(req, res) {
   console.log('uploadClientMedia', req.files);
@@ -21,7 +55,6 @@ async function uploadClientMedia(req, res) {
     const uploadedMedia = [];
 
     for (const file of req.files) {
-      // Determine the correct file extension based on mimetype
       const fileExtension = mime.extension(file.mimetype) || path.extname(file.originalname);
       const fileName = `client-${clientId}-${Date.now()}.${fileExtension}`;
       const blob = bucket.file(fileName);
@@ -36,10 +69,15 @@ async function uploadClientMedia(req, res) {
         blobStream.on('finish', async () => {
           const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
           
-          // Improved media type detection
           const mediaType = file.mimetype.startsWith('video/') ? 'video' : 
                             file.mimetype.startsWith('image/') ? 'image' : 'unknown';
-          const savedMedia = await addClientMedia(clientId, publicUrl, mediaType);
+          
+          let thumbnailUrl = null;
+          if (mediaType === 'video') {
+            thumbnailUrl = await generateThumbnail(file);
+          }
+          
+          const savedMedia = await addClientMedia(clientId, publicUrl, mediaType, thumbnailUrl);
           uploadedMedia.push(savedMedia);
           resolve();
         });
@@ -74,6 +112,12 @@ async function deleteClientMediaController(req, res) {
       // Delete the media from Google Cloud Storage
       const fileName = path.basename(media.media_url);
       await bucket.file(fileName).delete();
+      
+      // Delete the thumbnail if it exists
+      if (media.thumbnail_url) {
+        const thumbnailFileName = path.basename(media.thumbnail_url);
+        await bucket.file(thumbnailFileName).delete();
+      }
       
       res.status(200).json({ message: 'Media deleted successfully' });
     } else {
