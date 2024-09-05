@@ -1,6 +1,7 @@
 const { Storage } = require('@google-cloud/storage');
 const path = require('path');
 const { addClientMedia, getClientMedia, deleteClientMedia } = require('../model/clientMedia');
+const mime = require('mime-types');
 
 const storage = new Storage({
   keyFilename: path.join(__dirname, '../keys/uzi-imaging-project-33fdba88c16b.json'),
@@ -20,16 +21,24 @@ async function uploadClientMedia(req, res) {
     const uploadedMedia = [];
 
     for (const file of req.files) {
-      const fileName = `client-${clientId}-${Date.now()}${path.extname(file.originalname)}`;
+      // Determine the correct file extension based on mimetype
+      const fileExtension = mime.extension(file.mimetype) || path.extname(file.originalname);
+      const fileName = `client-${clientId}-${Date.now()}.${fileExtension}`;
       const blob = bucket.file(fileName);
-      const blobStream = blob.createWriteStream();
+      const blobStream = blob.createWriteStream({
+        metadata: {
+          contentType: file.mimetype
+        }
+      });
 
       await new Promise((resolve, reject) => {
         blobStream.on('error', reject);
         blobStream.on('finish', async () => {
           const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
           
-          const mediaType = file.mimetype.startsWith('image/') ? 'image' : 'video';
+          // Improved media type detection
+          const mediaType = file.mimetype.startsWith('video/') ? 'video' : 
+                            file.mimetype.startsWith('image/') ? 'image' : 'unknown';
           const savedMedia = await addClientMedia(clientId, publicUrl, mediaType);
           uploadedMedia.push(savedMedia);
           resolve();
