@@ -12,6 +12,16 @@ const { getMessageMetrics } = require('../model/messages');
 const { getMostRecentMessagePerClient } = require('../model/messages');
 const { countSuggestedResponses } = require('../model/messages');
 
+const fs = require('fs');
+const path = require('path');
+const { Configuration, OpenAIApi } = require("openai");
+
+// Add this at the top of the file with other imports
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+
 const handleChatRequest = async (req, res) => {
   try {
     const { message } = req.body;
@@ -203,6 +213,19 @@ const getSuggestedResponseCountController = async (req, res) => {
   }
 };
 
+// Update the transcribeAudioController function
+const { handleAudioTranscription } = require('../ai/whisper');
+
+const transcribeAudioController = async (req, res) => {
+  try {
+    const transcription = await handleAudioTranscription(req.file);
+    res.json({ transcription });
+  } catch (error) {
+    console.error('Error in transcribeAudioController:', error);
+    res.status(500).json({ error: error.message || 'Error transcribing audio' });
+  }
+};
+
 module.exports = { 
   handleChatRequest, 
   handleUserInputDataController, 
@@ -217,5 +240,6 @@ module.exports = {
   clearSuggestedResponseController, 
   getMessageMetricsController, 
   getMostRecentMessagePerClientController, 
-  getSuggestedResponseCountController 
+  getSuggestedResponseCountController, 
+  transcribeAudioController 
 };

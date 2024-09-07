@@ -514,3 +514,25 @@ export const getSuggestedResponseCount = async () => {
     throw error;
   }
 };
+
+export const transcribeAudio = async (audioUri) => {
+  try {
+    const formData = new FormData();
+    formData.append('audio', {
+      uri: audioUri,
+      type: 'audio/m4a',
+      name: 'audio.m4a',
+    });
+
+    const response = await api.post('/chat/transcribe-audio', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return response.data.transcription;
+  } catch (error) {
+    console.error('Error transcribing audio:', error);
+    throw error;
+  }
+};
