@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
 const { handleChatRequest, handleUserInputDataController, getMessagesByClientIdController, getAllMessagesGroupedByClientController, sendMessageController, setMessagesReadController, getCustomListController, sendMessagesToSelectedClients } = require('../controllers/chatController');
 const { handleIncomingMessage } = require('../config/twilio');
 const {
@@ -10,6 +12,21 @@ const {
 const { getMessageMetricsController } = require('../controllers/chatController');
 const { getMostRecentMessagePerClientController } = require('../controllers/chatController');
 const { getSuggestedResponseCountController } = require('../controllers/chatController');
+const { transcribeAudioController } = require('../controllers/chatController');
+
+// Configure multer for handling file uploads
+const upload = multer({ 
+  dest: 'uploads/',
+  fileFilter: (req, file, cb) => {
+    const filetypes = /wav|mp3|m4a|ogg/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error("Error: File upload only supports the following filetypes - " + filetypes));
+  }
+});
 
 router.post('/schedule', handleChatRequest);
 router.post('/incoming', handleIncomingMessage);
@@ -26,5 +43,8 @@ router.delete('/suggested-response/:clientId', clearSuggestedResponseController)
 router.get('/metrics', getMessageMetricsController);
 router.get('/most-recent-messages', getMostRecentMessagePerClientController);
 router.get('/suggested-response-count', getSuggestedResponseCountController);
+
+// Add the new route for audio transcription
+router.post('/transcribe-audio', upload.single('audio'), transcribeAudioController);
 
 module.exports = router;

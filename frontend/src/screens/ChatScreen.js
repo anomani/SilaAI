@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, SafeAreaView, StatusBar, Keyboard } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { handleUserInput } from '../services/api';
+import { handleUserInput, transcribeAudio } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../components/ChatContext';
+import { Audio } from 'expo-av';
 
 const TypingIndicator = () => {
   const [dots] = useState([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]);
@@ -54,7 +55,9 @@ const ChatScreen = () => {
   const flatListRef = useRef(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [inputHeight, setInputHeight] = useState(40); // Add this line
+  const [inputHeight, setInputHeight] = useState(40);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recording, setRecording] = useState(null);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -126,10 +129,8 @@ const ChatScreen = () => {
   };
 
   const renderItem = ({ item }) => {
-    // Regex to match the ID format
     const idRegex = /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i;
     
-    // Extract the ID from the message text
     const match = item.text.match(idRegex);
     const id = match ? match[1] : null;
 
@@ -176,6 +177,45 @@ const ChatScreen = () => {
       ))}
     </View>
   );
+
+  const startRecording = async () => {
+    try {
+      await Audio.requestPermissionsAsync();
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    try {
+      setIsRecording(false);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      handleRecordingComplete(uri);
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+    }
+  };
+
+  const handleRecordingComplete = async (uri) => {
+    try {
+      const transcription = await transcribeAudio(uri);
+      setMessage(transcription);
+      handleSend(transcription);
+    } catch (err) {
+      console.error('Failed to transcribe audio', err);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -231,6 +271,12 @@ const ChatScreen = () => {
                 setInputHeight(event.nativeEvent.contentSize.height);
               }}
             />
+            <TouchableOpacity
+              onPress={isRecording ? stopRecording : startRecording}
+              style={styles.recordButton}
+            >
+              <Ionicons name={isRecording ? "stop" : "mic"} size={24} color="#fff" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => handleSend()} style={styles.sendButton}>
               <Ionicons name="send" size={24} color="#fff" />
             </TouchableOpacity>
@@ -324,7 +370,7 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end', // Change this from 'center' to 'flex-end'
+    alignItems: 'flex-end',
     padding: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.05)',
@@ -337,7 +383,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     color: '#fff',
     fontSize: 16,
-    maxHeight: 120, // Add this line to limit the maximum height
+    maxHeight: 120,
   },
   sendButton: {
     marginLeft: 10,
@@ -390,6 +436,12 @@ const styles = StyleSheet.create({
     borderRadius: 3.5,
     backgroundColor: '#fff',
     marginHorizontal: 3,
+  },
+  recordButton: {
+    marginLeft: 10,
+    backgroundColor: '#007AFF',
+    borderRadius: 50,
+    padding: 10,
   },
 });
 
