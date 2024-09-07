@@ -272,6 +272,18 @@ ORDER BY id DESC
   }
 }
 
+async function countSuggestedResponses() {
+  const db = dbUtils.getDB();
+  const sql = 'SELECT COUNT(*) FROM SuggestedResponses';
+  try {
+    const res = await db.query(sql);
+    return parseInt(res.rows[0].count);
+  } catch (err) {
+    console.error('Error counting suggested responses:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   saveMessage,
   getAllMessages,
@@ -284,5 +296,6 @@ module.exports = {
   getSuggestedResponse,
   clearSuggestedResponse,
   getMessageMetrics,
-  getMostRecentMessagePerClient
+  getMostRecentMessagePerClient,
+  countSuggestedResponses
 };

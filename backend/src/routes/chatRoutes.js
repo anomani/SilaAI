@@ -9,6 +9,7 @@ const {
 } = require('../controllers/chatController');
 const { getMessageMetricsController } = require('../controllers/chatController');
 const { getMostRecentMessagePerClientController } = require('../controllers/chatController');
+const { getSuggestedResponseCountController } = require('../controllers/chatController');
 
 router.post('/schedule', handleChatRequest);
 router.post('/incoming', handleIncomingMessage);
@@ -24,5 +25,6 @@ router.get('/suggested-response/:clientId', getSuggestedResponseController);
 router.delete('/suggested-response/:clientId', clearSuggestedResponseController);
 router.get('/metrics', getMessageMetricsController);
 router.get('/most-recent-messages', getMostRecentMessagePerClientController);
+router.get('/suggested-response-count', getSuggestedResponseCountController);
 
 module.exports = router;
