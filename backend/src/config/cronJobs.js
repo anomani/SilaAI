@@ -29,7 +29,8 @@ function initializeCronJobs() {
     cron.schedule('* * * * *', async () => {
         try {
             const now = new Date();
-            const adjustedNow = new Date(now.getTime() - 4 * 60 * 60 * 1000); // Subtract 4 hours
+            const adjustedNow = new Date(now);
+            adjustedNow.setHours(adjustedNow.getHours() - 4); // Subtract 4 hours
             console.log('Checking for ending appointments at:', adjustedNow);
             const endingAppointments = await getEndingAppointments(adjustedNow);
             console.log('Found', endingAppointments.length, 'ending appointments');
