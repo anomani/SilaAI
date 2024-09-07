@@ -4,6 +4,8 @@ const { addClientMedia, getClientMedia, deleteClientMedia } = require('../model/
 const mime = require('mime-types');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+const fs = require('fs').promises;
+const os = require('os');
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 
@@ -15,32 +17,51 @@ const storage = new Storage({
 const bucket = storage.bucket('image-buckets-uzi');
 
 async function generateThumbnail(file) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
+    console.log('Generating thumbnail for file:', file);
     const thumbnailFileName = `thumbnail-${Date.now()}.jpg`;
-    const thumbnailFilePath = `/tmp/${thumbnailFileName}`;
+    const thumbnailFilePath = path.join(os.tmpdir(), thumbnailFileName);
+    const tempInputPath = path.join(os.tmpdir(), `input-${Date.now()}.mp4`);
 
-    ffmpeg(file.buffer)
-      .screenshots({
-        timestamps: ['00:00:01'],
-        filename: thumbnailFileName,
-        folder: '/tmp',
-        size: '320x240'
-      })
-      .on('end', async () => {
-        try {
-          await bucket.upload(thumbnailFilePath, {
-            destination: thumbnailFileName,
-            metadata: {
-              contentType: 'image/jpeg'
-            }
-          });
-          const thumbnailUrl = `https://storage.googleapis.com/${bucket.name}/${thumbnailFileName}`;
-          resolve(thumbnailUrl);
-        } catch (error) {
-          reject(error);
-        }
-      })
-      .on('error', reject);
+    try {
+      // Save buffer to temporary file
+      await fs.writeFile(tempInputPath, file.buffer);
+
+      ffmpeg(tempInputPath)
+        .inputFormat('mp4')
+        .screenshots({
+          timestamps: ['00:00:01'],
+          filename: thumbnailFileName,
+          folder: os.tmpdir(),
+          size: '320x240'
+        })
+        .on('end', async () => {
+          try {
+            await bucket.upload(thumbnailFilePath, {
+              destination: thumbnailFileName,
+              metadata: {
+                contentType: 'image/jpeg'
+              }
+            });
+            const thumbnailUrl = `https://storage.googleapis.com/${bucket.name}/${thumbnailFileName}`;
+            
+            // Clean up temporary files
+            await fs.unlink(tempInputPath);
+            await fs.unlink(thumbnailFilePath);
+            
+            resolve(thumbnailUrl);
+          } catch (error) {
+            reject(error);
+          }
+        })
+        .on('error', (err) => {
+          console.error('Error generating thumbnail:', err);
+          reject(err);
+        });
+    } catch (error) {
+      console.error('Error in generateThumbnail:', error);
+      reject(error);
+    }
   });
 }
 

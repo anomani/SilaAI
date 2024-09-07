@@ -112,13 +112,6 @@ async function getAllAppointmentsByClientId(clientId) {
     }
 }
 
-async function main() {
-    const appointments = (await getAllAppointmentsByClientId(2770)).slice(0,5);
-    console.log(appointments);
-}
-
-main();
-
 async function findAppointmentByClientAndTime(clientId, date, startTime) {
     const db = dbUtils.getDB();
     const sql = `
@@ -397,6 +390,22 @@ async function getAppointmentMetrics() {
   }
 }
 
+async function getEndingAppointments(currentTime) {
+    const db = dbUtils.getDB();
+    const currentDate = currentTime.toISOString().split('T')[0];
+    const currentTimeString = currentTime.toTimeString().split(' ')[0].slice(0, 5);
+    
+    const query = `
+        SELECT a.*, c.phonenumber, c.firstname, c.lastname
+        FROM Appointment a
+        JOIN Client c ON a.clientId = c.id
+        WHERE a.date = $1 AND a.endTime = $2
+    `;
+    
+    const res = await db.query(query, [currentDate, currentTimeString]);
+    return res.rows;
+}
+
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -412,5 +421,6 @@ module.exports = {
     updateAppointmentPayment,
     getUnpaidAppointmentsByDate,
     rescheduleAppointment,
-    getAppointmentMetrics
+    getAppointmentMetrics,
+    getEndingAppointments
 };
