@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration, TextInput } from 'react-native';
 import { getAppointmentsByDay, getClientById, createBlockedTime, deleteAppointment, rescheduleAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
@@ -7,10 +7,11 @@ import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import RescheduleConfirmModal from '../components/RescheduleConfirmModal';
 import BlockTimeModal from '../components/BlockTimeModal';
 import ClientCardView from '../components/ClientCardView';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 
 
 const CalendarScreen = ({ navigation }) => {
+  const route = useRoute();
   const [appointments, setAppointments] = useState([]);
   const [date, setDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('list');
@@ -21,6 +22,7 @@ const CalendarScreen = ({ navigation }) => {
   const [isRescheduleModalVisible, setIsRescheduleModalVisible] = useState(false);
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [isBlockTimeModalVisible, setIsBlockTimeModalVisible] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   // Add this constant at the top of the component
   const HOUR_HEIGHT = 100; // Height of each hour slot in pixels
@@ -146,11 +148,49 @@ const CalendarScreen = ({ navigation }) => {
     }, [date])
   );
 
+  useEffect(() => {
+    console.log('Route params changed:', route.params);
+    if (route.params?.openAppointmentForClient) {
+      const clientId = route.params.openAppointmentForClient;
+      console.log('Attempting to open appointment for clientId:', clientId);
+      if (appointments.length > 0) {
+        openAppointmentForClient(clientId);
+      } else {
+        console.log('Appointments not loaded yet. Current appointments:', appointments);
+      }
+    }
+  }, [route.params?.openAppointmentForClient, appointments]);
+
+  const openAppointmentForClient = (clientId) => {
+    console.log('openAppointmentForClient called with clientId:', clientId);
+    console.log('Current appointments:', appointments);
+
+    // Convert clientId to a number if it's a string
+    const numericClientId = Number(clientId);
+
+    const appointment = appointments.find(app => app.clientid === numericClientId);
+    console.log('Found appointment:', appointment);
+
+    if (appointment) {
+      console.log('Setting selected appointment:', appointment);
+      setSelectedAppointment(appointment);
+      console.log('Changing view mode to card');
+      setViewMode('card');
+      const index = appointments.indexOf(appointment);
+      console.log('Setting current appointment index to:', index);
+      setCurrentAppointmentIndex(index);
+    } else {
+      console.log('No appointment found for clientId:', clientId);
+      console.log('ClientIds in appointments:', appointments.map(app => app.clientid));
+    }
+  };
+
   const fetchAppointments = async () => {
+    console.log('Fetching appointments for date:', date);
     setIsLoading(true);
     setAppointments([]); // Clear existing appointments
     try {
-      const estDate = new Date(date);
+      const estDate = new Date(date); 
       estDate.setHours(estDate.getHours() - 4); // Convert to EST
       const year = estDate.getFullYear();
       const month = String(estDate.getMonth() + 1).padStart(2, '0');
@@ -158,6 +198,7 @@ const CalendarScreen = ({ navigation }) => {
       const formattedDate = `${year}-${month}-${day}`;
 
       const response = await getAppointmentsByDay(formattedDate);
+      console.log('Fetched appointments:', response);
       const adjustedAppointments = await Promise.all(response.map(async (appointment) => {
         if (appointment.appointmenttype === 'BLOCKED_TIME') {
           return {
@@ -176,6 +217,7 @@ const CalendarScreen = ({ navigation }) => {
           };
         }
       }));
+      console.log('Adjusted appointments:', adjustedAppointments);
       setAppointments(adjustedAppointments);
     } catch (error) {
       console.error('Error fetching appointments:', error);
@@ -524,9 +566,17 @@ const CalendarScreen = ({ navigation }) => {
         <View style={styles.cardView}>
           {appointments.length > 0 ? (
             <>
+              {console.log('Rendering ClientCardView with:', {
+                appointment: appointments[currentAppointmentIndex],
+                currentIndex: currentAppointmentIndex,
+                appointmentsLength: appointments.length
+              })}
               <ClientCardView
                 appointment={appointments[currentAppointmentIndex]}
                 onDelete={fetchAppointments}
+                allAppointments={appointments}
+                currentIndex={currentAppointmentIndex}
+                setCurrentIndex={setCurrentAppointmentIndex}
               />
               <View style={styles.cardNavigation}>
                 <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.max(0, currentAppointmentIndex - 1))} style={styles.navButton}>

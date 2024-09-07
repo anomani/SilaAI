@@ -28,9 +28,23 @@ interface Appointment {
 
 interface ClientCardViewProps {
   appointment: Appointment;
+  onDelete: () => void;
+  allAppointments: Appointment[];
+  currentIndex: number;
+  setCurrentIndex: (index: number) => void;
 }
 
-const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
+const ClientCardView: React.FC<ClientCardViewProps> = ({ 
+  appointment, 
+  onDelete, 
+  allAppointments, 
+  currentIndex, 
+  setCurrentIndex 
+}) => {
+  console.log('ClientCardView rendered with appointment:', appointment);
+  console.log('Current index:', currentIndex);
+  console.log('All appointments:', allAppointments);
+
   const navigation = useNavigation();
   const [isAddNoteModalVisible, setIsAddNoteModalVisible] = useState<boolean>(false);
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState<boolean>(false);
@@ -55,19 +69,22 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
   const currentClientId = appointment.clientid;
 
   useEffect(() => {
-    if (currentClientId) {
+    console.log('ClientCardView useEffect triggered');
+    if (appointment && appointment.clientid) {
+      console.log('Fetching data for clientId:', appointment.clientid);
       fetchClientAppointments();
       fetchNotes();
       fetchMessages();
       fetchClientMedia();
     } else {
-      console.log('No currentClientId available in the appointment object');
+      console.log('No appointment or clientId available');
     }
-  }, [currentClientId]);
+  }, [appointment]);
 
   const fetchClientAppointments = async () => {
     try {
-      const fetchedAppointments = await getClientAppointmentsAroundCurrent(currentClientId, appointment.id);
+      const fetchedAppointments = await getClientAppointmentsAroundCurrent(appointment.clientid, appointment.id);
+      console.log('Fetched client appointments:', fetchedAppointments);
       setClientAppointments(fetchedAppointments);
     } catch (error) {
       console.error('Error fetching client appointments:', error);
@@ -77,7 +94,8 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
 
   const fetchNotes = async () => {
     try {
-      const fetchedNotes = await getNotesByClientId(currentClientId);
+      const fetchedNotes = await getNotesByClientId(appointment.clientid);
+      console.log('Fetched notes:', fetchedNotes);
       setNotes(fetchedNotes);
     } catch (error) {
       console.error('Error fetching notes:', error);
@@ -87,8 +105,8 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
 
   const fetchMessages = async () => {
     try {
-      const fetchedMessages = await getMessagesByClientId(currentClientId);
-      // Sort messages by date, oldest first
+      const fetchedMessages = await getMessagesByClientId(appointment.clientid);
+      console.log('Fetched messages:', fetchedMessages);
       const sortedMessages = fetchedMessages.sort((a, b) => new Date(a.date) - new Date(b.date));
       setMessages(sortedMessages);
     } catch (error) {
@@ -99,7 +117,8 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
 
   const fetchClientMedia = async () => {
     try {
-      const media = await getClientMedia(currentClientId);
+      const media = await getClientMedia(appointment.clientid);
+      console.log('Fetched client media:', media);
       setClientMedia(media);
     } catch (error) {
       console.error('Error fetching client media:', error);
@@ -368,10 +387,23 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
     uploadMedia([uri]);
   };
 
+  const handlePreviousAppointment = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+
+  const handleNextAppointment = () => {
+    if (currentIndex < allAppointments.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
+  };
+
   console.log('ClientCardView rendered. showGallery:', showGallery);
 
   return (
     <ScrollView style={styles.cardView}>
+      {console.log('Rendering ClientCardView content')}
       <View style={styles.cardContainer}>
         {/* Payment Status and Tip Amount */}
         {appointment.paid ? (
@@ -576,6 +608,20 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({ appointment }) => {
         onClose={() => setShowCamera(false)}
         onCapture={handleCameraCapture}
       />
+      
+      <View style={styles.cardNavigation}>
+        <TouchableOpacity onPress={handlePreviousAppointment} style={styles.navButton}>
+          <Text style={styles.navButtonText}>‹</Text>
+        </TouchableOpacity>
+        <View style={styles.appointmentCounterContainer}>
+          <Text style={styles.appointmentCounter}>
+            {currentIndex + 1} / {allAppointments.length}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleNextAppointment} style={styles.navButton}>
+          <Text style={styles.navButtonText}>›</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 };
