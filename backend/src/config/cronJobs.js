@@ -67,7 +67,7 @@ async function sendNotificationToUser(title, body, recipientPhoneNumber, notific
     }
     // for (const token of pushTokens) {
         const notification = {
-            to: ExponentPushToken[rswz3mF3E2725DCf4tUSAU],
+            to: "ExponentPushToken[rswz3mF3E2725DCf4tUSAU]",
             sound: 'default',
             title: title,
             body: body,
