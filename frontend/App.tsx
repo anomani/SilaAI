@@ -116,6 +116,9 @@ const AppContent: React.FC = () => {
         } else if (data.notificationType === 'unpaid_appointments') {
           console.log('Navigating to CalendarScreen in card view');
           navigation.navigate('Calendar', { openInCardView: true });
+        } else if (data.notificationType === 'appointment_ended') {
+          console.log('Navigating to CalendarScreen for ended appointment:', { clientId });
+          navigation.navigate('Calendar', { openAppointmentForClient: clientId });
         }
       } else {
         console.warn('Invalid or missing data in notification:', data);
