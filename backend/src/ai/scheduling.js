@@ -968,19 +968,4 @@ async function shouldAIRespond(userMessages, thread) {
   }
 }
 
-async function main() {
-  const threadMessages = await openai.beta.threads.messages.list(
-    "thread_v1ShRWiQmN90ddxOiayjzXuZ"
-  );
-
-  const structuredMessages = threadMessages.data.map(message => ({
-    role: message.role,
-    content: message.content[0].text.value
-  }));
-
-  console.log(JSON.stringify(structuredMessages, null, 2));
-}
-
-main();
-
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal};

@@ -61,19 +61,18 @@ const ImageGallery = ({ media, visible, onClose, initialIndex, onMediaDeleted, c
       style={styles.gridItem} 
       onPress={() => setSelectedMediaIndex(index)}
     >
-      {item.media_type === 'image' ? (
-        <Image 
-          source={{ uri: item.media_url }} 
-          style={styles.gridImage} 
-        />
-      ) : (
-        <View style={styles.gridImage}>
+      <Image 
+        source={{ uri: item.media_type === 'video' ? item.thumbnail_url : item.media_url }} 
+        style={styles.gridImage} 
+      />
+      {item.media_type === 'video' && (
+        <View style={styles.videoIndicator}>
           <Ionicons name="play-circle" size={24} color="white" />
         </View>
       )}
     </TouchableOpacity>
   );
-
+  
   const renderFullScreenItem = ({ item }) => (
     <TouchableWithoutFeedback onPress={() => setShowControls(!showControls)}>
       <View style={styles.fullScreenContent}>
@@ -210,10 +209,22 @@ const styles = StyleSheet.create({
     flex: 1/3,
     aspectRatio: 1,
     padding: 2,
+    position: 'relative', // Add this
   },
   gridImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 8,
+  },
+  videoIndicator: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderRadius: 8,
   },
   fullScreenContainer: {

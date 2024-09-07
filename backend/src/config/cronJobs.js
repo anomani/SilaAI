@@ -1,10 +1,7 @@
 const cron = require('node-cron');
-const dbUtils = require('../model/dbUtils');
-const { ObjectId } = require('mongodb');
-const { getUnpaidAppointmentsByDate, getAppointmentsByDay } = require('../model/appointment');
-const { sendNotificationToUser } = require('./twilio');
+const { getUnpaidAppointmentsByDate, getEndingAppointments } = require('../model/appointment');
 const { getUserByPhoneNumber } = require('../model/users');
-const { getUserPushToken } = require('../model/pushToken');
+const { getUserPushTokens } = require('../model/pushToken');
 const { Expo } = require('expo-server-sdk');
 
 // Initialize the Expo SDK
@@ -18,7 +15,7 @@ function initializeCronJobs() {
             const unpaidAppointments = await getUnpaidAppointmentsByDate(today);
             if (unpaidAppointments.length > 0) {
                 const message = `You have ${unpaidAppointments.length} unpaid appointment(s) for today.`;
-                await sendUnpaidAppointmentsNotification('Barber', message);
+                await sendNotificationToUser('Unpaid Appointments', message, process.env.TWILIO_PHONE_NUMBER, 'unpaid_appointments');
             }
             
             console.log('Checked for unpaid appointments and sent notification if necessary');
@@ -27,30 +24,52 @@ function initializeCronJobs() {
         }
         console.log('Cron job completed at:', new Date().toISOString());
     });
+
+    // Cron job for appointment end notifications, runs every minute
+    cron.schedule('* * * * *', async () => {
+        try {
+            const now = new Date();
+            console.log('Checking for ending appointments at:', now);
+            const endingAppointments = await getEndingAppointments(now);
+            console.log('Found', endingAppointments.length, 'ending appointments');
+            for (const appointment of endingAppointments) {
+                const message = `Appointment ended for ${appointment.firstname} ${appointment.lastname}. Click here to log the appointment`;
+                await sendNotificationToUser(
+                    'Appointment Ended',
+                    message,
+                    process.env.TWILIO_PHONE_NUMBER, // Assuming you have this set in your environment variables
+                    'appointment_ended',
+                    { clientId: appointment.clientid }
+                );
+            }
+            console.log('Checked for ending appointments and sent notifications to barber if necessary');
+        } catch (error) {
+            console.error('Error checking ending appointments:', error);
+        }
+    });
 }
 
-async function sendUnpaidAppointmentsNotification(recipientName, message) {
-    const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
-    const barber = await getUserByPhoneNumber(barberPhoneNumber);
+async function sendNotificationToUser(title, body, recipientPhoneNumber, notificationType, data = {}) {
+    const user = await getUserByPhoneNumber(recipientPhoneNumber);
 
-    if (!barber) {
-        console.log('No barber found with the given phone number');
+    if (!user) {
+        console.log('No user found with the given phone number');
         return;
     }
 
-    const pushToken = await getUserPushToken(barber.id);
+    const pushTokens = await getUserPushTokens(user.id);
 
-    if (!pushToken) {
-        console.log('No push token found for the barber');
+    if (!pushTokens) {
+        console.log('No push token found for the user');
         return;
     }
-
-    const notification = {
-        to: pushToken,
-        sound: 'default',
-        title: 'Unpaid Appointments',
-        body: message,
-        data: { notificationType: 'unpaid_appointments' },
+    for (const token of pushTokens) {
+        const notification = {
+            to: token,
+            sound: 'default',
+            title: title,
+            body: body,
+        data: { ...data, notificationType: notificationType },
     };
 
     try {
@@ -58,7 +77,8 @@ async function sendUnpaidAppointmentsNotification(recipientName, message) {
         let ticketChunk = await expo.sendPushNotificationsAsync([notification]);
         console.log('Notification result:', ticketChunk);
     } catch (error) {
-        console.error('Error sending push notification:', error);
+            console.error('Error sending push notification:', error);
+        }
     }
 }
 
