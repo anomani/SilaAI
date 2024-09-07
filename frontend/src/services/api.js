@@ -503,3 +503,14 @@ export const getAppointmentMetrics = async () => {
     throw error;
   }
 };
+
+// Add this new function
+export const getSuggestedResponseCount = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.get('/chat/suggested-response-count')));
+    return response.data.count;
+  } catch (error) {
+    console.error('Error fetching suggested response count:', error);
+    throw error;
+  }
+};
