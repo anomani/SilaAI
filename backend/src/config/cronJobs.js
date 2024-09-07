@@ -29,8 +29,9 @@ function initializeCronJobs() {
     cron.schedule('* * * * *', async () => {
         try {
             const now = new Date();
-            console.log('Checking for ending appointments at:', now);
-            const endingAppointments = await getEndingAppointments(now);
+            const adjustedNow = new Date(now.getTime() - 4 * 60 * 60 * 1000); // Subtract 4 hours
+            console.log('Checking for ending appointments at:', adjustedNow);
+            const endingAppointments = await getEndingAppointments(adjustedNow);
             console.log('Found', endingAppointments.length, 'ending appointments');
             for (const appointment of endingAppointments) {
                 const message = `Appointment ended for ${appointment.firstname} ${appointment.lastname}. Click here to log the appointment`;
