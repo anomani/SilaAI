@@ -1,9 +1,10 @@
 const fs = require('fs');
+const fsPromises = require('fs').promises; // Make sure to use the promise-based version of fs
 const OpenAI = require('openai');
 const dotenv = require('dotenv');
 dotenv.config({ path: '../env' });
 
-const openai = new OpenAI({
+const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
 
@@ -13,16 +14,21 @@ const openai = new OpenAI({
  * @returns {Promise<string>} The transcribed text.
  */
 async function transcribeAudio(filePath) {
-  try {
-    const transcript = await openai.createTranscription(
-      fs.createReadStream(filePath),
-      "whisper-1"
-    );
-    return transcript.data.text;
-  } catch (error) {
-    console.error('Error transcribing audio:', error);
-    throw new Error('Failed to transcribe audio');
-  }
+    try {
+        const audioFile = fs.createReadStream(filePath);
+        const transcription = await client.audio.transcriptions.create({
+            model: "whisper-1",
+            file: audioFile,
+        });
+        console.log('Transcription successful:', transcription.text);
+        return transcription.text;
+    } catch (error) {
+        console.error('Error transcribing audio:', error);
+        if (error.response) {
+            console.error('Error response:', error.response.data);
+        }
+        throw error; // Throw the original error to preserve the stack trace
+    }
 }
 
 /**
@@ -38,15 +44,22 @@ async function handleAudioTranscription(file) {
   try {
     const transcription = await transcribeAudio(file.path);
     
-    // Delete the temporary file after transcription
-    fs.unlinkSync(file.path);
+    
+    // Delete the file after transcription
+    await fsPromises.unlink(file.path);
+    
 
     return transcription;
   } catch (error) {
-    // Ensure the temporary file is deleted even if transcription fails
-    if (file.path && fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
+    console.error('Error in handleAudioTranscription:', error);
+    
+    // Attempt to delete the file even if transcription fails
+    try {
+      await fsPromises.unlink(file.path);
+    } catch (deleteError) {
+      console.error('Error deleting temporary file:', deleteError);
     }
+    
     throw error;
   }
 }

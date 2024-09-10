@@ -31,6 +31,10 @@ const Footer = ({ navigation }) => {
         <Ionicons name="calendar" size={24} color="#fff" />
         <Text style={styles.footerText}>Calendar</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ChatScreen')}>
+        <Ionicons name="mic" size={24} color="#fff" />
+        <Text style={styles.footerText}>AI</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ChatDashboard')}>
         <View style={styles.iconContainer}>
           <Ionicons name="chatbubbles" size={24} color="#fff" />
@@ -42,9 +46,9 @@ const Footer = ({ navigation }) => {
         </View>
         <Text style={styles.footerText}>Chat</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ClientList')}>
-        <Ionicons name="people" size={24} color="#fff" />
-        <Text style={styles.footerText}>Clients</Text>
+      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Payment')}>
+        <Ionicons name="logo-usd" size={24} color="#fff" />
+        <Text style={styles.footerText}>Payment</Text>
       </TouchableOpacity>
     </View>
   );
@@ -60,10 +64,11 @@ const styles = StyleSheet.create({
   },
   footerItem: {
     alignItems: 'center',
+    flex: 1, // Add this to ensure equal width for all items
   },
   footerText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 10, // Reduce font size to fit all items
     marginTop: 4,
   },
   iconContainer: {
