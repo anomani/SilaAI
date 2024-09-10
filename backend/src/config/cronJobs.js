@@ -65,13 +65,13 @@ async function sendNotificationToUser(title, body, recipientPhoneNumber, notific
         console.log('No push token found for the user');
         return;
     }
-    // for (const token of pushTokens) {
+    for (const token of pushTokens) {
         const notification = {
-            to: "ExponentPushToken[rswz3mF3E2725DCf4tUSAU]",
+            to: token,
             sound: 'default',
             title: title,
             body: body,
-        data: { ...data, notificationType: notificationType },
+            data: { ...data, notificationType: notificationType },
     };
 
     try {
@@ -81,7 +81,7 @@ async function sendNotificationToUser(title, body, recipientPhoneNumber, notific
     } catch (error) {
             console.error('Error sending push notification:', error);
         }
-    // }
+    }
 }
 
 module.exports = {

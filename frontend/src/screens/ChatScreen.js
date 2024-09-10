@@ -5,6 +5,7 @@ import { handleUserInput, transcribeAudio } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../components/ChatContext';
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 
 const TypingIndicator = () => {
   const [dots] = useState([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]);
@@ -46,6 +47,64 @@ const TypingIndicator = () => {
   );
 };
 
+const SoundWave = ({ isRecording }) => {
+  const [amplitudes] = useState(
+    [...Array(5)].map(() => new Animated.Value(0))
+  );
+
+  useEffect(() => {
+    if (isRecording) {
+      const animations = amplitudes.map((amplitude, index) =>
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(amplitude, {
+              toValue: 1,
+              duration: 500 + index * 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(amplitude, {
+              toValue: 0,
+              duration: 500 + index * 100,
+              useNativeDriver: true,
+            }),
+          ])
+        )
+      );
+
+      Animated.parallel(animations).start();
+    } else {
+      amplitudes.forEach(amplitude => {
+        amplitude.setValue(0);
+        amplitude.stopAnimation();
+      });
+    }
+  }, [isRecording]);
+
+  return (
+    <View style={styles.soundWaveContainer}>
+      {amplitudes.map((amplitude, index) => (
+        <Animated.View
+          key={index}
+          style={[
+            styles.soundWaveLine,
+            {
+              transform: [
+                {
+                  scaleY: amplitude.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.3, 1],
+                  }),
+                },
+              ],
+              opacity: amplitude,
+            },
+          ]}
+        />
+      ))}
+    </View>
+  );
+};
+
 const ChatScreen = () => {
   const [message, setMessage] = useState('');
   const { messages, setMessages } = useChat();
@@ -56,8 +115,12 @@ const ChatScreen = () => {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [inputHeight, setInputHeight] = useState(40);
-  const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const silenceThreshold = -50; // Adjust this value as needed (in dB)
+  const silenceDuration = 1500; // 1.5 seconds of silence before stopping
+  const silenceTimer = useRef(null);
+  const silenceStartTime = useRef(null);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -86,6 +149,14 @@ const ChatScreen = () => {
       keyboardWillHide.remove();
       keyboardDidShowListener.remove();
       keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (recording) {
+        stopRecording();
+      }
     };
   }, []);
 
@@ -179,6 +250,7 @@ const ChatScreen = () => {
   );
 
   const startRecording = async () => {
+    console.log('Starting recording...');
     try {
       await Audio.requestPermissionsAsync();
       await Audio.setAudioModeAsync({
@@ -186,31 +258,68 @@ const ChatScreen = () => {
         playsInSilentModeIOS: true,
       });
 
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      setRecording(recording);
+      const newRecording = new Audio.Recording();
+      await newRecording.prepareToRecordAsync(Audio.RECORDING_OPTIONS_PRESET_HIGH_QUALITY);
+      newRecording.setOnRecordingStatusUpdate(onRecordingStatusUpdate);
+      await newRecording.startAsync();
+      setRecording(newRecording);
       setIsRecording(true);
+
+      console.log('Recording started');
     } catch (err) {
       console.error('Failed to start recording', err);
     }
   };
 
   const stopRecording = async () => {
+    console.log('Stopping recording...');
+    setIsRecording(false);
+    if (silenceTimer.current) {
+      clearTimeout(silenceTimer.current);
+      silenceTimer.current = null;
+    }
+    silenceStartTime.current = null;
     try {
-      setIsRecording(false);
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
+      console.log('Recording stopped and stored at', uri);
       handleRecordingComplete(uri);
     } catch (err) {
       console.error('Failed to stop recording', err);
     }
   };
 
+  const onRecordingStatusUpdate = (status) => {
+    if (status.isRecording) {
+      const { metering } = status;
+      console.log(`Current audio level: ${metering} dB (Threshold: ${silenceThreshold} dB)`);
+
+      if (metering !== undefined && metering < silenceThreshold) {
+        if (!silenceStartTime.current) {
+          silenceStartTime.current = Date.now();
+          console.log('Silence detected, starting timer');
+        } else {
+          const currentSilenceDuration = Date.now() - silenceStartTime.current;
+          console.log(`Silence duration: ${currentSilenceDuration}ms`);
+          
+          if (currentSilenceDuration >= silenceDuration) {
+            console.log('Silence duration exceeded, stopping recording');
+            stopRecording();
+          }
+        }
+      } else {
+        if (silenceStartTime.current) {
+          console.log('Audio above threshold, resetting silence timer');
+          silenceStartTime.current = null;
+        }
+      }
+    }
+  };
+
   const handleRecordingComplete = async (uri) => {
     try {
       const transcription = await transcribeAudio(uri);
-      setMessage(transcription);
+      // Directly send the transcribed message without setting it in the input
       handleSend(transcription);
     } catch (err) {
       console.error('Failed to transcribe audio', err);
@@ -275,7 +384,11 @@ const ChatScreen = () => {
               onPress={isRecording ? stopRecording : startRecording}
               style={styles.recordButton}
             >
-              <Ionicons name={isRecording ? "stop" : "mic"} size={24} color="#fff" />
+              {isRecording ? (
+                <SoundWave isRecording={isRecording} />
+              ) : (
+                <Ionicons name="mic" size={24} color="#fff" />
+              )}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleSend()} style={styles.sendButton}>
               <Ionicons name="send" size={24} color="#fff" />
@@ -442,6 +555,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     borderRadius: 50,
     padding: 10,
+  },
+  soundWaveContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: 30,
+    height: 30,
+  },
+  soundWaveLine: {
+    width: 3,
+    height: 30,
+    backgroundColor: '#fff',
+    borderRadius: 1.5,
   },
 });
 

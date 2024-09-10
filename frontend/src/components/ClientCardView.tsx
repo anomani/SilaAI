@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Modal, Alert, TextInput, Switch, Keyboard, FlatList, Button, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Modal, Alert, TextInput, Switch, Keyboard, FlatList, Button, StatusBar, Linking } from 'react-native';
 import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientMedia, uploadClientMedia, deleteClientMedia } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import avatarImage from '../../assets/avatar.png';
@@ -24,6 +24,7 @@ interface Appointment {
   paid: boolean;
   paymentmethod?: string;
   tipamount?: number;
+  clientPhoneNumber?: string;
 }
 
 interface ClientCardViewProps {
@@ -399,6 +400,31 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
     }
   };
 
+  const handleMessagePress = () => {
+    navigation.navigate('ClientMessages', { 
+      clientid: appointment.clientid, 
+      clientName: appointment.clientName,
+      suggestedResponse: null,
+      clientMessage: null
+    });
+  };
+
+  const handleCallPress = async () => {
+    try {
+      const clientDetails = await getClientById(appointment.clientid);
+      const phoneNumber = clientDetails?.phonenumber;
+      console.log('phoneNumber:', phoneNumber);
+      if (phoneNumber) {
+        Linking.openURL(`tel:${phoneNumber}`);
+      } else {
+        Alert.alert('Error', 'No phone number available for this client.');
+      }
+    } catch (error) {
+      console.error('Error fetching client phone number:', error);
+      Alert.alert('Error', 'Failed to retrieve client phone number.');
+    }
+  };
+
   console.log('ClientCardView rendered. showGallery:', showGallery);
 
   return (
@@ -473,6 +499,18 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
         </View>
         
         <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
+        
+        {/* Add Call and Message buttons */}
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleCallPress}>
+            <Ionicons name="call" size={24} color="#fff" />
+            <Text style={styles.actionButtonText}>Call</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={handleMessagePress}>
+            <Ionicons name="chatbubble" size={24} color="#fff" />
+            <Text style={styles.actionButtonText}>Message</Text>
+          </TouchableOpacity>
+        </View>
         
         <Text style={styles.cardTime}>{appointment.startTime || 'No Start'} - {appointment.endTime || 'No End'}</Text>
         <Text 
@@ -1176,6 +1214,26 @@ const styles = StyleSheet.create({
     color: '#007AFF',
     marginLeft: 5,
     fontSize: 14,
+    fontWeight: 'bold',
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginVertical: 10,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  actionButtonText: {
+    color: '#fff',
+    marginLeft: 8,
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
