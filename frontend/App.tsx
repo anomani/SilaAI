@@ -8,6 +8,7 @@ import * as Device from 'expo-device';
 import { savePushToken } from './src/services/api';
 import { ChatProvider } from './src/components/ChatContext';
 import { MessageProvider } from './src/components/MessageContext';
+import DailyAppointments from './src/screens/DailyAppointments';
 
 // Import your screen components
 import Homepage from './src/screens/Homepage';
@@ -114,8 +115,7 @@ const AppContent: React.FC = () => {
             clientMessage 
           });
         } else if (data.notificationType === 'unpaid_appointments') {
-          console.log('Navigating to CalendarScreen in card view');
-          navigation.navigate('Calendar', { openInCardView: true });
+          navigation.navigate('DailyAppointments');
         } else if (data.notificationType === 'appointment_ended') {
           console.log('Navigating to CalendarScreen for ended appointment:', { clientId });
           navigation.navigate('Calendar', { openAppointmentForClient: clientId });
@@ -156,6 +156,7 @@ const AppContent: React.FC = () => {
       />
       <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
       <Stack.Screen name="Metrics" component={MetricsScreen} /> 
+      <Stack.Screen name="DailyAppointments" component={DailyAppointments} />
     </Stack.Navigator>
   );
 };

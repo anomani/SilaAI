@@ -52,6 +52,13 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('DailyAppointments')}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Daily Appointments</Text>
+            <Text style={styles.menuSubtitle}>View and manage appointments for each day</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
       <Footer navigation={navigation} />
     </View>
