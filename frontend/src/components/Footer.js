@@ -46,7 +46,7 @@ const Footer = ({ navigation }) => {
         </View>
         <Text style={styles.footerText}>Chat</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Payment')}>
+      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('DailyAppointments')}>
         <Ionicons name="logo-usd" size={24} color="#fff" />
         <Text style={styles.footerText}>Payment</Text>
       </TouchableOpacity>
