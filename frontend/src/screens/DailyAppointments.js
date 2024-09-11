@@ -4,6 +4,7 @@ import { getAppointmentsByDay, updateAppointmentPayment, getClientById } from '.
 import PaymentModal from '../components/PaymentModal';
 import Footer from '../components/Footer';
 import { Ionicons } from '@expo/vector-icons';
+import DailyStatistics from '../components/DailyStatistics';
 
 const DailyAppointments = ({ navigation }) => {
   const [appointments, setAppointments] = useState([]);
@@ -151,6 +152,7 @@ const DailyAppointments = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         </View>
+        <DailyStatistics appointments={appointments} />
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'paid' && styles.activeTab]}
