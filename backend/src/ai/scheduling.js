@@ -1006,7 +1006,7 @@ async function shouldAIRespond(userMessages, thread) {
         }
       ]
     });
-
+    
     const aiDecision = response.content[0].text.trim().toLowerCase();
     console.log(`AI decision: ${aiDecision}`);
       return aiDecision === 'true';
@@ -1016,6 +1016,5 @@ async function shouldAIRespond(userMessages, thread) {
     return false; // Default to human attention if there's an error
   }
 }
-
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal};
