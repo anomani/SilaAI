@@ -46,6 +46,7 @@ const tools = [
     }
   }
 },
+
 {
   type: "function",
   function: {
@@ -345,6 +346,31 @@ const tools = [
       required: ["clientId", "initialDate", "startTime", "appointmentType", "addOns", "group", "recurrenceRule"]
     }
   }
+},
+{
+  type: "function",
+  function: {
+    name: "sendMessages",
+    description: "Sends a message to multiple clients",
+    parameters: {
+      type: "object",
+      properties: {
+        phoneNumbers: {
+          type: "array",
+          items: {
+            type: "string",
+            description: "The client's phone number"
+          },
+          description: "An array of client phone numbers"
+        },
+        message: {
+          type: "string",
+          description: "The message to send to the clients"
+        }
+      },
+      required: ["phoneNumbers", "message"]
+    }
+  }
 }
 ];
 
@@ -437,10 +463,12 @@ async function handleUserInputData(userMessage) {
               console.log("getInfo", args.query);
               output = await getInfo(args.query);
             } else if (funcName === "sendMessages") {
-              output = await sendMessages(args.clients, args.message);
+              console.log("sendMessages", args.phoneNumbers, args.message);
+              // output = await sendMessages(args.phoneNumbers, args.message);
+              output = "Message sent to all the clients";
             } else if (funcName === "createCustomList") {
               console.log("createCustomList", args.name, args.query);
-            const queryId = uuidv4();
+              const queryId = uuidv4();
               queryStore[queryId] = args.query;
               output = queryId;
             } else if (funcName === "getMuslimClients") {

@@ -279,20 +279,26 @@ const ChatScreen = () => {
       silenceTimer.current = null;
     }
     silenceStartTime.current = null;
+
     try {
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      console.log('Recording stopped and stored at', uri);
-      handleRecordingComplete(uri);
+      if (recording) {
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        console.log('Recording stopped and stored at', uri);
+        await handleRecordingComplete(uri);
+      } else {
+        console.log('No active recording to stop');
+      }
     } catch (err) {
-      console.error('Failed to stop recording', err);
+      console.error('Error during recording stop process:', err);
+    } finally {
+      setRecording(null);
     }
   };
 
   const onRecordingStatusUpdate = (status) => {
     if (status.isRecording) {
       const { metering } = status;
-      console.log(`Current audio level: ${metering} dB (Threshold: ${silenceThreshold} dB)`);
 
       if (metering !== undefined && metering < silenceThreshold) {
         if (!silenceStartTime.current) {
@@ -300,11 +306,10 @@ const ChatScreen = () => {
           console.log('Silence detected, starting timer');
         } else {
           const currentSilenceDuration = Date.now() - silenceStartTime.current;
-          console.log(`Silence duration: ${currentSilenceDuration}ms`);
           
           if (currentSilenceDuration >= silenceDuration) {
             console.log('Silence duration exceeded, stopping recording');
-            stopRecording();
+            stopRecording();  // Make sure this is being called
           }
         }
       } else {
@@ -320,7 +325,7 @@ const ChatScreen = () => {
     try {
       const transcription = await transcribeAudio(uri);
       // Directly send the transcribed message without setting it in the input
-      handleSend(transcription);
+      await handleSend(transcription);
     } catch (err) {
       console.error('Failed to transcribe audio', err);
     }

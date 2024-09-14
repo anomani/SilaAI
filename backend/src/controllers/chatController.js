@@ -208,7 +208,11 @@ const getSuggestedResponseCountController = async (req, res) => {
 // Update the transcribeAudioController function
 const transcribeAudioController = async (req, res) => {
   try {
-    const transcription = await handleAudioTranscription(req.file);
+    if (!req.file || !req.file.buffer) {
+      throw new Error('No audio file uploaded');
+    }
+    console.log('File received:', req.file);  // Add this line for debugging
+    const transcription = await handleAudioTranscription(req.file.buffer, req.file.originalname);
     res.json({ transcription });
   } catch (error) {
     console.error('Error in transcribeAudioController:', error);
