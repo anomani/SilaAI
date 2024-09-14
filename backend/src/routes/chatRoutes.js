@@ -15,17 +15,8 @@ const { getSuggestedResponseCountController } = require('../controllers/chatCont
 const { transcribeAudioController } = require('../controllers/chatController');
 
 // Configure multer for handling file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/')
-  },
-  filename: function (req, file, cb) {
-    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname))
-  }
-})
-
-const upload = multer({ 
-  storage: storage,
+const upload = multer({
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     console.log('Uploaded file:', file);
     const filetypes = /wav|mp3|m4a|ogg/;

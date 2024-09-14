@@ -362,36 +362,43 @@ const CalendarScreen = ({ navigation }) => {
     }
 
     const appointmentBlocks = [];
-    appointments.forEach((appointment, index) => {
+    const timeSlots = {};
+
+    // Sort appointments by start time
+    const sortedAppointments = [...appointments].sort((a, b) => {
+      return new Date('1970/01/01 ' + a.startTime) - new Date('1970/01/01 ' + b.startTime);
+    });
+
+    sortedAppointments.forEach((appointment) => {
       const [startHour, startMinute] = appointment.startTime.split(':');
       const [endHour, endMinute] = appointment.endTime.split(':');
       
       const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
       const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
       
-      const duration = end - start;
-      const topPosition = (start - 9) * 100; // 100px per hour
+      const startPosition = (start - 9) * HOUR_HEIGHT;
+      const endPosition = (end - 9) * HOUR_HEIGHT;
+      const duration = endPosition - startPosition;
+
+      let column = 0;
+      while (timeSlots[`${startPosition}-${column}`]) {
+        column++;
+      }
+
+      for (let i = startPosition; i < endPosition; i += HOUR_HEIGHT / 4) {
+        timeSlots[`${i}-${column}`] = appointment.id;
+      }
 
       const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
-
-      const animatedStyle = {
-        transform: [
-          {
-            translateY: panY.interpolate({
-              inputRange: [-1000, 0, 1000],
-              outputRange: [-1000, 0, 1000],
-              extrapolate: 'clamp',
-            }),
-          },
-        ],
-      };
+      const width = 350; // Fixed width for all appointments
+      const left = column * 210; // 210 to add some space between appointments
 
       appointmentBlocks.push(
         <PanGestureHandler
           key={appointment.id}
           onGestureEvent={onPanGestureEvent}
           onHandlerStateChange={(event) => onPanHandlerStateChange(event, appointment)}
-          minDist={10} // Minimum distance to start the gesture
+          minDist={10}
         >
           <Animated.View style={[
             { zIndex: activeDragId === appointment.id ? 1000 : 1 },
@@ -406,16 +413,13 @@ const CalendarScreen = ({ navigation }) => {
                     "Delete Blocked Time",
                     "Are you sure you want to delete this blocked time?",
                     [
-                      {
-                        text: "Cancel",
-                        style: "cancel"
-                      },
+                      { text: "Cancel", style: "cancel" },
                       { 
                         text: "OK", 
                         onPress: async () => {
                           try {
                             await deleteAppointment(appointment.id);
-                            fetchAppointments(); // Refresh the appointments list
+                            fetchAppointments();
                           } catch (error) {
                             console.error('Failed to delete blocked time:', error);
                             Alert.alert('Error', 'Failed to delete blocked time. Please try again.');
@@ -433,9 +437,11 @@ const CalendarScreen = ({ navigation }) => {
                 style={[
                   styles.appointmentBlock,
                   {
-                    top: topPosition,
-                    height: Math.max(duration * 100, 50), // Minimum height of 50px
-                    backgroundColor: isBlockedTime ? 'rgba(255, 149, 0, 0.7)' : '#007AFF', // Semi-transparent orange for blocked time
+                    top: startPosition,
+                    height: Math.max(duration, 50), // Minimum height of 50px
+                    backgroundColor: isBlockedTime ? 'rgba(255, 149, 0, 0.7)' : '#007AFF',
+                    width: width,
+                    left: left,
                   },
                   activeDragId === appointment.id && {
                     shadowColor: "#000",
@@ -547,18 +553,16 @@ const CalendarScreen = ({ navigation }) => {
             <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
           </View>
         ) : (
-          <ScrollView 
-            style={styles.calendarContainer}
-            contentContainerStyle={{ height: totalHeight }}
-          >
+          <ScrollView style={styles.calendarContainer}>
             <View style={styles.timelineContainer}>
               <View style={styles.timeline}>
                 {renderTimeSlots()}
               </View>
-              <View style={[styles.appointmentsContainer, { height: totalHeight }]}>
-                {renderAppointments()}
-                {renderCurrentTimeLine()}
-              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                <View style={styles.appointmentsContainer}>
+                  {renderAppointments()}
+                </View>
+              </ScrollView>
             </View>
           </ScrollView>
         )
@@ -883,20 +887,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   appointmentsContainer: {
-    flex: 1,
     position: 'relative',
-    borderLeftWidth: 1,
-    borderLeftColor: '#333',
+    minWidth: '100%', // Ensure it's at least as wide as the screen
   },
   appointmentBlock: {
     position: 'absolute',
-    left: 2,
-    right: 2,
     padding: 6,
     borderRadius: 6,
     backgroundColor: '#007AFF',
     borderWidth: 1,
-    borderColor: '#0056b3', // A slightly darker shade of blue for the border
+    borderColor: '#0056b3',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
