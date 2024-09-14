@@ -195,45 +195,54 @@ async function processDelayedResponse(phoneNumber) {
       const client = await getClientByPhoneNumber(phoneNumber);
       if (client.id != '') {
         await toggleLastMessageReadStatus(client.id);
-        if (responseMessage === "user" || responseMessage === "User") {
-          await sendNotificationToUser(
-            'New Message from ' + client.firstname,
-            `${client.firstname} ${client.lastname}: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
-            client.id,
-            client.firstname + ' ' + client.lastname,
-            lastMessage,
-            false
-          );
+        
+        // Check if the phone number is not the special case
+        if (formatPhoneNumber(phoneNumber) !== '+12038324011') {
+          if (responseMessage === "user" || responseMessage === "User") {
+            await sendNotificationToUser(
+              'New Message from ' + client.firstname,
+              `${client.firstname} ${client.lastname}: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
+              client.id,
+              client.firstname + ' ' + client.lastname,
+              lastMessage,
+              false
+            );
+          } else {
+            // Save the suggested response
+            await saveSuggestedResponse(client.id, responseMessage);
+            await sendNotificationToUser(
+              client.firstname + ' ' + client.lastname,
+              responseMessage,
+              client.id,
+              client.firstname + ' ' + client.lastname,
+              lastMessage,
+              true
+            );
+          }
+        } else {
+          console.log(`No notification sent for special number ${phoneNumber}`);
         }
-        else {
-          // Save the suggested response
-          await saveSuggestedResponse(client.id, responseMessage);
-          await sendNotificationToUser(
-            client.firstname + ' ' + client.lastname,
-            responseMessage,
-            client.id,
-            client.firstname + ' ' + client.lastname,
-            lastMessage,
-            true
-          );
-        }
-      } 
-      
-        else {
-          await sendMessage(phoneNumber, responseMessage, false, false);
-        }
+      } else {
+        await sendMessage(phoneNumber, responseMessage, false, false);
       }
+    }
   } catch (error) {
     console.error('Error processing delayed response:', error);
     const client = await getClientByPhoneNumber(phoneNumber);
-    await sendNotificationToUser(
-      'New Client Message',
-      `${client.firstname} ${client.lastname}: ${lastMessage}`,
-      client.id,
-      client.firstname + ' ' + client.lastname,
-      lastMessage,
-      false
-    );
+    
+    // Check if the phone number is not the special case before sending error notification
+    if (formatPhoneNumber(phoneNumber) !== '+12038324011') {
+      await sendNotificationToUser(
+        'New Client Message',
+        `${client.firstname} ${client.lastname}: ${lastMessage}`,
+        client.id,
+        client.firstname + ' ' + client.lastname,
+        lastMessage,
+        false
+      );
+    } else {
+      console.log(`No error notification sent for special number ${phoneNumber}`);
+    }
   }
 }
 
