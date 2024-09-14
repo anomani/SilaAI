@@ -54,40 +54,49 @@ function initializeCronJobs() {
         }
     });
 
-    // New cron job for checking waitlist requests, runs every hour
-    cron.schedule('0 * * * *', async () => {
+    // Updated cron job for checking waitlist requests, now runs every minute
+    cron.schedule('* * * * *', async () => {
         try {
-            console.log('Checking waitlist requests');
+            console.log('Starting waitlist check at:', new Date().toISOString());
             const waitlistRequests = await getActiveWaitlistRequests();
+            console.log(`Found ${waitlistRequests.length} active waitlist requests`);
             
             for (const request of waitlistRequests) {
+                console.log(`Processing request ID: ${request.id}, Type: ${request.requestType}`);
                 let availableSlots;
                 
                 switch (request.requestType) {
                     case 'specific':
+                        console.log(`Checking specific date: ${request.startDate}`);
                         availableSlots = await getAvailability(request.startDate, request.appointmentType, []);
                         break;
                     case 'range':
+                        console.log(`Checking date range: ${request.startDate} to ${request.endDate}`);
                         availableSlots = await checkRangeAvailability(request.startDate, request.endDate, request.appointmentType);
                         break;
                     case 'day':
+                        console.log(`Checking day of week: ${request.dayOfWeek}`);
                         availableSlots = await checkDayAvailability(request.dayOfWeek, request.appointmentType);
                         break;
                     case 'week':
+                        console.log(`Checking week starting from: ${request.startDate}`);
                         availableSlots = await checkWeekAvailability(request.startDate, request.appointmentType);
                         break;
                 }
                 
+                console.log(`Found ${availableSlots.length} available slots for request ID: ${request.id}`);
+                
                 if (availableSlots && availableSlots.length > 0) {
-                    // Notify the client
                     const client = await getClientById(request.clientId);
+                    console.log(`Notifying client ${client.id} for request ID: ${request.id}`);
                     const message = `A spot has opened up for your requested appointment on ${availableSlots[0].date} at ${availableSlots[0].startTime}. Please book soon!`;
                     await sendMessage(client.phonenumber, message, false, false);
                     await markWaitlistRequestAsNotified(request.id);
+                    console.log(`Marked request ID: ${request.id} as notified`);
                 }
             }
             
-            console.log('Finished checking waitlist requests');
+            console.log('Finished checking waitlist requests at:', new Date().toISOString());
         } catch (error) {
             console.error('Error checking waitlist requests:', error);
         }
