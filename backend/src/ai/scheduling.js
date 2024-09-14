@@ -1017,4 +1017,5 @@ async function shouldAIRespond(userMessages, thread) {
   }
 }
 
+
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal};
