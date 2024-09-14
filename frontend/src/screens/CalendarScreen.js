@@ -9,7 +9,6 @@ import BlockTimeModal from '../components/BlockTimeModal';
 import ClientCardView from '../components/ClientCardView';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 
-
 const CalendarScreen = ({ navigation }) => {
   const route = useRoute();
   const [appointments, setAppointments] = useState([]);
@@ -369,6 +368,8 @@ const CalendarScreen = ({ navigation }) => {
       return new Date('1970/01/01 ' + a.startTime) - new Date('1970/01/01 ' + b.startTime);
     });
 
+    let maxColumn = 0;
+
     sortedAppointments.forEach((appointment) => {
       const [startHour, startMinute] = appointment.startTime.split(':');
       const [endHour, endMinute] = appointment.endTime.split(':');
@@ -384,6 +385,7 @@ const CalendarScreen = ({ navigation }) => {
       while (timeSlots[`${startPosition}-${column}`]) {
         column++;
       }
+      maxColumn = Math.max(maxColumn, column);
 
       for (let i = startPosition; i < endPosition; i += HOUR_HEIGHT / 4) {
         timeSlots[`${i}-${column}`] = appointment.id;
@@ -475,7 +477,14 @@ const CalendarScreen = ({ navigation }) => {
       );
     });
 
-    return appointmentBlocks;
+    // Calculate the total width needed for all appointments
+    const totalWidth = (maxColumn + 1) * 210; // 210 is the width of each column
+
+    return (
+      <View style={{ width: Math.max(totalWidth, 350) }}>
+        {appointmentBlocks}
+      </View>
+    );
   };
 
   const renderCurrentTimeLine = () => {
@@ -558,7 +567,11 @@ const CalendarScreen = ({ navigation }) => {
               <View style={styles.timeline}>
                 {renderTimeSlots()}
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={true}
+                contentContainerStyle={{ flexGrow: 1 }}
+              >
                 <View style={styles.appointmentsContainer}>
                   {renderAppointments()}
                 </View>
