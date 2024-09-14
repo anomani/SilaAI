@@ -16,6 +16,7 @@ const { getAIPrompt , deleteAIPrompt} = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal } = require('./tools/rescheduleAppointment');
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
+const { createWaitlistRequest } = require('../model/waitlist');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -298,6 +299,30 @@ const tools = [
         required: []
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "createWaitlistRequest",
+      description: "Creates a waitlist request for a client when they want to be notified about appointment openings",
+      parameters: {
+        type: "object",
+        properties: {
+          clientId: { type: "number" },
+          requestType: { 
+            type: "string", 
+            enum: ["specific", "range", "day", "week"] 
+          },
+          startDate: { type: "string", format: "date" },
+          endDate: { type: "string", format: "date" },
+          startTime: { type: "string", format: "time" },
+          endTime: { type: "string", format: "time" },
+          dayOfWeek: { type: "number", minimum: 0, maximum: 6 },
+          appointmentType: { type: "string" }
+        },
+        required: ["clientId", "requestType", "appointmentType"]
+      }
+    }
   }
 ];
 
@@ -491,6 +516,18 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
       case "rescheduleAppointmentByPhoneAndDate":
         output = await rescheduleAppointmentByPhoneAndDate(client.phonenumber, args.currentDate, args.newDate, args.newStartTime);
         break;
+      case "createWaitlistRequest":
+        output = await createWaitlistRequest(
+          client.id,
+          args.requestType,
+          args.startDate,
+          args.endDate,
+          args.startTime,
+          args.endTime,
+          args.dayOfWeek,
+          args.appointmentType
+        );
+        break;
       default:
         const functionDetails = requiredActions.tool_calls[0].function;
         console.log(functionDetails);
@@ -596,6 +633,18 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
         break;
       case "rescheduleAppointmentByPhoneAndDate":
         output = await rescheduleAppointmentByPhoneAndDateInternal(client.phonenumber, args.currentDate, args.newDate, args.newStartTime);
+        break;
+      case "createWaitlistRequest":
+        output = await createWaitlistRequest(
+          client.id,
+          args.requestType,
+          args.startDate,
+          args.endDate,
+          args.startTime,
+          args.endTime,
+          args.dayOfWeek,
+          args.appointmentType
+        );
         break;
       default:
         const functionDetails = requiredActions.tool_calls[0].function;
