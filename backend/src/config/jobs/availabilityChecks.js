@@ -13,14 +13,6 @@ async function checkAvailability(request) {
                 console.log(`Checking date range: ${request.startdate} to ${request.enddate}`);
                 availableSlots = await checkRangeAvailability(request.startdate, request.enddate, request.appointmenttype);
                 break;
-            case 'day':
-                console.log(`Checking day of week: ${request.dayofweek}`);
-                availableSlots = await checkDayAvailability(request.dayofweek, request.appointmenttype);
-                break;
-            case 'week':
-                console.log(`Checking week starting from: ${request.startdate}`);
-                availableSlots = await checkWeekAvailability(request.startdate, request.appointmenttype);
-                break;
             default:
                 console.log(`Unknown request type: ${request.requesttype}`);
                 availableSlots = [];
@@ -103,7 +95,5 @@ async function checkWeekAvailability(startDate, appointmentType) {
 
 module.exports = {
     checkAvailability,
-    checkRangeAvailability,
-    checkDayAvailability,
-    checkWeekAvailability
+    checkRangeAvailability
 };
