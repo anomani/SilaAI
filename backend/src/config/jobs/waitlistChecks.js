@@ -1,6 +1,6 @@
 const { getActiveWaitlistRequests, markWaitlistRequestAsNotified } = require('../../model/waitlist');
 const { getClientById } = require('../../model/clients');
-const { sendMessage } = require('../../config/twilio');
+const { saveSuggestedResponse } = require('../../model/messages'); // Update this import
 const { checkAvailability } = require('./availabilityChecks');
 
 async function checkWaitlistRequests() {
@@ -20,9 +20,11 @@ async function checkWaitlistRequests() {
                 const formattedDate = slotDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
                 
                 const message = `A spot has opened up for your requested appointment on ${formattedDate}. Please book soon!`;
-                await sendMessage(client.phonenumber, message, false, false);
+                
+                // Save the message as a suggested response
+                await saveSuggestedResponse(client.id, message);
                 await markWaitlistRequestAsNotified(request.id);
-                console.log(`Marked request ID: ${request.id} as notified`);
+                console.log(`Marked request ID: ${request.id} as notified and set suggested response`);
             }
         }
         
