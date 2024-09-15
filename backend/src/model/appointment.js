@@ -433,6 +433,7 @@ async function createTestDataForWaitlist() {
     console.log('Test data created successfully');
 }
 
+
 // createTestDataForWaitlist();
 module.exports = {
     createAppointment,
