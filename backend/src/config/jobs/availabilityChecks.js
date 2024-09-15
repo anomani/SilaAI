@@ -57,41 +57,6 @@ async function checkRangeAvailability(startDate, endDate, appointmentType) {
     return availableSlots;
 }
 
-async function checkDayAvailability(dayOfWeek, appointmentType) {
-    const today = new Date();
-    let targetDate = new Date(today);
-
-    // Find the next occurrence of the specified day of the week
-    while (targetDate.getDay() !== dayOfWeek) {
-        targetDate.setDate(targetDate.getDate() + 1);
-    }
-
-    const dateString = targetDate.toISOString().split('T')[0];
-    const availableSlots = await getAvailabilityCron(dateString, appointmentType, []);
-
-    return availableSlots.map(slot => ({
-        date: dateString,
-        ...slot
-    }));
-}
-
-async function checkWeekAvailability(startDate, appointmentType) {
-    const startDateObj = new Date(startDate);
-    
-    for (let i = 0; i < 7; i++) {
-        const currentDate = new Date(startDateObj);
-        currentDate.setDate(currentDate.getDate() + i);
-        const dateString = currentDate.toISOString().split('T')[0];
-        
-        const result = await getAvailabilityCron(dateString, appointmentType, []);
-        
-        if (result && result.availableSlots && result.availableSlots.length > 0) {
-            return result; // Return the result as-is when we find available slots
-        }
-    }
-
-    return null; // Return null if no available slots are found in the week
-}
 
 module.exports = {
     checkAvailability,
