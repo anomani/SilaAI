@@ -18,21 +18,21 @@ async function createAppointment(appointmentType, acuityId, date, startTime, end
     }
 }
 
-async function main() {
-    await createAppointment('Adult Cut', 0, '2024-09-26', '12:45', '13:15', 3670, 'Adult Cut', 55);
-    // await createAppointment('Adult Cut', 0, '2023-07-27', '14:00', '15:00', 3670, 'test', 55);
+// async function main() {
+//     await createAppointment('Adult Cut', 0, '2024-09-26', '12:45', '13:15', 3670, 'Adult Cut', 55);
+// //     // await createAppointment('Adult Cut', 0, '2023-07-27', '14:00', '15:00', 3670, 'test', 55);
 
-    // await createAppointment('Adult Cut', 0, '2022-07-27', '14:00', '15:00', 3670, 'test', 55);
+// //     // await createAppointment('Adult Cut', 0, '2022-07-27', '14:00', '15:00', 3670, 'test', 55);
 
-    // await createAppointment('Adult Cut', 0, '2021-07-27', '14:00', '15:00', 3670, 'test', 55);
-    // await createAppointment('Adult Cut', 0, '2020-07-27', '14:00', '15:00', 3670, 'test', 55);
-    // await createAppointment('Adult Cut', 0, '2019-07-27', '14:00', '15:00', 3670, 'test', 55);
+// //     // await createAppointment('Adult Cut', 0, '2021-07-27', '14:00', '15:00', 3670, 'test', 55);
+// //     // await createAppointment('Adult Cut', 0, '2020-07-27', '14:00', '15:00', 3670, 'test', 55);
+// //     // await createAppointment('Adult Cut', 0, '2019-07-27', '14:00', '15:00', 3670, 'test', 55);
 
-    // await createAppointment('Adult Cut', 0, '2018-07-27', '14:00', '15:00', 3670, 'test', 55);
+// //     // await createAppointment('Adult Cut', 0, '2018-07-27', '14:00', '15:00', 3670, 'test', 55);
 
-}
+// }
 
-main();
+// main();
 
 async function getAppointmentById(appointmentId) {
     const db = dbUtils.getDB();
@@ -406,6 +406,34 @@ async function getEndingAppointments(currentTime) {
     return res.rows;
 }
 
+async function createTestDataForWaitlist() {
+    const startDate = '2024-11-01';
+    const endDate = '2024-11-10';
+    const clientId = 3670; // Using a sample client ID
+
+    let currentDate = new Date(startDate);
+    const lastDate = new Date(endDate);
+
+    while (currentDate <= lastDate) {
+        const dateString = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+        console.log(dateString)
+        await createAppointment(
+            'All day',
+            0,
+            dateString,
+            '09:00',
+            '17:00',
+            clientId,
+            'Test all-day appointment',
+            100
+        );
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    console.log('Test data created successfully');
+}
+
+// createTestDataForWaitlist();
 module.exports = {
     createAppointment,
     getAppointmentById,
