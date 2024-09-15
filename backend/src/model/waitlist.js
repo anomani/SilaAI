@@ -17,8 +17,6 @@ async function createWaitlistRequest(clientId, requestType, startDate, endDate, 
     }
 }
 
-
-
 async function getActiveWaitlistRequests() {
     const db = dbUtils.getDB();
     const sql = `
