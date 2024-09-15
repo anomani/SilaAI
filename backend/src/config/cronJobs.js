@@ -4,7 +4,7 @@ const { getUserByPhoneNumber } = require('../model/users');
 const { getUserPushTokens } = require('../model/pushToken');
 const { Expo } = require('expo-server-sdk');
 const { getActiveWaitlistRequests, markWaitlistRequestAsNotified } = require('../model/waitlist');
-const { getAvailability, findNextAvailableSlots } = require('../ai/tools/getAvailability');
+const { getAvailability, findNextAvailableSlots, getAvailabilityCron } = require('../ai/tools/getAvailability');
 const { sendMessage } = require('./twilio');
 const { getClientById } = require('../model/clients');
 
@@ -35,9 +35,7 @@ function initializeCronJobs() {
             const now = new Date();
             const adjustedNow = new Date(now);
             adjustedNow.setHours(adjustedNow.getHours() - 4); // Subtract 4 hours
-            console.log('Checking for ending appointments at:', adjustedNow);
             const endingAppointments = await getEndingAppointments(adjustedNow);
-            console.log('Found', endingAppointments.length, 'ending appointments');
             for (const appointment of endingAppointments) {
                 const message = `Appointment ended for ${appointment.firstname} ${appointment.lastname}. Click here to log the appointment`;
                 await sendNotificationToUser(
@@ -48,7 +46,7 @@ function initializeCronJobs() {
                     { clientId: appointment.clientid }
                 );
             }
-            console.log('Checked for ending appointments and sent notifications to barber if necessary');
+
         } catch (error) {
             console.error('Error checking ending appointments:', error);
         }
@@ -57,39 +55,61 @@ function initializeCronJobs() {
     // Updated cron job for checking waitlist requests, now runs every minute
     cron.schedule('* * * * *', async () => {
         try {
-            console.log('Starting waitlist check at:', new Date().toISOString());
             const waitlistRequests = await getActiveWaitlistRequests();
-            console.log(`Found ${waitlistRequests.length} active waitlist requests`);
             
             for (const request of waitlistRequests) {
-                console.log(`Processing request ID: ${request.id}, Type: ${request.requestType}`);
                 let availableSlots;
                 
-                switch (request.requestType) {
-                    case 'specific':
-                        console.log(`Checking specific date: ${request.startDate}`);
-                        availableSlots = await getAvailability(request.startDate, request.appointmentType, []);
-                        break;
-                    case 'range':
-                        console.log(`Checking date range: ${request.startDate} to ${request.endDate}`);
-                        availableSlots = await checkRangeAvailability(request.startDate, request.endDate, request.appointmentType);
-                        break;
-                    case 'day':
-                        console.log(`Checking day of week: ${request.dayOfWeek}`);
-                        availableSlots = await checkDayAvailability(request.dayOfWeek, request.appointmentType);
-                        break;
-                    case 'week':
-                        console.log(`Checking week starting from: ${request.startDate}`);
-                        availableSlots = await checkWeekAvailability(request.startDate, request.appointmentType);
-                        break;
+                try {
+                    switch (request.requesttype) {
+                        case 'specific':
+                            console.log(`Checking specific date: ${request.startdate}`);
+                            availableSlots = await getAvailabilityCron(request.startdate, request.appointmenttype, []);
+                            console.log("AvailableSlots", availableSlots)
+                            break;
+                        case 'range':
+                            console.log(`Checking date range: ${request.startdate} to ${request.enddate}`);
+                            availableSlots = await checkRangeAvailability(request.startdate, request.enddate, request.appointmenttype);
+                            break;
+                        case 'day':
+                            console.log(`Checking day of week: ${request.dayofweek}`);
+                            availableSlots = await checkDayAvailability(request.dayofweek, request.appointmenttype);
+                            break;
+                        case 'week':
+                            console.log(`Checking week starting from: ${request.startdate}`);
+                            availableSlots = await checkWeekAvailability(request.startdate, request.appointmenttype);
+                            console.log("AvailableSlots", availableSlots)
+                            break;
+                        default:
+                            console.log(`Unknown request type: ${request.requesttype}`);
+                            availableSlots = [];
+                    }
+                    
+                    // Filter available slots based on request's time range
+                    if (availableSlots.length > 0) {
+                        availableSlots = availableSlots.filter(slot => {
+                            return slot.startTime >= request.starttime && slot.endTime <= request.endtime;
+                        });
+                    }
+                    
+                } catch (error) {
+                    console.error(`Error checking availability for request ID ${request.id}:`, error);
+                    availableSlots = [];
                 }
                 
-                console.log(`Found ${availableSlots.length} available slots for request ID: ${request.id}`);
-                
-                if (availableSlots && availableSlots.length > 0) {
-                    const client = await getClientById(request.clientId);
-                    console.log(`Notifying client ${client.id} for request ID: ${request.id}`);
-                    const message = `A spot has opened up for your requested appointment on ${availableSlots[0].date} at ${availableSlots[0].startTime}. Please book soon!`;
+                if (availableSlots.availableSlots && availableSlots.availableSlots.length > 0) {
+                    const client = await getClientById(request.clientid);
+                    
+                    // Use the date from the first available slot
+                    const [year, month, day] = availableSlots.date.split('-');
+                    const slotDate = new Date(Date.UTC(year, month - 1, day));
+                    
+                    // Subtract 4 hours
+                    slotDate.setUTCHours(slotDate.getUTCHours() - 4);
+                    
+                    const formattedDate = slotDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+                    
+                    const message = `A spot has opened up for your requested appointment on ${formattedDate}. Please book soon!`;
                     await sendMessage(client.phonenumber, message, false, false);
                     await markWaitlistRequestAsNotified(request.id);
                     console.log(`Marked request ID: ${request.id} as notified`);
@@ -144,7 +164,7 @@ async function checkRangeAvailability(startDate, endDate, appointmentType) {
 
     while (currentDate <= endDateObj) {
         const dateString = currentDate.toISOString().split('T')[0];
-        const daySlots = await getAvailability(dateString, appointmentType, []);
+        const daySlots = await getAvailabilityCron(dateString, appointmentType, []);
         
         if (daySlots.length > 0) {
             availableSlots.push(...daySlots.map(slot => ({
@@ -171,7 +191,7 @@ async function checkDayAvailability(dayOfWeek, appointmentType) {
     }
 
     const dateString = targetDate.toISOString().split('T')[0];
-    const availableSlots = await getAvailability(dateString, appointmentType, []);
+    const availableSlots = await getAvailabilityCron(dateString, appointmentType, []);
 
     return availableSlots.map(slot => ({
         date: dateString,
@@ -181,27 +201,33 @@ async function checkDayAvailability(dayOfWeek, appointmentType) {
 
 async function checkWeekAvailability(startDate, appointmentType) {
     const startDateObj = new Date(startDate);
-    let availableSlots = [];
-
+    
     for (let i = 0; i < 7; i++) {
         const currentDate = new Date(startDateObj);
         currentDate.setDate(currentDate.getDate() + i);
         const dateString = currentDate.toISOString().split('T')[0];
         
-        const daySlots = await getAvailability(dateString, appointmentType, []);
+        const result = await getAvailabilityCron(dateString, appointmentType, []);
         
-        if (daySlots.length > 0) {
-            availableSlots.push(...daySlots.map(slot => ({
-                date: dateString,
-                ...slot
-            })));
-
-            if (availableSlots.length > 0) break; // Stop after finding the first available slot
+        if (result && result.availableSlots && result.availableSlots.length > 0) {
+            return result; // Return the result as-is when we find available slots
         }
     }
 
-    return availableSlots;
+    return null; // Return null if no available slots are found in the week
 }
+
+// async function test() {
+//     const availableSlots = [{
+//         date: '2024-09-26',
+//         availableSlots: [ { startTime: '12:45', endTime: '13:15' } ]
+//       }]
+//       const slotDate = new Date(availableSlots[0].date);
+//       const formattedDate = slotDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+//       console.log(formattedDate)
+// }
+
+// test()
 
 module.exports = {
     initializeCronJobs

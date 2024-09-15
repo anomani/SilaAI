@@ -66,7 +66,6 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
                 if (currentTime >= endOfSlot) break;
             }
         }
-        console.log({date: day, availableSlots: availableSlots});
         return availableSlots;
     } catch (error) {
         console.error("Error:", error);
@@ -74,6 +73,75 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
     }
 }
 
+async function getAvailabilityCron(day, appointmentType, addOnArray, clientId = null) {
+    console.log("Day:", day);
+    console.log("Appointment Type:", appointmentType);
+    console.log("Add-ons:", addOnArray);
+    
+    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
+    }
+    
+    const group = appointmentTypeInfo.group;
+    console.log("Group:", group);
+
+    const duration = calculateTotalDuration(appointmentType, addOnArray);
+
+    try {
+        const date = new Date(day);
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 1) {
+            return []
+        }
+        const groupAvailability = getGroupAvailability(group, dayOfWeek);
+        if (!groupAvailability) {
+            return []
+        }
+
+        const appointments = await getAppointmentsByDay(day);
+        const availableSlots = [];
+
+        const now = new Date();
+        const isToday = now.toDateString() === date.toDateString();
+
+        for (const slot of groupAvailability) {
+            const startOfSlot = new Date(`${day}T${slot.start}`);
+            const endOfSlot = new Date(`${day}T${slot.end}`);
+            let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
+            for (let i = 0; i <= appointments.length; i++) {
+                const appointment = appointments[i];
+                if (clientId && appointment && appointment.clientId === clientId) {
+                    // Skip this appointment if it belongs to the current client
+                    continue;
+                }
+
+                const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
+                const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
+                if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000 && currentTime <= endOfSlot) {
+                    console.log("slot is available")
+                    const slotEndTime = new Date(Math.min(appointmentStart, endOfSlot));
+                    const slotDuration = slotEndTime - currentTime;
+
+                    if (slotDuration >= duration * 60000) {
+                        availableSlots.push({
+                            startTime: new Date(currentTime).toTimeString().slice(0, 5),
+                            endTime: slotEndTime.toTimeString().slice(0, 5)
+                        });
+                    }
+                }
+
+                currentTime = appointmentEnd > currentTime ? appointmentEnd : currentTime;
+                if (currentTime >= endOfSlot) break;
+            }
+        }
+        console.log({date: day, availableSlots: availableSlots});
+        return {date: day, availableSlots: availableSlots}
+    } catch (error) {
+        console.error("Error:", error);
+        return [];
+    }
+}
 function calculateTotalDuration(appointmentType, addOnArray) {
     const appointmentDuration = appointmentTypes[appointmentType].duration;
     const addOnsDuration = addOnArray.reduce((total, addOn) => total + addOns[addOn].duration, 0);
@@ -148,4 +216,4 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, num
 }
 
 
-module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots}
+module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots, getAvailabilityCron}
