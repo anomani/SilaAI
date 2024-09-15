@@ -311,13 +311,12 @@ const tools = [
           clientId: { type: "number" },
           requestType: { 
             type: "string", 
-            enum: ["specific", "range", "day", "week"] 
+            enum: ["specific", "range"] 
           },
           startDate: { type: "string", format: "date" },
           endDate: { type: "string", format: "date" },
           startTime: { type: "string", format: "time" },
           endTime: { type: "string", format: "time" },
-          dayOfWeek: { type: "number", minimum: 0, maximum: 6 },
           appointmentType: { type: "string" }
         },
         required: ["clientId", "requestType", "appointmentType"]
@@ -524,7 +523,6 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
           args.endDate,
           args.startTime,
           args.endTime,
-          args.dayOfWeek,
           args.appointmentType
         );
         break;
@@ -642,7 +640,6 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
           args.endDate,
           args.startTime,
           args.endTime,
-          args.dayOfWeek,
           args.appointmentType
         );
         break;
