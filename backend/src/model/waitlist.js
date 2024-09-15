@@ -1,13 +1,13 @@
 const dbUtils = require('./dbUtils');
 
-async function createWaitlistRequest(clientId, requestType, startDate, endDate, startTime, endTime, dayOfWeek, appointmentType) {
+async function createWaitlistRequest(clientId, requestType, startDate, endDate, startTime, endTime, appointmentType) {
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO WaitlistRequest (clientId, requestType, startDate, endDate, startTime, endTime, dayOfWeek, appointmentType)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO WaitlistRequest (clientId, requestType, startDate, endDate, startTime, endTime, appointmentType)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
     `;
-    const values = [clientId, requestType, startDate, endDate, startTime, endTime, dayOfWeek, appointmentType];
+    const values = [clientId, requestType, startDate, endDate, startTime, endTime, appointmentType];
     try {
         const res = await db.query(sql, values);
         return res.rows[0].id;

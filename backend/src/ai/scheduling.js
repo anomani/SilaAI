@@ -641,6 +641,14 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
         output = await rescheduleAppointmentByPhoneAndDateInternal(client.phonenumber, args.currentDate, args.newDate, args.newStartTime);
         break;
       case "createWaitlistRequest":
+        console.log("Creating waitlist request with the following parameters:");
+        console.log("Client ID:", client.id);
+        console.log("Request Type:", args.requestType);
+        console.log("Start Date:", args.startDate);
+        console.log("End Date:", args.endDate);
+        console.log("Start Time:", args.startTime);
+        console.log("End Time:", args.endTime);
+        console.log("Appointment Type:", args.appointmentType);
         output = await createWaitlistRequest(
           client.id,
           args.requestType,
