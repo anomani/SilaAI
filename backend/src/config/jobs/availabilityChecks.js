@@ -34,27 +34,23 @@ async function checkAvailability(request) {
 }
 
 async function checkRangeAvailability(startDate, endDate, appointmentType) {
-    let currentDate = new Date(startDate);
+    const startDateObj = new Date(startDate);
     const endDateObj = new Date(endDate);
-    let availableSlots = [];
 
+    let currentDate = startDateObj;
+    
     while (currentDate <= endDateObj) {
         const dateString = currentDate.toISOString().split('T')[0];
-        const daySlots = await getAvailabilityCron(dateString, appointmentType, []);
         
-        if (daySlots.length > 0) {
-            availableSlots.push(...daySlots.map(slot => ({
-                date: dateString,
-                ...slot
-            })));
-
-            if (availableSlots.length > 0) break; // Stop after finding the first available slot
+        const result = await getAvailabilityCron(dateString, appointmentType, []);
+        
+        if (result && result.availableSlots && result.availableSlots.length > 0) {
+            return result; // Return the result as-is when we find available slots
         }
-
         currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    return availableSlots;
+    return null; // Return null if no available slots are found in the date range
 }
 
 
