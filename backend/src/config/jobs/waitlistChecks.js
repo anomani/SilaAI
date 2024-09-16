@@ -9,7 +9,7 @@ async function checkWaitlistRequests() {
         
         for (const request of waitlistRequests) {
             const availableSlots = await checkAvailability(request);
-            
+            console.log("Available slots:", availableSlots);
             if (availableSlots.availableSlots && availableSlots.availableSlots.length > 0) {
                 const client = await getClientById(request.clientid);
                 
