@@ -27,7 +27,7 @@
         "mongodb": "^6.7.0",
         "multer": "^1.4.5-lts.1",
         "node-cron": "^2.0.3",
-        "openai": "^4.47.1",
+        "openai": "^4.62.0",
         "os": "^0.1.2",
         "pg": "^8.12.0",
         "puppeteer": "^22.10.0",
@@ -36,7 +36,8 @@
         "sqlite3": "^5.1.7",
         "twilio": "^5.0.4",
         "uuid": "^10.0.0",
-        "yahoo-finance2": "^2.11.2"
+        "yahoo-finance2": "^2.11.2",
+        "zod": "^3.23.8"
     },
     "devDependencies": {
         "jest": "^28.1.3"

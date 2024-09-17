@@ -3,6 +3,7 @@ const { getClientById } = require('../../model/clients');
 const { saveSuggestedResponse } = require('../../model/messages'); // Update this import
 const { checkAvailability } = require('./availabilityChecks');
 
+
 async function checkWaitlistRequests() {
     try {
         const waitlistRequests = await getActiveWaitlistRequests();
