@@ -6,7 +6,7 @@ const { bookAppointment, bookAppointmentInternal } = require('./tools/bookAppoin
 const {cancelAppointment, cancelAppointmentInternal} = require('./tools/cancelAppointment')
 const { getClientByPhoneNumber, createClient, updateClientNames } = require('../model/clients');
 const {getMessagesByClientId} = require('../model/messages')
-const {getAllAppointmentsByClientId, getUpcomingAppointments} = require('../model/appointment')
+const {getAllAppointmentsByClientId, getUpcomingAppointments, getAppointmentsByDay} = require('../model/appointment')
 const fs = require('fs');
 const path = require('path');
 const { createRecurringAppointments, createRecurringAppointmentsInternal } = require('./tools/recurringAppointments');
@@ -17,6 +17,7 @@ const { Anthropic } = require('@anthropic-ai/sdk');
 const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal } = require('./tools/rescheduleAppointment');
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { createWaitlistRequest } = require('../model/waitlist');
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -1028,5 +1029,6 @@ async function shouldAIRespond(userMessages, thread) {
     return false; // Default to human attention if there's an error
   }
 }
+
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal};

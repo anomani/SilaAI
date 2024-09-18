@@ -49,6 +49,8 @@ async function getClientById(clientId) {
     }
 }
 
+
+
 async function updateClient(clientId, firstName, lastName, phoneNumber, email, notes) {
     const db = dbUtils.getDB();
     const sql = `
