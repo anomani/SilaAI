@@ -1,9 +1,24 @@
 const { sendMessages } = require('../model/messages');
 const { getClientById, getOldClients, updateClientOutreachDate } = require('../model/clients');
 const { getAvailableSlots } = require('./tools/getAvailableSlots');
-const openai = require('../services/openai');
+const { OpenAI } = require('openai');
+const { zodResponseFormat } = require("openai/helpers/zod");
+const { z } = require("zod");
 const schedule = require('node-schedule');
 const logger = require('../utils/logger');
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY, // Make sure this environment variable is set
+});
+
+
+const StrategySchema = z.object({
+  recommendedStrategy: z.string(),
+  specificActions: z.object({
+    numberOfCustomersToContact: z.number(),
+  }),
+  draftCustomerMessage: z.string(),
+});
 
 async function fillMyCalendar(startDate, endDate, appointmentType, addOnArray) {
   try {
@@ -72,51 +87,28 @@ async function determineStrategy(data) {
     Conversion Rate Estimate:
 
     Estimated Conversion Rate: ${data.conversionRateEstimate.estimatedConversionRate}
-
-    Expected Output:
-
-    Recommended Strategy:
-    Specific Actions:
-    Draft Customer Message:
   `;
 
-  const response = await openai.createCompletion({
-    model: "gpt-4",
-    prompt: prompt,
-    max_tokens: 500,
-    temperature: 0.7
-  });
-
   try {
-    const strategy = parseLLMResponse(response.data.choices[0].text);
+    const completion = await openai.beta.chat.completions.parse({
+      model: "gpt-4-1106-preview", // Use the latest available model
+      messages: [
+        { role: "system", content: "You are a strategic AI assistant for a barber shop. Provide a strategy to fill empty appointment slots." },
+        { role: "user", content: prompt },
+      ],
+      response_format: zodResponseFormat(StrategySchema, "strategy"),
+    });
+
+    const strategy = completion.choices[0].message.parsed;
     return strategy;
   } catch (error) {
-    console.error("Error parsing LLM response:", error);
+    console.error("Error getting strategy from LLM:", error);
     // Fallback strategy
     return defaultStrategy(data);
   }
 }
 
-function parseLLMResponse(responseText) {
-  // Implement parsing logic based on the expected output format
-  // This could involve regex or using a markdown parser
-  // For simplicity, let's assume structured text and extract sections
-  const recommendedStrategyMatch = responseText.match(/Recommended Strategy:\s*(.*)/i);
-  const specificActionsMatch = responseText.match(/Specific Actions:\s*Number of Customers to Contact:\s*(\d+)/i);
-  const draftMessageMatch = responseText.match(/Draft Customer Message:\s*"(.*)"/i);
-
-  if (recommendedStrategyMatch && specificActionsMatch && draftMessageMatch) {
-    return {
-      recommendedStrategy: recommendedStrategyMatch[1].trim(),
-      specificActions: {
-        numberOfCustomersToContact: parseInt(specificActionsMatch[1].trim())
-      },
-      draftCustomerMessage: draftMessageMatch[1].trim()
-    };
-  } else {
-    throw new Error("Failed to parse LLM response");
-  }
-}
+// Remove the parseLLMResponse function as it's no longer needed
 
 function defaultStrategy(data) {
   // Define a fallback strategy if LLM fails

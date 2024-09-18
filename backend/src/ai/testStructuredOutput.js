@@ -1,12 +1,15 @@
+const path = require('path');
 const dotenv = require('dotenv');
 dotenv.config({ path: '../env' });
+
+// Now require other modules
 const { OpenAI } = require('openai');
 const { zodResponseFormat } = require("openai/helpers/zod");
 const { z } = require("zod");
-console.log(process.env.OPENAI_API_KEY)
+
 
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey:'sk-proj-qgeFK451cWki7oGv7s1xT3BlbkFJdMZerPnr4Mnqn1O203jE',
 });
 
 const CalendarEvent = z.object({

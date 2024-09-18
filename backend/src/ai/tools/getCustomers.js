@@ -11,4 +11,5 @@ async function getInfo(query) {
     }
 }
 
+
 module.exports = { getInfo };
