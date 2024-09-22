@@ -98,13 +98,6 @@ async function getAppointmentsByDay(date) {
     }
 }
 
-async function main() {
-    const appointments = await getAppointmentsByDay('2024-07-27');
-    console.log(appointments);
-}
-
-main();
-
 async function getAllAppointmentsByClientId(clientId) {
     const db = dbUtils.getDB();
     const sql = 'SELECT * FROM Appointment WHERE clientId = $1 ORDER BY date DESC';

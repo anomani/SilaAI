@@ -1,4 +1,5 @@
 const dbUtils = require('./dbUtils');
+const { appointmentTypes } = require('./appointmentTypes');
 
 async function createClient(firstName, lastName, phoneNumber, email, notes) {
     const db = dbUtils.getDB();
@@ -292,6 +293,130 @@ async function updateClientNames(clientId, firstName, lastName) {
     }
 }
 
+/**
+ * Retrieves clients who haven't had an appointment in the last 6 weeks
+ * and haven't been contacted in the last 90 days.
+ * @returns {Promise<Array>} List of old clients eligible for outreach, sorted by most recent visit
+ */
+async function getOldClients() {
+    const db = dbUtils.getDB();
+    const inactivityThresholdDays = 42; // Clients inactive for 6 weeks
+    const outreachThresholdDays = 90; // No outreach in the last 90 days
+
+    const currentDate = new Date().toISOString().split('T')[0];
+    const pastThresholdDate = new Date(Date.now() - inactivityThresholdDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const outreachThresholdDate = new Date(Date.now() - outreachThresholdDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const sql = `
+        WITH RankedAppointments AS (
+            SELECT 
+                clientid,
+                appointmenttype,
+                COUNT(*) as type_count,
+                ROW_NUMBER() OVER (PARTITION BY clientid ORDER BY COUNT(*) DESC) as rn
+            FROM Appointment
+            GROUP BY clientid, appointmenttype
+        ),
+        FutureAppointments AS (
+            SELECT DISTINCT clientid
+            FROM Appointment
+            WHERE date > $1
+        )
+        SELECT 
+            c.id, c.firstName, c.lastName, c.phoneNumber, c.outreach_date,
+            a.lastAppointmentDate AS lastVisitDate,
+            ra.appointmenttype AS mostCommonAppointmentType
+        FROM Client c
+        LEFT JOIN (
+            SELECT clientid, MAX(date) AS lastAppointmentDate
+            FROM Appointment
+            WHERE date <= $1
+            GROUP BY clientid
+        ) a ON c.id = a.clientid
+        LEFT JOIN RankedAppointments ra ON c.id = ra.clientid AND ra.rn = 1
+        WHERE 
+            (a.lastAppointmentDate IS NULL OR a.lastAppointmentDate <= $2)
+            AND (c.outreach_date IS NULL OR c.outreach_date <= $3)
+            AND c.id NOT IN (SELECT clientid FROM FutureAppointments)
+        ORDER BY a.lastAppointmentDate DESC NULLS LAST
+        LIMIT 100
+    `;
+
+    const values = [currentDate, pastThresholdDate, outreachThresholdDate];
+
+    try {
+        const res = await db.query(sql, values);
+        return res.rows.map(row => ({
+            ...row,
+            group: getGroupForAppointmentType(row.mostcommonappointmenttype)
+        }));
+    } catch (err) {
+        console.error('Error fetching old clients:', err.message);
+        throw err;
+    }
+}
+
+function getGroupForAppointmentType(appointmentType) {
+    if (!appointmentType) return 1; // Default to group 1 if appointmentType is null or undefined
+    const appointmentInfo = appointmentTypes[appointmentType];
+    return appointmentInfo ? appointmentInfo.group : 1; // Default to group 1 if not found
+}
+
+async function main() {
+    const oldClients = await getOldClients();
+    console.log(JSON.stringify(oldClients, null, 2));
+}
+
+main()
+
+/**
+ * Updates the outreach information for a client after sending a message.
+ * @param {string} clientId - The ID of the client.
+ * @returns {Promise<void>}
+ */
+async function updateClientOutreachInfo(clientId) {
+    const db = dbUtils.getDB();
+    const sql = `
+        UPDATE Client
+        SET 
+            outreach_date = CURRENT_DATE
+        WHERE id = $1
+    `;
+    const values = [clientId];
+    
+    try {
+        await db.query(sql, values);
+        console.log(`Outreach info updated for client ID: ${clientId}`);
+    } catch (err) {
+        console.error('Error updating outreach info:', err.message);
+        throw err;
+    }
+}
+
+/**
+ * Retrieves the number of customers contacted within the last specified number of days.
+ * @param {number} [days=30] - The number of days to look back for outreach contacts.
+ * @returns {Promise<number>} The count of customers contacted.
+ */
+async function getNumberOfCustomersContacted(days = 30) {
+    const db = dbUtils.getDB();
+    const sql = `
+        SELECT COUNT(DISTINCT id) as contacted_count
+        FROM Client
+        WHERE outreach_date >= CURRENT_DATE - INTERVAL '${days} days'
+    `;
+
+    try {
+        const res = await db.query(sql);
+        return parseInt(res.rows[0].contacted_count, 10);
+    } catch (err) {
+        console.error('Error getting number of customers contacted:', err.message);
+        throw err;
+    }
+}
+
+
+
 module.exports = {
     createClient,
     getClientById,
@@ -308,5 +433,8 @@ module.exports = {
     getClientByName,
     getClientAutoRespond,
     updateClientAutoRespond,
-    updateClientNames
+    updateClientNames,
+    getOldClients,
+    updateClientOutreachInfo,
+    getNumberOfCustomersContacted
 };

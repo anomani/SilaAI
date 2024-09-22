@@ -1,41 +1,57 @@
 const { sendMessages } = require('../model/messages');
-const { getClientById, getOldClients, updateClientOutreachDate } = require('../model/clients');
+const { getClientById, getOldClients, updateClientOutreachInfo, getNumberOfCustomersContacted } = require('../model/clients');
 const { getAvailableSlots } = require('./tools/getAvailableSlots');
 const { OpenAI } = require('openai');
 const { zodResponseFormat } = require("openai/helpers/zod");
 const { z } = require("zod");
-const schedule = require('node-schedule');
-const logger = require('../utils/logger');
+const { saveSuggestedResponse } = require('../model/messages');
 
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY, // Make sure this environment variable is set
+    apiKey: process.env.OPENAI_API_KEY, // Ensure this environment variable is set
 });
 
-
+// Update the StrategySchema
 const StrategySchema = z.object({
   recommendedStrategy: z.string(),
   specificActions: z.object({
-    numberOfCustomersToContact: z.number(),
+    customersToContact: z.array(z.number()), // Array of customer IDs
   }),
-  draftCustomerMessage: z.string(),
+  // Removed draftCustomerMessage
 });
 
-async function fillMyCalendar(startDate, endDate, appointmentType, addOnArray) {
+async function fillMyCalendar(startDate, endDate) {
   try {
-    const availableSlots = await getAvailableSlots(startDate, endDate, appointmentType, addOnArray);
+    const availableSlots = await getAvailableSlots(startDate, endDate);
     const oldClients = await getOldClients();
+    console.log(oldClients.length);
+    if (oldClients.length === 0) {
+      return "No outreach messages sent. No eligible clients.";
+    }
+
+    // Calculate total empty spots and categorize them by group
+    const slotsByGroup = availableSlots.reduce((acc, day) => {
+      Object.entries(day.slotsByGroup).forEach(([group, slots]) => {
+        if (!acc[group]) {
+          acc[group] = 0;
+        }
+        acc[group] += slots.length;
+      });
+      return acc;
+    }, {});
+
+    const totalEmptySpots = Object.values(slotsByGroup).reduce((sum, count) => sum + count, 0);
 
     // Prepare data for strategy decision
     const data = {
       appointmentData: {
-        totalEmptySpots: availableSlots.length,
+        totalEmptySpots,
+        slotsByGroup,
         timeframeDays: calculateTimeframe(startDate, endDate)
       },
       customerData: oldClients.map(client => ({
         customerId: client.id,
-        lastVisitDate: client.lastAppointmentDate,
-        hasNearFutureAppointment: client.hasNearFutureAppointment,
-        priorityLevel: client.priorityLevel
+        lastVisitDate: client.lastvisitdate,
+        group: client.group 
       })),
       outreachStatus: {
         numberOfCustomersAlreadyContacted: await getNumberOfCustomersContacted()
@@ -45,21 +61,31 @@ async function fillMyCalendar(startDate, endDate, appointmentType, addOnArray) {
       }
     };
 
-    // Determine the best strategy using LLM
+    console.log(data);
+    // // Determine the best strategy using LLM
     const strategy = await determineStrategy(data);
+    console.log(strategy);
+    // // Execute the strategy
+    // const selectedClients = await selectClientsBasedOnStrategy(strategy, oldClients);
+    // console.log(selectedClients);
+    // // Use the predefined message instead of the AI-generated one
+    // // const message = "Hey {name}, this is Uzi from Uzi Cuts reaching out from my new business number. How's everything going bro";
 
-    // Execute the strategy
-    const selectedClients = await selectClientsBasedOnStrategy(strategy, oldClients);
-    const message = strategy.draftCustomerMessage;
-
-    const result = await sendOutreachMessages(selectedClients, message);
-
-    return result;
+    // // Save suggested responses instead of sending messages
+    // // const result = await saveSuggestedResponses(selectedClients, message);
+    // return result;
   } catch (error) {
     console.error("Error in fillMyCalendar:", error);
     throw error;
   }
 }
+
+// async function main() {
+//   await fillMyCalendar('2024-09-21', '2024-09-28');
+// }
+
+// main();
+
 
 function calculateTimeframe(startDate, endDate) {
   const start = new Date(startDate);
@@ -71,27 +97,30 @@ function calculateTimeframe(startDate, endDate) {
 
 async function determineStrategy(data) {
   const prompt = `
-    I am trying to fill empty appointment slots for a barber shop using direct outreach to lapsed customers. I need to maximize revenue while ensuring all slots are filled within the next few days. Given the data below, please provide the best strategy and the specific actions I should take next. Include how many customers to contact and draft a message to send to them.
+    I am trying to fill empty appointment slots for a barber shop using direct outreach to lapsed customers. I need to maximize revenue while ensuring all slots are filled within the next few days. Given the data below, please provide the best strategy and the specific actions I should take next. Include a list of customer IDs to contact.
 
     Input Data:
 
     Appointment Data:
-
     Total Empty Spots: ${data.appointmentData.totalEmptySpots}
+    Slots by Group: ${JSON.stringify(data.appointmentData.slotsByGroup)}
     Timeframe (days): ${data.appointmentData.timeframeDays}
+
     Customer Data:
     ${JSON.stringify(data.customerData, null, 2)}
+
     Outreach Status:
-
     Number of Customers Already Contacted: ${data.outreachStatus.numberOfCustomersAlreadyContacted}
-    Conversion Rate Estimate:
 
+    Conversion Rate Estimate:
     Estimated Conversion Rate: ${data.conversionRateEstimate.estimatedConversionRate}
+
+    Please consider the different groups when recommending a strategy. Each group represents a different type of appointment or service. Provide a list of specific customer IDs that best match the available slots, considering their group preference and last visit date.
   `;
 
   try {
     const completion = await openai.beta.chat.completions.parse({
-      model: "gpt-4-1106-preview", // Use the latest available model
+      model: "gpt-4o-mini-2024-07-18", 
       messages: [
         { role: "system", content: "You are a strategic AI assistant for a barber shop. Provide a strategy to fill empty appointment slots." },
         { role: "user", content: prompt },
@@ -108,35 +137,28 @@ async function determineStrategy(data) {
   }
 }
 
-// Remove the parseLLMResponse function as it's no longer needed
-
 function defaultStrategy(data) {
   // Define a fallback strategy if LLM fails
   return {
-    recommendedStrategy: "Continue outreach without specific targeting.",
+    recommendedStrategy: "Contact the most recently visited customers from each group.",
     specificActions: {
-      numberOfCustomersToContact: 10
+      customersToContact: data.customerData.slice(0, 10).map(customer => customer.customerId)
     },
-    draftCustomerMessage: "Hi, we'd love to see you back at our barber shop! Please book your next appointment at your convenience."
+    // Removed draftCustomerMessage
   };
 }
 
 async function selectClientsBasedOnStrategy(strategy, clients) {
-  const numberOfCustomers = strategy.specificActions.numberOfCustomersToContact;
-  
-  // Prioritize high-level customers
-  const highPriorityClients = clients.filter(client => client.priorityLevel === "High");
-  const lowPriorityClients = clients.filter(client => client.priorityLevel === "Low");
-  
-  let selectedClients = [];
+  // Filter clients based on the IDs provided by the strategy
+  const selectedClients = clients.filter(client => 
+    strategy.specificActions.customersToContact.includes(client.id)
+  );
 
-  if (highPriorityClients.length >= numberOfCustomers) {
-    selectedClients = highPriorityClients.slice(0, numberOfCustomers);
-  } else {
-    selectedClients = highPriorityClients;
-    const remaining = numberOfCustomers - highPriorityClients.length;
-    selectedClients = selectedClients.concat(lowPriorityClients.slice(0, remaining));
-  }
+  // Sort selected clients by their order in the strategy's customersToContact array
+  selectedClients.sort((a, b) => 
+    strategy.specificActions.customersToContact.indexOf(a.id) - 
+    strategy.specificActions.customersToContact.indexOf(b.id)
+  );
 
   return selectedClients;
 }
@@ -149,43 +171,26 @@ function personalizeMessage(template, client) {
     .replace("[Website URL]", "https://yourbarbershop.com");
 }
 
-async function sendOutreachMessages(clients, messageTemplate) {
+async function saveSuggestedResponses(clients, messageTemplate) {
   try {
-    const personalizedMessages = await Promise.all(clients.map(async (client) => {
-      const clientData = await getClientById(client.customerId);
-      return personalizeMessage(messageTemplate, clientData);
+    const savedResponses = await Promise.all(clients.map(async (client) => {
+      // Update outreach info before saving suggested response
+      await updateClientOutreachInfo(client.id);
+
+      const clientData = await getClientById(client.id);
+      const personalizedMessage = personalizeMessage(messageTemplate, clientData);
+      return saveSuggestedResponse(client.id, personalizedMessage);
     }));
-    const phoneNumbers = clients.map(client => client.phoneNumber);
-    const messages = personalizedMessages;
 
-    await sendMessages(phoneNumbers, messages);
-
-    // Update outreach dates
-    const currentDate = new Date().toISOString().split('T')[0];
-    await Promise.all(clients.map(client => updateClientOutreachDate(client.customerId, currentDate)));
-
-    logger.info("Outreach messages sent and outreach dates updated.");
-    return "Outreach messages sent successfully and outreach dates updated.";
+    return `Suggested responses saved for ${savedResponses.length} clients.`;
   } catch (error) {
-    logger.error("Error sending outreach messages:", error);
+    console.error("Error in saveSuggestedResponses:", error);
     throw error;
   }
 }
 
 // Schedule the fillMyCalendar function to run daily at 8 AM
-schedule.scheduleJob('0 8 * * *', async () => {
-  const startDate = getTodayDate();
-  const endDate = getFutureDate(7); // Next 7 days
-  const appointmentType = 'standard';
-  const addOnArray = [];
 
-  try {
-    const result = await fillMyCalendar(startDate, endDate, appointmentType, addOnArray);
-    console.log("Calendar filled successfully:", result);
-  } catch (error) {
-    console.error("Failed to fill calendar:", error);
-  }
-});
 
 module.exports = {
   fillMyCalendar

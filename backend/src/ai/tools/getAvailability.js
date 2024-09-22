@@ -215,5 +215,4 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, num
   return availableSlots;
 }
 
-
 module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots, getAvailabilityCron}
