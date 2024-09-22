@@ -38,13 +38,6 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ScheduleScreen')}>
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>Internal Testing</Text>
-            <Text style={styles.menuSubtitle}>Internal testing for Uzi AI</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#fff" />
-        </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Metrics')}>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Metrics</Text>
