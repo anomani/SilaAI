@@ -13,7 +13,7 @@ import DailyAppointments from './src/screens/DailyAppointments';
 // Import your screen components
 import Homepage from './src/screens/Homepage';
 import ClientListScreen from './src/screens/ClientListScreen';
-import ScheduleScreen from './src/screens/ScheduleScreen'
+import ScheduleScreen from './src/screens/ScheduleScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import AddAppointmentScreen from './src/screens/AddAppointmentScreen';
 import ClientDetailsScreen from './src/screens/ClientDetailsScreen';
@@ -25,7 +25,8 @@ import EditClientScreen from './src/screens/EditClientScreen';
 import ChatDashboard from './src/screens/ChatDashboard';
 import ClientMessagesScreen from './src/screens/ClientMessagesScreen';
 import InitiateConversation from './src/screens/InitiateConversation';
-import MetricsScreen from './src/screens/MetricsScreen'; // Add this import
+import MetricsScreen from './src/screens/MetricsScreen';
+import SettingsPage from './src/screens/SettingsPage'; // Add this import
 
 const Stack = createStackNavigator();
 
@@ -157,6 +158,7 @@ const AppContent: React.FC = () => {
       <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
       <Stack.Screen name="Metrics" component={MetricsScreen} /> 
       <Stack.Screen name="DailyAppointments" component={DailyAppointments} />
+      <Stack.Screen name="Settings" component={SettingsPage} /> 
     </Stack.Navigator>
   );
 };
