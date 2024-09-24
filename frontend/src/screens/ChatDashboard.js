@@ -113,6 +113,9 @@ const ChatDashboard = ({ navigation }) => {
     }
 
     return filtered.sort((a, b) => {
+      // Handle cases where there might not be a date (for clients with only suggested responses)
+      if (!a.date) return 1;
+      if (!b.date) return -1;
       const dateA = parseDate(a.date);
       const dateB = parseDate(b.date);
       return dateB - dateA;
@@ -131,7 +134,7 @@ const ChatDashboard = ({ navigation }) => {
       }
     }
     
-    const formattedDateTime = formatTimestamp(message.date);
+    const formattedDateTime = message.date ? formatTimestamp(message.date) : 'No recent messages';
 
     return (
       <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid: message.clientid, clientName: dashboardData.clientNames[message.clientid] })}>
@@ -147,7 +150,7 @@ const ChatDashboard = ({ navigation }) => {
             </View>
           )}
         </View>
-        <Text style={styles.messageText}>{message.body}</Text>
+        {message.body && <Text style={styles.messageText}>{message.body}</Text>}
       </TouchableOpacity>
     );
   }, [dashboardData, navigation]);
