@@ -134,15 +134,23 @@ const ChatDashboard = ({ navigation }) => {
       }
     }
     
-    const formattedDateTime = message.date ? formatTimestamp(message.date) : 'No recent messages';
-
     const truncateMessage = (text, maxLength = 50) => {
       if (!text) return '';
       if (text.length <= maxLength) return text;
       return text.slice(0, maxLength) + '...';
     };
 
-    const displayMessage = message.body || (message.hasSuggestedResponse ? message.suggestedResponse : '');
+    let displayMessage, displayDate;
+
+    if (message.hasSuggestedResponse && !message.body) {
+      // If there's a suggested response but no other messages
+      displayMessage = message.suggestedresponse;
+      displayDate = null;
+    } else {
+      // If there are messages (with or without a suggested response)
+      displayMessage = message.body;
+      displayDate = message.date ? formatTimestamp(message.date) : null;
+    }
 
     return (
       <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid: message.clientid, clientName: dashboardData.clientNames[message.clientid] })}>
@@ -150,7 +158,7 @@ const ChatDashboard = ({ navigation }) => {
           <Image source={avatar} style={styles.avatar} />
           <View style={styles.clientContent}>
             <Text style={styles.clientName}>{senderName}</Text>
-            <Text style={styles.messageTime}>{formattedDateTime}</Text>
+            {displayDate && <Text style={styles.messageTime}>{displayDate}</Text>}
           </View>
           {message.hasSuggestedResponse && (
             <View style={styles.suggestedResponseContainer}>
