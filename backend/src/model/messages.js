@@ -272,7 +272,8 @@ async function getMostRecentMessagePerClient() {
       rm.body,
       rm.date,
       rm.is_ai,
-      CASE WHEN sr.response IS NOT NULL THEN true ELSE false END as hasSuggestedResponse
+      CASE WHEN sr.response IS NOT NULL THEN true ELSE false END as hasSuggestedResponse,
+      sr.response as suggestedResponse
     FROM RecentMessages rm
     FULL OUTER JOIN SuggestedResponses sr ON rm.clientid = sr.clientid
     ORDER BY COALESCE(rm.id, -1) DESC
