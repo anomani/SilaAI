@@ -39,7 +39,6 @@ function initializeCronJobs() {
         }
     });
 }
-
 module.exports = {
     initializeCronJobs
 };
