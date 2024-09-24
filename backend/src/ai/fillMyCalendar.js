@@ -5,7 +5,6 @@ const { zodResponseFormat } = require("openai/helpers/zod");
 const { z } = require("zod");
 const { saveSuggestedResponse, getNumberOfSuggestedResponses } = require('../model/messages');
 const { storeAIPrompt } = require('../model/aiPrompt');
-const cron = require('node-cron');
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY, // Ensure this environment variable is set
@@ -221,10 +220,6 @@ function getCatchUpMessage(weeksSinceLastVisit) {
     return "I just wanted to say thank you for once being a part of my barber journey and trusting me with your image. It really means a lot. Would love to catch up on all the big moments since we last met. When can I see you and bless you next? 🙌";
   }
 }
-
-cron.schedule('0 * * * *', async () => {
-  await fillMyCalendar();
-});
 
 module.exports = {
   fillMyCalendar

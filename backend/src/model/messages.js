@@ -254,14 +254,28 @@ async function getMessageMetrics() {
 async function getMostRecentMessagePerClient() {
   const db = dbUtils.getDB();
   const sql = `
-    SELECT *
-    FROM (
-    SELECT DISTINCT ON (clientid)
+    WITH RecentMessages AS (
+      SELECT DISTINCT ON (clientid)
         *
-    FROM Messages
-    ORDER BY clientid, id DESC
-) subquery
-ORDER BY id DESC
+      FROM Messages
+      ORDER BY clientid, id DESC
+    ),
+    SuggestedResponses AS (
+      SELECT clientid, response
+      FROM SuggestedResponses
+    )
+    SELECT 
+      COALESCE(rm.id, -1) as id,
+      COALESCE(rm.clientid, sr.clientid) as clientid,
+      rm.fromText,
+      rm.toText,
+      rm.body,
+      rm.date,
+      rm.is_ai,
+      CASE WHEN sr.response IS NOT NULL THEN true ELSE false END as hasSuggestedResponse
+    FROM RecentMessages rm
+    FULL OUTER JOIN SuggestedResponses sr ON rm.clientid = sr.clientid
+    ORDER BY COALESCE(rm.id, -1) DESC
   `;
   try {
     const res = await db.query(sql);
