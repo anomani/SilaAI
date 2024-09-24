@@ -136,6 +136,14 @@ const ChatDashboard = ({ navigation }) => {
     
     const formattedDateTime = message.date ? formatTimestamp(message.date) : 'No recent messages';
 
+    const truncateMessage = (text, maxLength = 50) => {
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return text.slice(0, maxLength) + '...';
+    };
+
+    const displayMessage = message.body || (message.hasSuggestedResponse ? message.suggestedResponse : '');
+
     return (
       <TouchableOpacity onPress={() => navigation.navigate('ClientMessages', { clientid: message.clientid, clientName: dashboardData.clientNames[message.clientid] })}>
         <View style={styles.clientContainer}>
@@ -150,7 +158,7 @@ const ChatDashboard = ({ navigation }) => {
             </View>
           )}
         </View>
-        {message.body && <Text style={styles.messageText}>{message.body}</Text>}
+        {displayMessage && <Text style={styles.messageText}>{truncateMessage(displayMessage)}</Text>}
       </TouchableOpacity>
     );
   }, [dashboardData, navigation]);
@@ -185,7 +193,7 @@ const ChatDashboard = ({ navigation }) => {
       <FlatList
         data={filteredClients}
         renderItem={renderClient}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => item.id === -1 ? `sr_${item.clientid}` : item.id.toString()}
         style={styles.flatList}
         extraData={dashboardData}
       />
