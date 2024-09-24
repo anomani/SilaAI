@@ -32,11 +32,7 @@ async function fillMyCalendar() {
     endDate.setDate(startDate.getDate() + 7);
 
     const availableSlots = await getAvailableSlots(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
-    const oldClients = await getOldClients();
-    if (oldClients.length === 0) {
-      return "No outreach messages sent. No eligible clients.";
-    }
-
+    
     // Calculate total empty spots and categorize them by group
     const slotsByGroup = availableSlots.reduce((acc, day) => {
       Object.entries(day.slotsByGroup).forEach(([group, slots]) => {
@@ -49,6 +45,16 @@ async function fillMyCalendar() {
     }, {});
 
     const totalEmptySpots = Object.values(slotsByGroup).reduce((sum, count) => sum + count, 0);
+    
+    if (totalEmptySpots === 0) {
+      console.log("Skipping fillMyCalendar: No empty slots available.");
+      return "Skipping fillMyCalendar: No empty slots available.";
+    }
+
+    const oldClients = await getOldClients();
+    if (oldClients.length === 0) {
+      return "No outreach messages sent. No eligible clients.";
+    }
 
     // Prepare data for strategy decision
     const data = {
