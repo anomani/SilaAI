@@ -1,16 +1,17 @@
-const { sendMessages } = require('../model/messages');
 const { getClientById, getOldClients, updateClientOutreachInfo, getNumberOfCustomersContacted } = require('../model/clients');
 const { getAvailableSlots } = require('./tools/getAvailableSlots');
 const { OpenAI } = require('openai');
 const { zodResponseFormat } = require("openai/helpers/zod");
 const { z } = require("zod");
-const { saveSuggestedResponse } = require('../model/messages');
+const { saveSuggestedResponse, getNumberOfSuggestedResponses } = require('../model/messages');
+const { storeAIPrompt } = require('../model/aiPrompt');
+const cron = require('node-cron');
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY, // Ensure this environment variable is set
 });
 
-// Update the StrategySchema
+// Update the StrategySchema to include draftCustomerMessage
 const StrategySchema = z.object({
   recommendedStrategy: z.string(),
   specificActions: z.object({
@@ -19,11 +20,20 @@ const StrategySchema = z.object({
   // Removed draftCustomerMessage
 });
 
-async function fillMyCalendar(startDate, endDate) {
+async function fillMyCalendar() {
   try {
-    const availableSlots = await getAvailableSlots(startDate, endDate);
+    const suggestedResponsesCount = await getNumberOfSuggestedResponses();
+    if (suggestedResponsesCount >= 20) {
+      console.log("Skipping fillMyCalendar: 20 or more suggested responses already stored.");
+      return "Skipping fillMyCalendar: 20 or more suggested responses already stored.";
+    }
+
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(startDate.getDate() + 7);
+
+    const availableSlots = await getAvailableSlots(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
     const oldClients = await getOldClients();
-    console.log(oldClients.length);
     if (oldClients.length === 0) {
       return "No outreach messages sent. No eligible clients.";
     }
@@ -60,32 +70,22 @@ async function fillMyCalendar(startDate, endDate) {
         estimatedConversionRate: 0.05
       }
     };
-
     console.log(data);
-    // // Determine the best strategy using LLM
+    // Determine the best strategy using LLM
     const strategy = await determineStrategy(data);
-    console.log(strategy);
-    // // Execute the strategy
-    // const selectedClients = await selectClientsBasedOnStrategy(strategy, oldClients);
-    // console.log(selectedClients);
-    // // Use the predefined message instead of the AI-generated one
-    // // const message = "Hey {name}, this is Uzi from Uzi Cuts reaching out from my new business number. How's everything going bro";
+    
+    // Execute the strategy
+    const selectedClients = await selectClientsBasedOnStrategy(strategy, oldClients);
+    console.log(selectedClients);
 
-    // // Save suggested responses instead of sending messages
-    // // const result = await saveSuggestedResponses(selectedClients, message);
-    // return result;
+    // Save suggested responses
+    const result = await saveSuggestedResponses(selectedClients);
+    return result;
   } catch (error) {
     console.error("Error in fillMyCalendar:", error);
     throw error;
   }
 }
-
-// async function main() {
-//   await fillMyCalendar('2024-09-21', '2024-09-28');
-// }
-
-// main();
-
 
 function calculateTimeframe(startDate, endDate) {
   const start = new Date(startDate);
@@ -163,22 +163,39 @@ async function selectClientsBasedOnStrategy(strategy, clients) {
   return selectedClients;
 }
 
-function personalizeMessage(template, client) {
-  return template
-    .replace("[Customer Name]", client.name)
-    .replace("[Barber Shop Name]", "Your Barber Shop")
-    .replace("[Phone Number]", "123-456-7890")
-    .replace("[Website URL]", "https://yourbarbershop.com");
-}
-
-async function saveSuggestedResponses(clients, messageTemplate) {
+async function saveSuggestedResponses(clients) {
   try {
     const savedResponses = await Promise.all(clients.map(async (client) => {
       // Update outreach info before saving suggested response
       await updateClientOutreachInfo(client.id);
 
       const clientData = await getClientById(client.id);
-      const personalizedMessage = personalizeMessage(messageTemplate, clientData);
+      const weeksSinceLastVisit = calculateWeeksSinceLastVisit(clientData.lastvisitdate);
+
+      // Choose the appropriate message based on the time since last visit
+      const catchUpMessage = getCatchUpMessage(weeksSinceLastVisit);
+
+      // Set custom prompt for the client
+      const customPrompt = `Your task is to get the user to return to the barber shop through normal informal conversation. Just talk to them very casually and use the conversation history in order to assess how to address the user. Don't immediately bring up that you should come back use informal small talk and then when you see fit bring up that you should swing by the barbershop sometime and when you feel that the user wants to book then use the scheduling instructions to accomplish this.
+
+Here is an example conversation:
+AI: Hey man this is Uzi from Uzi cuts. How you doing?
+
+Customer: Im good bro how you been
+
+AI: Im good man. Havent heard from you in a while what you been up to
+
+Customer: Ive been good just busy with work and everything
+
+AI: ${catchUpMessage}
+
+Make sure to say something along the lines of this somewhere in the conversation: ${catchUpMessage}
+Never ask them if they need a cut. If they are asking to see if first make sure that they want to book an appointment before starting the book Appoiontment sequence. We want this to be a conversation among friends not like a sales pitch`;
+
+      await storeAIPrompt(client.id, customPrompt);
+
+      const personalizedMessage = "Hey {name}, this is Uzi from Uzi Cuts reaching out from my new business number. How's everything going bro"
+        .replace("{name}", clientData.firstname);
       return saveSuggestedResponse(client.id, personalizedMessage);
     }));
 
@@ -189,8 +206,25 @@ async function saveSuggestedResponses(clients, messageTemplate) {
   }
 }
 
-// Schedule the fillMyCalendar function to run daily at 8 AM
+function calculateWeeksSinceLastVisit(lastVisitDate) {
+  const lastVisit = new Date(lastVisitDate);
+  const now = new Date();
+  const diffTime = Math.abs(now - lastVisit);
+  const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+  return diffWeeks;
+}
 
+function getCatchUpMessage(weeksSinceLastVisit) {
+  if (weeksSinceLastVisit <= 6) {
+    return "Would love to catch up. When can I see you next?";
+  } else {
+    return "I just wanted to say thank you for once being a part of my barber journey and trusting me with your image. It really means a lot. Would love to catch up on all the big moments since we last met. When can I see you and bless you next? 🙌";
+  }
+}
+
+cron.schedule('0 * * * *', async () => {
+  await fillMyCalendar();
+});
 
 module.exports = {
   fillMyCalendar

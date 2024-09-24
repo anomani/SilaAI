@@ -362,13 +362,6 @@ function getGroupForAppointmentType(appointmentType) {
     return appointmentInfo ? appointmentInfo.group : 1; // Default to group 1 if not found
 }
 
-async function main() {
-    const oldClients = await getOldClients();
-    console.log(JSON.stringify(oldClients, null, 2));
-}
-
-main()
-
 /**
  * Updates the outreach information for a client after sending a message.
  * @param {string} clientId - The ID of the client.

@@ -535,3 +535,22 @@ export const transcribeAudio = async (audioUri) => {
     throw error;
   }
 };
+
+export const getFillMyCalendarStatus = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.get('/settings/fillMyCalendar')));
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching fillMyCalendar status:', error);
+    throw error;
+  }
+};
+
+export const setFillMyCalendarStatus = async (status) => {
+  try {
+    await retryRequest(() => throttledRequest(() => api.post('/settings/fillMyCalendar', { status })));
+  } catch (error) {
+    console.error('Error setting fillMyCalendar status:', error);
+    throw error;
+  }
+};
