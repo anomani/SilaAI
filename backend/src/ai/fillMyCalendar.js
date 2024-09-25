@@ -173,13 +173,13 @@ async function saveSuggestedResponses(clients) {
     const savedResponses = await Promise.all(clients.map(async (client) => {
       // Update outreach info before saving suggested response
       await updateClientOutreachInfo(client.id);
-
-      const clientData = await getClientById(client.id);
-      const weeksSinceLastVisit = calculateWeeksSinceLastVisit(clientData.lastvisitdate);
-
+      const clientData = client
+      console.log(clientData);
+      // const weeksSinceLastVisit = calculateWeeksSinceLastVisit(clientData.lastvisitdate);
+      const weeksSinceLastVisit = 2;
       // Choose the appropriate message based on the time since last visit
       const catchUpMessage = getCatchUpMessage(weeksSinceLastVisit);
-
+      console.log(catchUpMessage);
       // Set custom prompt for the client
       const customPrompt = `Your task is to get the user to return to the barber shop through normal informal conversation. Just talk to them very casually and use the conversation history in order to assess how to address the user. Don't immediately bring up that you should come back use informal small talk and then when you see fit bring up that you should swing by the barbershop sometime and when you feel that the user wants to book then use the scheduling instructions to accomplish this.
 
@@ -227,6 +227,31 @@ function getCatchUpMessage(weeksSinceLastVisit) {
   }
 }
 
+// Add this new function at the end of the file
+async function runSaveSuggestedResponsesForClient(clientId) {
+  try {
+    const client = await getClientById(clientId);
+    if (!client) {
+      throw new Error(`Client with ID ${clientId} not found`);
+    }
+
+    const result = await saveSuggestedResponses([client]);
+    console.log(result);
+    return result;
+  } catch (error) {
+    console.error(`Error running saveSuggestedResponses for client ${clientId}:`, error);
+    throw error;
+  }
+}
+
+
+async function main() {
+  await runSaveSuggestedResponsesForClient(3670);
+}
+
+main()
+
+// Modify the module.exports to include the new function
 module.exports = {
-  fillMyCalendar
+  fillMyCalendar,
 };
