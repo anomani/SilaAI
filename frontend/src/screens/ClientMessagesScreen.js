@@ -75,16 +75,21 @@ const ClientMessagesScreen = ({ route }) => {
     };
   }, [clientid, isFocused, initialSuggestedResponse, clientMessage, isSuggestedResponseEdited]);
 
+  const scrollToBottom = useCallback(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToEnd({ animated: true });
+    }
+  }, []);
+
   const fetchMessagesAndSetup = useCallback(async () => {
     try {
       const data = await getMessagesByClientId(clientid);
-      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort in ascending order
+      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
       setMessages(sortedMessages);
       
       fetchClientDetails(clientid);
       setMessagesAsRead();
       
-      // Start polling after initial fetch
       const pollInterval = setInterval(() => {
         fetchMessages(clientid);
       }, 5000);
@@ -97,11 +102,22 @@ const ClientMessagesScreen = ({ route }) => {
     }
   }, [clientid, scrollToBottom]);
 
-  const scrollToBottom = useCallback(() => {
-    if (flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: false });
+  const fetchMessages = useCallback(async (clientid) => {
+    try {
+      const data = await getMessagesByClientId(clientid);
+      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setMessages(prevMessages => {
+        if (JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages)) {
+          // Scroll to bottom when new messages are received
+          setTimeout(scrollToBottom, 100);
+          return sortedMessages;
+        }
+        return prevMessages;
+      });
+    } catch (error) {
+      console.error('Error fetching messages:', error);
     }
-  }, []);
+  }, [scrollToBottom]);
 
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
@@ -159,22 +175,6 @@ const ClientMessagesScreen = ({ route }) => {
     }
   };
 
-  const fetchMessages = useCallback(async (clientid) => {
-    try {
-      const data = await getMessagesByClientId(clientid);
-      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date)); // Sort in ascending order
-      setMessages(prevMessages => {
-        // Only update if there are new messages
-        if (JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages)) {
-          return sortedMessages;
-        }
-        return prevMessages;
-      });
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  }, []);
-
   const setMessagesAsRead = async () => {
     try {
       await setMessagesRead(clientid);
@@ -216,7 +216,6 @@ const ClientMessagesScreen = ({ route }) => {
       const adjustedDate = new Date();
       const adjustedDateString = adjustedDate.toLocaleString();
       
-      // Check if the message is the same as the current suggested response
       const isAI = messageToSend === currentSuggestedResponse;
 
       const tempMessage = {
@@ -230,6 +229,7 @@ const ClientMessagesScreen = ({ route }) => {
 
       setLocalMessages(prev => [...prev, tempMessage]);
       setNewMessage('');
+      setEditableSuggestedResponse('');
       scrollToBottom();
 
       console.log('Sending message via API'+ messageToSend);

@@ -19,7 +19,7 @@ async function createAppointment(appointmentType, acuityId, date, startTime, end
 }
 
 // async function main() {
-//     await createAppointment('Adult Cut', 0, '2024-09-26', '12:45', '13:15', 3670, 'Adult Cut', 55);
+//     await createAppointment('Adult Cut', 0, '2023-09-26', '12:45', '13:15', 3670, 'Adult Cut', 55);
 // //     // await createAppointment('Adult Cut', 0, '2023-07-27', '14:00', '15:00', 3670, 'test', 55);
 
 // //     // await createAppointment('Adult Cut', 0, '2022-07-27', '14:00', '15:00', 3670, 'test', 55);

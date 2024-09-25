@@ -358,7 +358,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
   
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
-
+  console.log("AI prompt", aiPrompt)
   // Place aiPrompt before assistantInstructions
   let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
   fullInstructions = fullInstructions
@@ -369,7 +369,6 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
     .replace('${day}', day)
     .replace('${upcomingAppointment}', upcomingAppointment);
 
-  console.log("Full instructions:", fullInstructions.substring(0, 100));
 
   if (!assistants.has(phone)) {
     const newAssistant = await openai.beta.assistants.create({
