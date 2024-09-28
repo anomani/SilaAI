@@ -434,6 +434,28 @@ async function createTestDataForWaitlist() {
 
 
 // createTestDataForWaitlist();
+
+async function updateAppointmentDetails(appointmentId, updateData) {
+    const db = dbUtils.getDB();
+    const { date, startTime, endTime, appointmentType, price } = updateData;
+    const sql = `
+        UPDATE Appointment
+        SET date = $1, startTime = $2, endTime = $3, appointmentType = $4, price = $5
+        WHERE id = $6
+        RETURNING *
+    `;
+    const values = [date, startTime, endTime, appointmentType, price, appointmentId];
+    try {
+        const res = await db.query(sql, values);
+        console.log(`Appointment Updated: ID ${appointmentId}`);
+        return res.rows[0];
+    } catch (err) {
+        console.error('Error updating appointment details:', err.message);
+        throw err;
+    }
+}
+
+// Add this to the module.exports
 module.exports = {
     createAppointment,
     getAppointmentById,
@@ -450,5 +472,6 @@ module.exports = {
     getUnpaidAppointmentsByDate,
     rescheduleAppointment,
     getAppointmentMetrics,
-    getEndingAppointments
+    getEndingAppointments,
+    updateAppointmentDetails,
 };

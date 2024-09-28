@@ -245,11 +245,11 @@ async function runSaveSuggestedResponsesForClient(clientId) {
 }
 
 
-async function main() {
-  await runSaveSuggestedResponsesForClient(3670);
-}
+// async function main() {
+//   await runSaveSuggestedResponsesForClient(3670);
+// }
 
-main()
+// main()
 
 // Modify the module.exports to include the new function
 module.exports = {

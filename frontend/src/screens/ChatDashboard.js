@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image, Pressable } from 'react-native';
-import { getMostRecentMessagePerClient, getClientById } from '../services/api';
+import { View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, Image, Pressable, Alert } from 'react-native';
+import { getMostRecentMessagePerClient, getClientById, sendMessage, clearSuggestedResponse } from '../services/api';
 import Footer from '../components/Footer'; 
 import { useIsFocused } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 const ChatDashboard = ({ navigation }) => {
   const [dashboardData, setDashboardData] = useState({ recentMessages: [], clientNames: {} });
@@ -122,6 +123,53 @@ const ChatDashboard = ({ navigation }) => {
     });
   }, [dashboardData, searchQuery, activeTab]);
 
+  const handleAcceptSuggestedResponse = async (clientId, suggestedResponse) => {
+    try {
+      console.log("Accepting suggested response for client:", clientId);
+      console.log("Suggested response:", suggestedResponse);
+      
+      if (!suggestedResponse) {
+        console.error("Suggested response is empty or undefined");
+        Alert.alert('Error', 'No suggested response available.');
+        return;
+      }
+
+      // Fetch the client's details to get the phone number
+      const client = await getClientById(clientId);
+      const phoneNumber = client.phonenumber;
+
+      if (!phoneNumber) {
+        console.error("Client phone number is missing");
+        Alert.alert('Error', 'Client phone number is missing.');
+        return;
+      }
+
+      console.log("Sending message to:", phoneNumber);
+      await sendMessage(phoneNumber, suggestedResponse, false, false);
+      
+      console.log("Clearing suggested response");
+      await clearSuggestedResponse(clientId);
+      
+      console.log('Successfully accepted suggested response for client:', clientId);
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Error accepting suggested response:', error);
+      console.error('Error details:', error.response?.data);
+      Alert.alert('Error', `Failed to accept suggested response. ${error.message}`);
+    }
+  };
+
+  const handleRejectSuggestedResponse = async (clientId) => {
+    try {
+      await clearSuggestedResponse(clientId);
+      console.log('Rejected suggested response for client:', clientId);
+      fetchDashboardData();
+    } catch (error) {
+      console.error('Error rejecting suggested response:', error);
+      Alert.alert('Error', 'Failed to reject suggested response. Please try again.');
+    }
+  };
+
   const renderClient = useCallback(({ item: message }) => {
     const avatar = message.fromText === '+18446480598' ? require('../../assets/uzi.png') : require('../../assets/avatar.png');
     let senderName = message.fromText === '+18446480598' ? 'UZI' : dashboardData.clientNames[message.clientid];
@@ -142,12 +190,12 @@ const ChatDashboard = ({ navigation }) => {
 
     let displayMessage, displayDate;
 
-    if (message.hasSuggestedResponse && !message.body) {
-      // If there's a suggested response but no other messages
+    if (message.hasSuggestedResponse) {
+      // Prioritize showing the suggested response
       displayMessage = message.suggestedresponse;
-      displayDate = null;
+      displayDate = null; // Suggested responses don't have a date
     } else {
-      // If there are messages (with or without a suggested response)
+      // If there's no suggested response, show the last message
       displayMessage = message.body;
       displayDate = message.date ? formatTimestamp(message.date) : null;
     }
@@ -161,12 +209,34 @@ const ChatDashboard = ({ navigation }) => {
             {displayDate && <Text style={styles.messageTime}>{displayDate}</Text>}
           </View>
           {message.hasSuggestedResponse && (
-            <View style={styles.suggestedResponseContainer}>
-              <Text style={styles.suggestedResponseText}>Pending confirmation</Text>
+            <View style={styles.suggestedResponseActions}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  handleAcceptSuggestedResponse(message.clientid, message.suggestedresponse);
+                }}
+              >
+                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  handleRejectSuggestedResponse(message.clientid);
+                }}
+              >
+                <Ionicons name="close-circle" size={24} color="#F44336" />
+              </TouchableOpacity>
             </View>
           )}
         </View>
-        {displayMessage && <Text style={styles.messageText}>{truncateMessage(displayMessage)}</Text>}
+        {displayMessage && (
+          <Text style={[styles.messageText, message.hasSuggestedResponse && styles.suggestedResponseText]}>
+            {message.hasSuggestedResponse ? "Suggested: " : ""}
+            {truncateMessage(displayMessage)}
+          </Text>
+        )}
       </TouchableOpacity>
     );
   }, [dashboardData, navigation]);
@@ -299,17 +369,14 @@ const styles = StyleSheet.create({
   flatList: {
     flex: 1,
   },
-  suggestedResponseContainer: {
-    backgroundColor: '#FF0000', // Changed to red
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 8,
+  suggestedResponseActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 'auto',
   },
-  suggestedResponseText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+  actionButton: {
+    padding: 4,
+    marginLeft: 8,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -332,6 +399,10 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#ffffff',
     fontWeight: 'bold',
+  },
+  suggestedResponseText: {
+    fontStyle: 'italic',
+    color: '#4CAF50', // Green color for suggested responses
   },
 });
 

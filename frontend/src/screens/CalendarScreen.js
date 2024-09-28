@@ -351,6 +351,12 @@ const CalendarScreen = ({ navigation }) => {
     }
   };
 
+  const handleAppointmentPress = (appointment, index) => {
+    setSelectedAppointment(appointment);
+    setCurrentAppointmentIndex(index);
+    setViewMode('card');
+  };
+
   const renderAppointments = () => {
     if (appointments.length === 0) {
       return (
@@ -370,7 +376,7 @@ const CalendarScreen = ({ navigation }) => {
 
     let maxColumn = 0;
 
-    sortedAppointments.forEach((appointment) => {
+    sortedAppointments.forEach((appointment, index) => {
       const [startHour, startMinute] = appointment.startTime.split(':');
       const [endHour, endMinute] = appointment.endTime.split(':');
       
@@ -409,31 +415,7 @@ const CalendarScreen = ({ navigation }) => {
             } : null
           ]}>
             <TouchableOpacity
-              onPress={() => {
-                if (isBlockedTime) {
-                  Alert.alert(
-                    "Delete Blocked Time",
-                    "Are you sure you want to delete this blocked time?",
-                    [
-                      { text: "Cancel", style: "cancel" },
-                      { 
-                        text: "OK", 
-                        onPress: async () => {
-                          try {
-                            await deleteAppointment(appointment.id);
-                            fetchAppointments();
-                          } catch (error) {
-                            console.error('Failed to delete blocked time:', error);
-                            Alert.alert('Error', 'Failed to delete blocked time. Please try again.');
-                          }
-                        }
-                      }
-                    ]
-                  );
-                } else {
-                  navigation.navigate('AppointmentDetails', { appointment, onDelete: fetchAppointments });
-                }
-              }}
+              onPress={() => handleAppointmentPress(appointment, index)}
             >
               <Animated.View
                 style={[
@@ -583,11 +565,6 @@ const CalendarScreen = ({ navigation }) => {
         <View style={styles.cardView}>
           {appointments.length > 0 ? (
             <>
-              {console.log('Rendering ClientCardView with:', {
-                appointment: appointments[currentAppointmentIndex],
-                currentIndex: currentAppointmentIndex,
-                appointmentsLength: appointments.length
-              })}
               <ClientCardView
                 appointment={appointments[currentAppointmentIndex]}
                 onDelete={fetchAppointments}

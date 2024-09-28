@@ -1,6 +1,24 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Dimensions, Modal, Alert, TextInput, Switch, Keyboard, FlatList, Button, StatusBar, Linking } from 'react-native';
-import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientMedia, uploadClientMedia, deleteClientMedia } from '../services/api';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  Image, 
+  Dimensions, 
+  Modal, 
+  Alert, 
+  TextInput, 
+  Switch, 
+  Keyboard, 
+  FlatList, 
+  Button, 
+  StatusBar, 
+  Linking,
+  ActivityIndicator // Add this import
+} from 'react-native';
+import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientMedia, uploadClientMedia, deleteClientMedia, updateAppointmentDetails } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import avatarImage from '../../assets/avatar.png';
 import twilioAvatar from '../../assets/icon.png';
@@ -47,14 +65,15 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
   console.log('All appointments:', allAppointments);
 
   const navigation = useNavigation();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAddNoteModalVisible, setIsAddNoteModalVisible] = useState<boolean>(false);
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState<boolean>(false);
   const [paymentData, setPaymentData] = useState<PaymentData>({
     paid: false,
     paymentMethod: 'cash',
-    price: appointment.price.toString(),
-    tipAmount: appointment.tipamount ? appointment.tipamount.toString() : '',
-    totalAmount: (appointment.price + (appointment.tipamount || 0)).toString(),
+    price: '0',
+    tipAmount: '',
+    totalAmount: '0',
   });
   const [newNote, setNewNote] = useState<string>('');
   const [showAllNotes, setShowAllNotes] = useState<boolean>(false);
@@ -65,9 +84,26 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
   const [showGallery, setShowGallery] = useState<boolean>(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState<number>(0);
   const [showCamera, setShowCamera] = useState<boolean>(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedAppointment, setEditedAppointment] = useState(appointment);
 
   // Extract clientId from the appointment object
-  const currentClientId = appointment.clientid;
+  const currentClientId = appointment?.clientid;
+
+  useEffect(() => {
+    if (appointment) {
+      setIsLoading(false);
+      setPaymentData({
+        paid: appointment.paid || false,
+        paymentMethod: appointment.paymentmethod || 'cash',
+        price: appointment.price ? appointment.price.toString() : '0',
+        tipAmount: appointment.tipamount ? appointment.tipamount.toString() : '',
+        totalAmount: ((appointment.price || 0) + (appointment.tipamount || 0)).toString(),
+      });
+    } else {
+      setIsLoading(true);
+    }
+  }, [appointment]);
 
   useEffect(() => {
     console.log('ClientCardView useEffect triggered');
@@ -425,14 +461,60 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
     }
   };
 
+  const handleEditPress = () => {
+    setIsEditMode(true);
+    setEditedAppointment(appointment);
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const updatedAppointment = await updateAppointmentDetails(
+        appointment.id,
+        editedAppointment
+      );
+      // Update the appointment in the parent component
+      allAppointments[currentIndex] = updatedAppointment;
+      setIsEditMode(false);
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      Alert.alert('Error', 'Failed to update appointment. Please try again.');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditedAppointment(appointment);
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setEditedAppointment(prev => ({ ...prev, [field]: value }));
+  };
+
   console.log('ClientCardView rendered. showGallery:', showGallery);
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading appointment details...</Text>
+      </View>
+    );
+  }
+
+  if (!appointment) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>No appointment selected. Please select an appointment from the list view.</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.cardView}>
       {console.log('Rendering ClientCardView content')}
       <View style={styles.cardContainer}>
         {/* Payment Status and Tip Amount */}
-        {appointment.paid ? (
+        {appointment.paid && (
           <View style={styles.paymentInfoContainer}>
             <View style={styles.paymentMethodContainer}>
               <Text style={styles.paymentMethodText}>
@@ -450,14 +532,15 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
               </View>
             )}
           </View>
-        ) : appointment.paymentmethod === 'e-transfer' ? (
+        )}
+        {!appointment.paid && appointment.paymentmethod === 'e-transfer' && (
           <View style={styles.paymentInfoContainer}>
             <View style={styles.pendingPaymentContainer}>
               <Ionicons name="time-outline" size={24} color="#FFA500" />
               <Text style={styles.pendingPaymentText}>Pending Payment</Text>
             </View>
           </View>
-        ) : null}
+        )}
 
         <View style={styles.headerContainer}>
           <TouchableOpacity 
@@ -512,15 +595,59 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
           </TouchableOpacity>
         </View>
         
-        <Text style={styles.cardTime}>{appointment.startTime || 'No Start'} - {appointment.endTime || 'No End'}</Text>
-        <Text 
-          style={styles.cardType} 
-          numberOfLines={1} 
-          ellipsizeMode="tail"
-        >
-          {appointment.appointmenttype || 'No Type'}
-        </Text>
-        <Text style={styles.cardPrice}>${appointment.price}</Text>
+        {isEditMode ? (
+          <View style={styles.editContainer}>
+            <TextInput
+              style={styles.editInput}
+              value={editedAppointment.date}
+              onChangeText={(value) => handleInputChange('date', value)}
+              placeholder="Date (YYYY-MM-DD)"
+            />
+            <TextInput
+              style={styles.editInput}
+              value={editedAppointment.startTime}
+              onChangeText={(value) => handleInputChange('startTime', value)}
+              placeholder="Start Time (HH:MM)"
+            />
+            <TextInput
+              style={styles.editInput}
+              value={editedAppointment.endTime}
+              onChangeText={(value) => handleInputChange('endTime', value)}
+              placeholder="End Time (HH:MM)"
+            />
+            <TextInput
+              style={styles.editInput}
+              value={editedAppointment.appointmenttype}
+              onChangeText={(value) => handleInputChange('appointmenttype', value)}
+              placeholder="Appointment Type"
+            />
+            <TextInput
+              style={styles.editInput}
+              value={editedAppointment.price.toString()}
+              onChangeText={(value) => handleInputChange('price', value)}
+              placeholder="Price"
+              keyboardType="numeric"
+            />
+            <View style={styles.editButtonsContainer}>
+              <TouchableOpacity style={styles.editButton} onPress={handleSaveEdit}>
+                <Text style={styles.editButtonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.editButton} onPress={handleCancelEdit}>
+                <Text style={styles.editButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.cardDate}>{appointment.date}</Text>
+            <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
+            <Text style={styles.cardType}>{appointment.appointmenttype}</Text>
+            <Text style={styles.cardPrice}>${appointment.price}</Text>
+            <TouchableOpacity style={styles.editButton} onPress={handleEditPress}>
+              <Text style={styles.editButtonText}>Edit Appointment</Text>
+            </TouchableOpacity>
+          </>
+        )}
         
         {/* Payment Button */}
         <TouchableOpacity 
@@ -1233,6 +1360,55 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#fff',
     marginLeft: 8,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1c1c1e',
+  },
+  loadingText: {
+    color: '#fff',
+    marginTop: 10,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1c1c1e',
+  },
+  errorText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  editContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  editInput: {
+    backgroundColor: '#3a3a3c',
+    color: '#fff',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  editButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  editButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+    width: '48%',
+  },
+  editButtonText: {
+    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
   },
