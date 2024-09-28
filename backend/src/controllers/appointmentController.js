@@ -3,6 +3,7 @@ const { createAppointment, createBlockedTime } = require('../model/appointment')
 const dbUtils = require('../model/dbUtils');
 const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
 const { getAppointmentMetrics } = require('../model/appointment');
+const { updateAppointment } = require('../model/appointment');
 
 async function createNewAppointment(req, res) {
   try {
@@ -152,4 +153,37 @@ async function getAppointmentMetricsController(req, res) {
     }
 }
 
-module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController, rescheduleAppointmentController, getAppointmentMetricsController };
+async function updateAppointmentDetailsController(req, res) {
+    try {
+        const { appointmentId } = req.params;
+        const { date, startTime, endTime, appointmentType, price } = req.body;
+
+        if (!date || !startTime || !endTime || !appointmentType || price === undefined) {
+            return res.status(400).send('Missing required fields');
+        }
+
+        const updateData = {
+            appointmentType,
+            date,
+            startTime,
+            endTime,
+            clientId: req.body.clientId, // Assuming this is needed; if not, remove it
+            details: req.body.details, // Assuming this is needed; if not, remove it
+            price
+        };
+
+        const updatedRowCount = await updateAppointment(appointmentId, updateData);
+
+        if (updatedRowCount === 0) {
+            return res.status(404).send('Appointment not found');
+        }
+
+        // Fetch the updated appointment to return in the response
+        const updatedAppointment = await getAppointmentById(appointmentId);
+        res.status(200).json(updatedAppointment);
+    } catch (error) {
+        res.status(500).send(`Error updating appointment details: ${error.message}`);
+    }
+}
+
+module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController, rescheduleAppointmentController, getAppointmentMetricsController, updateAppointmentDetailsController };

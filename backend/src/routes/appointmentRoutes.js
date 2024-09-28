@@ -10,7 +10,8 @@ const {
     getClientAppointmentsAroundCurrentController,
     updateAppointmentPaymentController,
     rescheduleAppointmentController,
-    getAppointmentMetricsController
+    getAppointmentMetricsController,
+    updateAppointmentDetailsController
 } = require('../controllers/appointmentController');
 
 router.get('/appointments/:date', getAppointmentsByDate);
@@ -23,5 +24,6 @@ router.get('/appointments/client/:clientId/around-current/:currentAppointmentId'
 router.put('/appointments/:appointmentId/payment', updateAppointmentPaymentController);
 router.put('/appointments/:appointmentId/reschedule', rescheduleAppointmentController);
 router.get('/metrics', getAppointmentMetricsController);
+router.put('/appointments/:appointmentId', updateAppointmentDetailsController);
 
 module.exports = router;

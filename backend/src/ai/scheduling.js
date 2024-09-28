@@ -412,6 +412,7 @@ tempTools = [{
     }
   }
 }]
+
 async function createTemporaryAssistant(phoneNumber) {
   const newAssistant = await openai.beta.assistants.create({
     instructions: "Initially say hey bro, don't think I've heard from you before. Can you just give me your first and last name so I can save it? Then with the name that they give call the createClient tool with the corresponding first name and last name. After you call it respond by saying, How can I help you today bro. ALWAYS CALL createClient function",
@@ -912,6 +913,7 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
     return 'user'; 
   }
 }
+
 function calculateTotalDuration(appointmentType, addOnArray) {
   const appointmentDuration = appointmentTypes[appointmentType].duration;
   const addOnsDuration = addOnArray.reduce((total, addOn) => total + addOns[addOn].duration, 0);

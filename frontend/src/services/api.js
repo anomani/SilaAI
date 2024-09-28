@@ -227,6 +227,7 @@ export const getDaysSinceLastAppointment = async (clientId) => {
 
 export const sendMessage = async (to, message, initialMessage = false, manual = false) => {
   try {
+    console.log('Sending messagess:', { to, message, initialMessage, manual });
     await retryRequest(() => throttledRequest(() => api.post('/chat/send-message', { to, message, initialMessage, manual })));
   } catch (error) {
     console.error('Error sending message:', error);
@@ -551,6 +552,18 @@ export const setFillMyCalendarStatus = async (status) => {
     await retryRequest(() => throttledRequest(() => api.post('/settings/fillMyCalendar', { status })));
   } catch (error) {
     console.error('Error setting fillMyCalendar status:', error);
+    throw error;
+  }
+};
+
+export const updateAppointmentDetails = async (appointmentId, appointmentData) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.put(`/appointments/${appointmentId}`, appointmentData)
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error updating appointment details:', error);
     throw error;
   }
 };
