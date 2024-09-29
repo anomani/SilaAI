@@ -158,17 +158,13 @@ async function updateAppointmentDetailsController(req, res) {
         const { appointmentId } = req.params;
         const { date, startTime, endTime, appointmentType, price } = req.body;
 
-        if (!date || !startTime || !endTime || !appointmentType || price === undefined) {
-            return res.status(400).send('Missing required fields');
-        }
-
         const updateData = {
             appointmentType,
             date,
             startTime,
             endTime,
-            clientId: req.body.clientId, // Assuming this is needed; if not, remove it
-            details: req.body.details, // Assuming this is needed; if not, remove it
+            clientId: req.body.clientId, 
+            details: req.body.details, 
             price
         };
 
