@@ -447,6 +447,10 @@ async function updateAppointmentDetails(appointmentId, updateData) {
     const values = [date, startTime, endTime, appointmentType, price, appointmentId];
     try {
         const res = await db.query(sql, values);
+        if (res.rows.length === 0) {
+            console.log(`No appointment found with ID: ${appointmentId}`);
+            return null;
+        }
         console.log(`Appointment Updated: ID ${appointmentId}`);
         return res.rows[0];
     } catch (err) {

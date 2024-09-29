@@ -3,7 +3,7 @@ const { createAppointment, createBlockedTime } = require('../model/appointment')
 const dbUtils = require('../model/dbUtils');
 const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
 const { getAppointmentMetrics } = require('../model/appointment');
-const { updateAppointment } = require('../model/appointment');
+const { updateAppointmentDetails } = require('../model/appointment');
 
 async function createNewAppointment(req, res) {
   try {
@@ -154,32 +154,40 @@ async function getAppointmentMetricsController(req, res) {
 }
 
 async function updateAppointmentDetailsController(req, res) {
-    try {
-        const { appointmentId } = req.params;
-        const { date, startTime, endTime, appointmentType, price } = req.body;
+  try {
+    const { appointmentId } = req.params;
+    const { date, startTime, endTime, appointmentType, price } = req.body;
 
-        const updateData = {
-            appointmentType,
-            date,
-            startTime,
-            endTime,
-            clientId: req.body.clientId, 
-            details: req.body.details, 
-            price
-        };
+    console.log('Updating appointment:', appointmentId);
+    console.log('Update data:', req.body);
 
-        const updatedRowCount = await updateAppointment(appointmentId, updateData);
-
-        if (updatedRowCount === 0) {
-            return res.status(404).send('Appointment not found');
-        }
-
-        // Fetch the updated appointment to return in the response
-        const updatedAppointment = await getAppointmentById(appointmentId);
-        res.status(200).json(updatedAppointment);
-    } catch (error) {
-        res.status(500).send(`Error updating appointment details: ${error.message}`);
+    if (!date || !startTime || !endTime || !appointmentType || price === undefined) {
+      return res.status(400).send('Missing required fields');
     }
+
+    const updatedAppointmentData = {
+      date,
+      startTime,
+      endTime,
+      appointmentType,
+      price: parseFloat(price),
+    };
+
+    const updatedAppointment = await updateAppointmentDetails(
+      appointmentId,
+      updatedAppointmentData
+    );
+
+    if (!updatedAppointment) {
+      return res.status(404).send('Appointment not found');
+    }
+
+    console.log('Appointment updated successfully:', updatedAppointment);
+    res.status(200).json(updatedAppointment);
+  } catch (error) {
+    console.error('Error updating appointment:', error);
+    res.status(500).send(`Error updating appointment: ${error.message}`);
+  }
 }
 
 module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController, rescheduleAppointmentController, getAppointmentMetricsController, updateAppointmentDetailsController };

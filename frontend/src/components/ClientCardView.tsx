@@ -472,7 +472,7 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
         date: editedAppointment.date,
         startTime: editedAppointment.startTime,
         endTime: editedAppointment.endTime,
-        appointmentType: editedAppointment.appointmentType,
+        appointmentType: editedAppointment.appointmenttype,
         price: parseFloat(editedAppointment.price.toString()),
       };
 
