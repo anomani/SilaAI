@@ -554,9 +554,12 @@ export const setFillMyCalendarStatus = async (status) => {
     console.error('Error setting fillMyCalendar status:', error);
     throw error;
   }
+  
 };
 
 export const updateAppointmentDetails = async (appointmentId, appointmentData) => {
+  console.log("Appointment ID", appointmentId)
+  console.log("Appointment Data", appointmentData)
   try {
     const response = await retryRequest(() => throttledRequest(() => 
       api.put(`/appointments/${appointmentId}`, appointmentData)

@@ -12,7 +12,7 @@ import {
   TextInput, 
   Switch, 
   Keyboard, 
-  FlatList, 
+  FlatList,
   Button, 
   StatusBar, 
   Linking,
@@ -468,13 +468,31 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
 
   const handleSaveEdit = async () => {
     try {
+      const updatedAppointmentData = {
+        date: editedAppointment.date,
+        startTime: editedAppointment.startTime,
+        endTime: editedAppointment.endTime,
+        appointmentType: editedAppointment.appointmentType,
+        price: parseFloat(editedAppointment.price.toString()),
+      };
+
       const updatedAppointment = await updateAppointmentDetails(
         appointment.id,
-        editedAppointment
+        updatedAppointmentData
       );
+
       // Update the appointment in the parent component
-      allAppointments[currentIndex] = updatedAppointment;
+      allAppointments[currentIndex] = {
+        ...allAppointments[currentIndex],
+        ...updatedAppointment,
+      };
       setIsEditMode(false);
+
+      // Update the local appointment state
+      setEditedAppointment(updatedAppointment);
+
+      // Optionally, you can add a success message here
+      Alert.alert('Success', 'Appointment updated successfully');
     } catch (error) {
       console.error('Error updating appointment:', error);
       Alert.alert('Error', 'Failed to update appointment. Please try again.');
