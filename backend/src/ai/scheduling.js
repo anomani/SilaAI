@@ -17,6 +17,7 @@ const { Anthropic } = require('@anthropic-ai/sdk');
 const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal } = require('./tools/rescheduleAppointment');
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { createWaitlistRequest } = require('../model/waitlist');
+const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -360,7 +361,46 @@ async function createThread(phoneNumber, initialMessage = false, userId) {
 async function createAssistant(fname, lname, phone, messages, appointment, day, client, upcomingAppointment) {
   const instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
-  
+    // Fetch appointment types and add-ons for the user
+  const appointmentTypes = await getAppointmentTypes(userId);
+  const addOns = await getAddOns(userId);
+
+  // Group appointment types by group number
+  const groupedAppointmentTypes = appointmentTypes.reduce((acc, type) => {
+    if (!acc[type.group_number]) {
+      acc[type.group_number] = [];
+    }
+    acc[type.group_number].push(type);
+    return acc;
+  }, {});
+
+  // Create a string representation of appointment types
+  let appointmentTypesString = '';
+  for (const [group, types] of Object.entries(groupedAppointmentTypes)) {
+    appointmentTypesString += `Group ${group}:\n`;
+    types.forEach(type => {
+      const price = typeof type.price === 'number' ? `CA$${type.price.toFixed(2)}` : type.price;
+      appointmentTypesString += `  ${type.name} (${type.duration} minutes @ ${price})\n`;
+    });
+    
+    // Add availability information for the group
+    if (types[0].availability) {
+      appointmentTypesString += '  Availability:\n';
+      for (const [day, times] of Object.entries(types[0].availability)) {
+        appointmentTypesString += `    ${day}: ${times.join(', ')}\n`;
+      }
+    }
+    appointmentTypesString += '\n';
+  }
+  console.log(appointmentTypesString);
+  // Create a string representation of add-ons
+  const addOnsString = addOns.map(addon => {
+    const price = typeof addon.price === 'number' ? `CA$${addon.price.toFixed(2)}` : addon.price;
+    return `${addon.name}: ${addon.duration} minutes @ ${price}\n  Compatible with: ${addon.compatible_appointment_types.join(', ')}`;
+  }).join('\n\n');
+  console.log(addOnsString);
+  // Add the appointment types and add-ons information to the beginning of the instructions
+  assistantInstructions = `Appointment Types:\n${appointmentTypesString}\nAdd-ons:\n${addOnsString}\n\n${assistantInstructions}`;
   
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
