@@ -30,7 +30,7 @@ const upload = multer({
 });
 
 router.post('/schedule', authenticateToken, handleChatRequest);
-router.get('/incoming', authenticateToken, handleIncomingMessage);
+router.post('/incoming', authenticateToken, handleIncomingMessage);
 router.post('/handle-user-input', authenticateToken, handleUserInputDataController);
 router.get('/messages/:clientId', getMessagesByClientIdController);
 router.get('/messages', authenticateToken, getAllMessagesGroupedByClientController);
