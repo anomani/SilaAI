@@ -12,7 +12,8 @@ const noteRoutes = require('./routes/notesRoutes');
 const cronJobs = require('./config/cronJobs');  // Import the cron jobs
 const mediaRoutes = require('./routes/mediaRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
-
+const userRoutes = require('./routes/userRoutes');
+const authenticateToken = require('./middleware/authMiddleware');
 const app = express();
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -31,7 +32,13 @@ app.use('/api/ai-prompt', aiPromptRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/appointments', appointmentRoutes);
 // Initialize cron jobs
-cronJobs.initializeCronJobs();
+// cronJobs.initializeCronJobs();
+
+// app.get('/api/protected-route', authenticateToken, (req, res) => {
+//   res.json({ message: 'You have access to this protected route' });
+// });
 
 module.exports = app;

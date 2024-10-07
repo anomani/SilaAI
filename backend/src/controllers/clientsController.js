@@ -2,21 +2,24 @@ const { getAllClients, createClient, searchForClients,
     deleteClient, followUp, getClientById, updateClient, getDaysSinceLastAppointment, 
     updateClientOutreachDate, getClientAutoRespond, updateClientAutoRespond } = require('../model/clients');
 const dbUtils = require('../model/dbUtils');
-
+const { authenticateToken } = require('../middleware/authMiddleware');
 
 async function getClients(req, res) {
     try {
-        const clients = await getAllClients();
+        const userId = req.user.id;
+        const clients = await getAllClients(userId);
         res.status(200).json(clients);
     } catch (error) {
         res.status(500).send(`Error fetching clients: ${error.message}`);
     }
 }
 
+
 async function addClient(req, res) {
+    const userId = req.user.id;
     const { firstname, lastname, phonenumber, email } = req.body;
     try {
-        const result = await createClient(firstname, lastname, phonenumber, email);
+        const result = await createClient(firstname, lastname, phonenumber, email, userId);
         const client = {
             id: result.insertedId,
             firstname,
@@ -33,9 +36,10 @@ async function addClient(req, res) {
 
 
 async function searchClients(req, res) {
+    const userId = req.user.id;
   try {
     const { query } = req.query;
-    const clients = await searchForClients(query);
+    const clients = await searchForClients(query, userId);
     res.status(200).json(clients);
   } catch (error) {
     res.status(500).send(`Error searching clients: ${error.message}`);
@@ -53,8 +57,9 @@ async function delClient(req, res) {
 }
 
 async function getSuggestedFollowUps(req, res) {
+    const userId = req.user.id;
     const { days } = req.params;
-    const suggestedFollowUps = await followUp(days);
+    const suggestedFollowUps = await followUp(days, userId);
     res.status(200).json({suggestedFollowUps});
 }
 

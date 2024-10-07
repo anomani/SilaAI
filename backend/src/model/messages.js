@@ -1,6 +1,7 @@
 const dbUtils = require('./dbUtils');
 
-async function saveMessage(from, to, body, date, clientid, read = true, isAI = false) {
+async function saveMessage(from, to, body, date, clientid, read = true, isAI = false, user_id) {
+  console.log('[saveMessage] user_id:', user_id);
   if (!clientid) {
     throw new Error('Invalid clientid');
   }
@@ -12,17 +13,17 @@ async function saveMessage(from, to, body, date, clientid, read = true, isAI = f
   try {
     // Save the message
     const sql = `
-      INSERT INTO Messages (fromText, toText, body, date, clientid, read, is_ai)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO Messages (fromText, toText, body, date, clientid, read, is_ai, user_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id
     `;
-    const values = [from, to, body, date, clientid, read, isAI];
+    const values = [from, to, body, date, clientid, read, isAI, user_id];
     const res = await db.query(sql, values);
     const newId = res.rows[0].id;
     console.log("Message saved with id:", newId);
 
     // Clear the suggested response for this client
-    await clearSuggestedResponse(clientid);
+    await clearSuggestedResponse(clientid, user_id);
 
     // Commit the transaction
     await db.query('COMMIT');
@@ -36,11 +37,12 @@ async function saveMessage(from, to, body, date, clientid, read = true, isAI = f
   }
 }
 
-async function getAllMessages() {
+async function getAllMessages(user_id) {
+  console.log('[getAllMessages] user_id:', user_id);
   const db = dbUtils.getDB();
-  const sql = 'SELECT * FROM Messages ORDER BY date ASC';
+  const sql = 'SELECT * FROM Messages WHERE user_id = $1 ORDER BY date ASC';
   try {
-    const res = await db.query(sql);
+    const res = await db.query(sql, [user_id]);
     return res.rows;
   } catch (err) {
     console.error('Error fetching all messages:', err.message);
@@ -118,7 +120,8 @@ async function setMessagesRead(clientid) {
   }
 }
 
-async function getAllMessagesGroupedByClient() {
+async function getAllMessagesGroupedByClient(user_id) {
+  console.log('[getAllMessagesGroupedByClient] user_id:', user_id);
   const db = dbUtils.getDB();
   const sql = `
     SELECT 
@@ -135,10 +138,11 @@ async function getAllMessagesGroupedByClient() {
         ) ORDER BY id ASC
       ) AS messages
     FROM Messages
+    WHERE user_id = $1
     GROUP BY clientid
   `;
   try {
-    const res = await db.query(sql);
+    const res = await db.query(sql, [user_id]);
     return res.rows.reduce((acc, row) => {
       acc[row.clientid] = row.messages;
       return acc;
@@ -195,14 +199,15 @@ async function clearSuggestedResponse(clientId) {
   }
 }
 
-async function getMessageMetrics() {
+async function getMessageMetrics(user_id) {
+  console.log('[getMessageMetrics] user_id:', user_id);
   const db = dbUtils.getDB();
   const metrics = {};
 
   try {
     // Total number of messages
-    const totalMessagesQuery = 'SELECT COUNT(*) FROM Messages';
-    const totalMessagesResult = await db.query(totalMessagesQuery);
+    const totalMessagesQuery = 'SELECT COUNT(*) FROM Messages WHERE user_id = $1';
+    const totalMessagesResult = await db.query(totalMessagesQuery, [user_id]);
     metrics.totalMessages = parseInt(totalMessagesResult.rows[0].count);
 
     // Messages per day (last 30 days)
@@ -210,24 +215,26 @@ async function getMessageMetrics() {
       SELECT DATE(TO_TIMESTAMP(date, 'MM/DD/YYYY, HH24:MI:SS')) as day, COUNT(*) as count
       FROM Messages
       WHERE TO_TIMESTAMP(date, 'MM/DD/YYYY, HH24:MI:SS') >= NOW() - INTERVAL '30 days'
+      AND user_id = $1
       GROUP BY DATE(TO_TIMESTAMP(date, 'MM/DD/YYYY, HH24:MI:SS'))
       ORDER BY day
     `;
-    const messagesPerDayResult = await db.query(messagesPerDayQuery);
+    const messagesPerDayResult = await db.query(messagesPerDayQuery, [user_id]);
     metrics.messagesPerDay = messagesPerDayResult.rows;
 
     // Distribution of messages between human and AI responses
     const messageDistributionQuery = `
       SELECT is_ai, COUNT(*) as count
       FROM Messages
+      WHERE user_id = $1
       GROUP BY is_ai
     `;
-    const messageDistributionResult = await db.query(messageDistributionQuery);
+    const messageDistributionResult = await db.query(messageDistributionQuery, [user_id]);
     metrics.messageDistribution = messageDistributionResult.rows;
 
     // Number of unique clients
-    const uniqueClientsQuery = 'SELECT COUNT(DISTINCT clientid) FROM Messages';
-    const uniqueClientsResult = await db.query(uniqueClientsQuery);
+    const uniqueClientsQuery = 'SELECT COUNT(DISTINCT clientid) FROM Messages WHERE user_id = $1';
+    const uniqueClientsResult = await db.query(uniqueClientsQuery, [user_id]);
     metrics.uniqueClients = parseInt(uniqueClientsResult.rows[0].count);
 
     // Average messages per client
@@ -237,11 +244,12 @@ async function getMessageMetrics() {
     const activeClientsQuery = `
       SELECT clientid, COUNT(*) as message_count
       FROM Messages
+      WHERE user_id = $1
       GROUP BY clientid
       ORDER BY message_count DESC
       LIMIT 5
     `;
-    const activeClientsResult = await db.query(activeClientsQuery);
+    const activeClientsResult = await db.query(activeClientsQuery, [user_id]);
     metrics.mostActiveClients = activeClientsResult.rows;
 
     return metrics;
@@ -251,18 +259,21 @@ async function getMessageMetrics() {
   }
 }
 
-async function getMostRecentMessagePerClient() {
+async function getMostRecentMessagePerClient(user_id) {
+  console.log('[getMostRecentMessagePerClient] user_id:', user_id);
   const db = dbUtils.getDB();
   const sql = `
     WITH RecentMessages AS (
       SELECT DISTINCT ON (clientid)
         *
       FROM Messages
+      WHERE user_id = $1
       ORDER BY clientid, id DESC
     ),
     SuggestedResponses AS (
       SELECT clientid, response
       FROM SuggestedResponses
+      WHERE user_id = $1
     )
     SELECT 
       COALESCE(rm.id, -1) as id,
@@ -279,7 +290,7 @@ async function getMostRecentMessagePerClient() {
     ORDER BY COALESCE(rm.id, -1) DESC
   `;
   try {
-    const res = await db.query(sql);
+    const res = await db.query(sql, [user_id]);
     return res.rows;
   } catch (err) {
     console.error('Error fetching most recent messages per client:', err.message);
@@ -287,11 +298,12 @@ async function getMostRecentMessagePerClient() {
   }
 }
 
-async function countSuggestedResponses() {
+async function countSuggestedResponses(user_id) {
+  console.log('[countSuggestedResponses] user_id:', user_id);
   const db = dbUtils.getDB();
-  const sql = 'SELECT COUNT(*) FROM SuggestedResponses';
+  const sql = 'SELECT COUNT(*) FROM SuggestedResponses WHERE user_id = $1';
   try {
-    const res = await db.query(sql);
+    const res = await db.query(sql, [user_id]);
     return parseInt(res.rows[0].count);
   } catch (err) {
     console.error('Error counting suggested responses:', err.message);
@@ -299,11 +311,12 @@ async function countSuggestedResponses() {
   }
 }
 
-async function getNumberOfSuggestedResponses() {
+async function getNumberOfSuggestedResponses(user_id) {
+  console.log('[getNumberOfSuggestedResponses] user_id:', user_id);
   const db = dbUtils.getDB();
-  const sql = 'SELECT COUNT(*) FROM SuggestedResponses';
+  const sql = 'SELECT COUNT(*) FROM SuggestedResponses WHERE user_id = $1';
   try {
-    const res = await db.query(sql);
+    const res = await db.query(sql, [user_id]);
     return parseInt(res.rows[0].count);
   } catch (err) {
     console.error('Error counting suggested responses:', err.message);

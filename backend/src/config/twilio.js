@@ -1,15 +1,13 @@
 const twilio = require('twilio');
-const path = require('path');
 require('dotenv').config({ path: '../../.env' });
 const { handleUserInput, createThread } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus, saveSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
 const { createClient, getClientByPhoneNumber, getClientAutoRespond } = require('../model/clients');
-const dbUtils = require('../model/dbUtils')
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 const { getUserPushTokens } = require('../model/pushToken');
-const { getUserByPhoneNumber } = require('../model/users');
+const { getUserByPhoneNumber, getUserByBusinessNumber, getUserById } = require('../model/users');
 const { Expo } = require('expo-server-sdk');
 const OpenAI = require('openai');
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -41,19 +39,20 @@ function adjustDate(date) {
   return adjustedDate.toLocaleString();
 }
 
-async function sendMessage(to, body, initialMessage = true, manual = true) {
+async function sendMessage(to, body, userId, initialMessage = true, manual = true) {
   const to_formatted = formatPhoneNumber(to);
-  const customer = await getClientByPhoneNumber(to);
+  const customer = await getClientByPhoneNumber(to, userId);
   const localDate = new Date().toLocaleString();
   const adjustedDate = adjustDate(localDate);
-
+  const user = await getUserById(userId);
   let clientId;
   if (customer.id != '') {
     clientId = customer.id
-    await saveMessage(process.env.TWILIO_PHONE_NUMBER, to, body, adjustedDate, clientId, true, !manual);
+    console.log("userId: ", userId)
+    await saveMessage(user.business_number, to, body, adjustedDate, clientId, true, !manual, userId);
     console.log(initialMessage, manual)
     // Create or get the thread, passing the initialMessage parameter
-    const thread = await createThread(to_formatted, initialMessage);
+    const thread = await createThread(to_formatted, initialMessage, userId);
     if (manual) {
       await openai.beta.threads.messages.create(thread.id, {
         role: "assistant",
@@ -74,7 +73,7 @@ async function sendMessage(to, body, initialMessage = true, manual = true) {
   }
   
   return client.messages.create({
-    from: process.env.TWILIO_PHONE_NUMBER,
+    from: user.business_number,
     to: to_formatted,
     body: body
   })
@@ -88,9 +87,10 @@ async function sendMessage(to, body, initialMessage = true, manual = true) {
   });
 };
 
-async function sendMessages(clients, message) {
+async function sendMessages(clients, message, userId) {
   for (const client of clients) {
-    await sendMessage(client, message);
+    console.log("user_id: ", userId)
+    await sendMessage(client, message, userId);
   };
 };
 
@@ -98,9 +98,9 @@ async function handleIncomingMessage(req, res) {
   if (!req.body) {
     return res.status(400).send('No request body!');
   }
-
+  console.log(req.body)
   const { EventType } = req.body;
-  let Author, Body;
+  let Author, Body, ConversationSid;
 
   if (EventType === 'onConversationAdd') {
     Author = req.body['MessagingBinding.Address'];
@@ -108,27 +108,34 @@ async function handleIncomingMessage(req, res) {
   } else if (EventType === 'onMessageAdd') {
     Author = req.body.Author;
     Body = req.body.Body;
+    ConversationSid = req.body.ConversationSid;
   } else {
     return res.status(400).send('Unsupported EventType');
   }
 
   try {
-    let client = await getClientByPhoneNumber(Author);
+    console.log(ConversationSid)
+    const business_number = await getContactPhoneNumberFromConversation(ConversationSid)
+    console.log("Business Number: ", business_number)
+    const user = await getUserByBusinessNumber(business_number)
+    console.log(user)
+    let client = await getClientByPhoneNumber(Author, user.id);
     let clientId = '';
     const localDate = new Date().toLocaleString();
     const adjustedDate = adjustDate(localDate);
 
     if (!client || client.id === '') {
       // Create a new client if one doesn't exist
-      clientId = await createClient('', '', Author, '', '');
-      client = await getClientByPhoneNumber(Author);
+      clientId = await createClient('', '', Author, '', '', user.id);
+      client = await getClientByPhoneNumber(Author, user.id);
     } else {
       clientId = client.id;
     }
 
     try {
       // Set isAI to true for incoming messages
-      await saveMessage(Author, process.env.TWILIO_PHONE_NUMBER, Body, adjustedDate, clientId, true);
+      console.log("user.id: ", user.id)
+      await saveMessage(Author, user.business_number, Body, adjustedDate, clientId, true, false, user.id);
     } catch (saveError) {
       if (saveError.code !== '23505') {
         console.error('Error saving message:', saveError);
@@ -142,14 +149,15 @@ async function handleIncomingMessage(req, res) {
     if (!autoRespond) {
       // If auto_respond is false, don't process the message with AI
       await toggleLastMessageReadStatus(clientId);
-      await sendNotificationToUser(
-        'New Message from ' + client.firstname,
-        `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
-        clientId,
-        client.firstname + ' ' + client.lastname,
-        Body,
-        false
-      );
+      // await sendNotificationToUser(
+      //   'New Message from ' + client.firstname,
+      //   `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
+      //   clientId,
+      //   client.firstname + ' ' + client.lastname,
+      //   Body,
+      //   false,
+      //   user.id
+      // );
       return res.status(200).send('Message received');
     }
 
@@ -169,7 +177,7 @@ async function handleIncomingMessage(req, res) {
         delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
       }
       
-      setTimeout(() => processDelayedResponse(Author), delayInMs);
+      setTimeout(() => processDelayedResponse(Author, user.id), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
 
@@ -182,71 +190,70 @@ async function handleIncomingMessage(req, res) {
   }
 }
 
-async function processDelayedResponse(phoneNumber) {
+async function processDelayedResponse(phoneNumber, userId) {
   console.log(`Processing delayed response for ${phoneNumber}`);
   const messages = pendingMessages.get(phoneNumber);
   const lastMessage = messages[messages.length - 1];
   try {
     pendingMessages.delete(phoneNumber);
     if (messages && messages.length > 0) {
-      const responseMessage = await handleUserInput(messages, phoneNumber);
+      const responseMessage = await handleUserInput(messages, phoneNumber, userId);
       console.log(responseMessage)
       
-      const client = await getClientByPhoneNumber(phoneNumber);
+      const client = await getClientByPhoneNumber(phoneNumber, userId);
       if (client.id != '') {
         await toggleLastMessageReadStatus(client.id);
         if (responseMessage === "user" || responseMessage === "User") {
-          await sendNotificationToUser(
-            'New Message from ' + client.firstname,
-            `${client.firstname} ${client.lastname}: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
-            client.id,
-            client.firstname + ' ' + client.lastname,
-            lastMessage,
-            false
-          );
+          // await sendNotificationToUser(
+          //   'New Message from ' + client.firstname,
+          //   `${client.firstname} ${client.lastname}: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
+          //   client.id,
+          //   client.firstname + ' ' + client.lastname,
+          //   lastMessage,
+          //   false,
+          //   userId
+          // );
         }
         else {
           // Save the suggested response
           await saveSuggestedResponse(client.id, responseMessage);
-          await sendNotificationToUser(
-            client.firstname + ' ' + client.lastname,
-            responseMessage,
-            client.id,
-            client.firstname + ' ' + client.lastname,
-            lastMessage,
-            true
-          );
+          // await sendNotificationToUser(
+          //   client.firstname + ' ' + client.lastname,
+          //   responseMessage,
+          //   client.id,
+          //   client.firstname + ' ' + client.lastname,
+          //   lastMessage,
+          //   true,
+          //   userId
+          // );
         }
       } 
       
         else {
-          await sendMessage(phoneNumber, responseMessage, false, false);
+          console.log("phoneNumber: ", phoneNumber)
+          console.log("responseMessage: ", responseMessage)
+          console.log("userId: ", userId)
+          await sendMessage(phoneNumber, responseMessage, userId, false, false);
         }
       }
   } catch (error) {
     console.error('Error processing delayed response:', error);
-    const client = await getClientByPhoneNumber(phoneNumber);
-    await sendNotificationToUser(
-      'New Client Message',
-      `${client.firstname} ${client.lastname}: ${lastMessage}`,
-      client.id,
-      client.firstname + ' ' + client.lastname,
-      lastMessage,
-      false
-    );
+    const client = await getClientByPhoneNumber(phoneNumber, userId);
+    // await sendNotificationToUser(
+    //   'New Client Message',
+    //   `${client.firstname} ${client.lastname}: ${lastMessage}`,
+    //   client.id,
+    //   client.firstname + ' ' + client.lastname,
+    //   lastMessage,
+    //   false,
+    //   userId
+    // );
   }
 }
 
-async function sendNotificationToUser(title, body, clientId, clientName, clientMessage, isSuggestedResponse) {
-  const barberPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
-  const barber = await getUserByPhoneNumber(barberPhoneNumber);
+async function sendNotificationToUser(title, body, clientId, clientName, clientMessage, isSuggestedResponse, userId) {
 
-  if (!barber) {
-    console.log('No barber found with the given phone number');
-    return;
-  }
-
-  const pushTokens = await getUserPushTokens(barber.id);
+  const pushTokens = await getUserPushTokens(userId);
 
   if (!pushTokens || pushTokens.length === 0) {
     console.log('No push tokens found for the barber');
@@ -280,10 +287,29 @@ async function sendNotificationToUser(title, body, clientId, clientName, clientM
   }
 }
 
+async function getContactPhoneNumberFromConversation(conversationSid) {
+  try {
+    // Fetch participants in the conversation
+    const participants = await client.conversations.v1.conversations(conversationSid).participants.list();
+    
+    // Find the participant with the proxy_address (Twilio number)
+    const proxyParticipant = participants.find(p => p.messagingBinding.proxy_address);
+    if (!proxyParticipant) {
+      console.log('Proxy participant not found in the conversation');
+      return null;
+    }
+    return proxyParticipant.messagingBinding.proxy_address
+  } catch (error) {
+    console.error('Error fetching contact phone number:', error);
+    return null;
+  }
+}
+
 module.exports = {
   sendMessage,
   handleIncomingMessage,
   sendMessages,
   sendNotificationToUser,
-  formatPhoneNumber
+  formatPhoneNumber,
+  getContactPhoneNumberFromConversation
 };

@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Platform } from 'react-native';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -10,7 +10,7 @@ import { ChatProvider } from './src/components/ChatContext';
 import { MessageProvider } from './src/components/MessageContext';
 import DailyAppointments from './src/screens/DailyAppointments';
 
-// Import your screen components
+// Import your existing screen components
 import Homepage from './src/screens/Homepage';
 import ClientListScreen from './src/screens/ClientListScreen';
 import ScheduleScreen from './src/screens/ScheduleScreen';
@@ -26,7 +26,14 @@ import ChatDashboard from './src/screens/ChatDashboard';
 import ClientMessagesScreen from './src/screens/ClientMessagesScreen';
 import InitiateConversation from './src/screens/InitiateConversation';
 import MetricsScreen from './src/screens/MetricsScreen';
-import SettingsPage from './src/screens/SettingsPage'; // Add this import
+import SettingsPage from './src/screens/SettingsPage';
+
+// Import new login and register components
+import Login from './src/components/Login';
+import Register from './src/components/Register';
+
+// Import auth utilities
+import { getToken, logout } from './src/utils/auth';
 
 const Stack = createStackNavigator();
 
@@ -78,11 +85,29 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
 }
 
 const AppContent: React.FC = () => {
-  const navigation = useNavigation();
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
+  const handleLogout = useCallback(async () => {
+    await logout();
+    setIsLoggedIn(false);
+  }, []);
+
+  const handleLogin = useCallback(() => {
+    setIsLoggedIn(true);
+  }, []);
+
   useEffect(() => {
+    // Check if the user is logged in
+    const checkLoginStatus = async () => {
+      const token = await getToken();
+      console.log('Current user token:', token);
+      setIsLoggedIn(!!token);
+    };
+
+    checkLoginStatus();
+
     registerForPushNotificationsAsync().then(token => {
       if (token) {
         savePushToken('+18446480598', token);
@@ -98,32 +123,9 @@ const AppContent: React.FC = () => {
       const data = response.notification.request.content.data;
       console.log('Notification data:', data);
       
-      if (data && typeof data === 'object') {
-        const { clientId, clientName, clientMessage, suggestedResponse, notificationType } = data;
-        
-        if (notificationType === 'suggestedResponse') {
-          console.log('Navigating to ClientMessages with suggested response:', { clientId, clientName, suggestedResponse });
-          navigation.navigate('ClientMessages', { 
-            clientid: clientId, 
-            clientName, 
-            suggestedResponse 
-          });
-        } else if (notificationType === 'clientMessage') {
-          console.log('Navigating to ClientMessages with client message:', { clientId, clientName, clientMessage });
-          navigation.navigate('ClientMessages', { 
-            clientid: clientId, 
-            clientName, 
-            clientMessage 
-          });
-        } else if (data.notificationType === 'unpaid_appointments') {
-          navigation.navigate('DailyAppointments');
-        } else if (data.notificationType === 'appointment_ended') {
-          console.log('Navigating to CalendarScreen for ended appointment:', { clientId });
-          navigation.navigate('Calendar', { openAppointmentForClient: clientId });
-        }
-      } else {
-        console.warn('Invalid or missing data in notification:', data);
-      }
+      // Handle notification responses here
+      // You may need to use a different navigation method here
+      // or pass the navigation as a prop to this component
     });
 
     return () => {
@@ -134,31 +136,57 @@ const AppContent: React.FC = () => {
         Notifications.removeNotificationSubscription(responseListener.current);
       }
     };
-  }, [navigation]);
+  }, []);
+
+  if (isLoggedIn === null) {
+    // You might want to show a loading screen here
+    return null;
+  }
 
   return (
-    <Stack.Navigator initialRouteName="Homepage" screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Homepage" component={Homepage} />
-      <Stack.Screen name="ClientList" component={ClientListScreen} />
-      <Stack.Screen name="ScheduleScreen" component={ScheduleScreen} />
-      <Stack.Screen name="Calendar" component={CalendarScreen} />
-      <Stack.Screen name="AddAppointment" component={AddAppointmentScreen} />
-      <Stack.Screen name="ClientDetails" component={ClientDetailsScreen} />
-      <Stack.Screen name="AppointmentDetails" component={AppointmentDetailsScreen} />
-      <Stack.Screen name="AddClient" component={AddClientScreen} />
-      <Stack.Screen name="QueryResults" component={QueryResults} />
-      <Stack.Screen name="Chat" component={ChatScreen} />
-      <Stack.Screen name="EditClient" component={EditClientScreen} />
-      <Stack.Screen name="ChatDashboard" component={ChatDashboard} />
-      <Stack.Screen 
-        name="ClientMessages" 
-        component={ClientMessagesScreen} 
-        initialParams={{ clientid: 0, clientName: '', suggestedResponse: false }}
-      />
-      <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
-      <Stack.Screen name="Metrics" component={MetricsScreen} /> 
-      <Stack.Screen name="DailyAppointments" component={DailyAppointments} />
-      <Stack.Screen name="Settings" component={SettingsPage} /> 
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {isLoggedIn ? (
+        <>
+          <Stack.Screen 
+            name="Homepage" 
+            component={Homepage}
+            initialParams={{ handleLogout }}
+          />
+          <Stack.Screen name="ClientList" component={ClientListScreen} />
+          <Stack.Screen name="ScheduleScreen" component={ScheduleScreen} />
+          <Stack.Screen name="Calendar" component={CalendarScreen} />
+          <Stack.Screen name="AddAppointment" component={AddAppointmentScreen} />
+          <Stack.Screen name="ClientDetails" component={ClientDetailsScreen} />
+          <Stack.Screen name="AppointmentDetails" component={AppointmentDetailsScreen} />
+          <Stack.Screen name="AddClient" component={AddClientScreen} />
+          <Stack.Screen name="QueryResults" component={QueryResults} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="EditClient" component={EditClientScreen} />
+          <Stack.Screen name="ChatDashboard" component={ChatDashboard} />
+          <Stack.Screen 
+            name="ClientMessages" 
+            component={ClientMessagesScreen} 
+            initialParams={{ clientid: 0, clientName: '', suggestedResponse: false }}
+          />
+          <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
+          <Stack.Screen name="Metrics" component={MetricsScreen} /> 
+          <Stack.Screen name="DailyAppointments" component={DailyAppointments} />
+          <Stack.Screen 
+            name="Settings" 
+            component={SettingsPage}
+            initialParams={{ handleLogout }}
+          />
+        </>
+      ) : (
+        <>
+          <Stack.Screen 
+            name="Login" 
+            component={Login} 
+            initialParams={{ handleLogin }}
+          />
+          <Stack.Screen name="Register" component={Register} />
+        </>
+      )}
     </Stack.Navigator>
   );
 };

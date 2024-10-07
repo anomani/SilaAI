@@ -38,17 +38,18 @@ async function rescheduleAppointmentWithAcuity(appointmentId, newDate, newStartT
     }
 }
 
-async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, newDate, newStartTime) {
+async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, newDate, newStartTime, userId) {
     try {
         console.log("Current Date:", currentDate);
         console.log("New Date:", newDate);
         console.log("New Start Time:", newStartTime);
-        const client = await getClientByPhoneNumber(phoneNumber);
+        console.log("User ID:", userId);
+        const client = await getClientByPhoneNumber(phoneNumber, userId);
         if (!client) {
             return "Client not found";
         }
 
-        const appointmentsForDay = await getAppointmentsByDay(currentDate);
+        const appointmentsForDay = await getAppointmentsByDay(currentDate, userId);
         const appointment = appointmentsForDay.find(appt => appt.clientid === client.id);
         if (!appointment) {
             return "Appointment not found";
@@ -79,7 +80,7 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
         const newEndTime = addMinutes(newStartTime, totalDuration);
 
         // Check availability
-        const availability = await getAvailability(newDate, appointmentType, addOnArray);
+        const availability = await getAvailability(newDate, appointmentType, addOnArray, userId, client.id);
         const availabilityCheck = isAppointmentAvailable(availability, newStartTime, newEndTime);
         
         if (availabilityCheck !== "Available") {
@@ -89,7 +90,7 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
         // Reschedule with Acuity
         const acuityResponse = await rescheduleAppointmentWithAcuity(appointment.acuityid, newDate, newStartTime);
 
-        await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime);
+        await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime, userId);
         
         return "Appointment rescheduled successfully"
     } catch (error) {
@@ -98,17 +99,18 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
     }
 }
 
-async function rescheduleAppointmentByPhoneAndDateInternal(phoneNumber, currentDate, newDate, newStartTime) {
+async function rescheduleAppointmentByPhoneAndDateInternal(phoneNumber, currentDate, newDate, newStartTime, userId) {
     try {
         console.log("Current Date:", currentDate);
         console.log("New Date:", newDate);
         console.log("New Start Time:", newStartTime);
-        const client = await getClientByPhoneNumber(phoneNumber);
+        console.log("User ID:", userId);
+        const client = await getClientByPhoneNumber(phoneNumber, userId);
         if (!client) {
             return "Client not found";
         }
 
-        const appointmentsForDay = await getAppointmentsByDay(currentDate);
+        const appointmentsForDay = await getAppointmentsByDay(currentDate, userId);
         const appointment = appointmentsForDay.find(appt => appt.clientid === client.id);
         if (!appointment) {
             return "Appointment not found";
@@ -132,7 +134,7 @@ async function rescheduleAppointmentByPhoneAndDateInternal(phoneNumber, currentD
 
         const newEndTime = addMinutes(newStartTime, totalDuration);
 
-        const availability = await getAvailability(newDate, appointmentType, addOnArray);
+        const availability = await getAvailability(newDate, appointmentType, addOnArray, userId, client.id);
         const availabilityCheck = isAppointmentAvailable(availability, newStartTime, newEndTime);
         
         if (availabilityCheck !== "Available") {

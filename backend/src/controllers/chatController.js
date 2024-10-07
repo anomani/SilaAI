@@ -11,7 +11,6 @@ const { saveSuggestedResponse, getSuggestedResponse, clearSuggestedResponse } = 
 const { getMessageMetrics } = require('../model/messages');
 const { getMostRecentMessagePerClient } = require('../model/messages');
 const { countSuggestedResponses } = require('../model/messages');
-
 const { handleAudioTranscription } = require('../ai/whisper');
 
 const handleChatRequest = async (req, res) => {
@@ -48,7 +47,9 @@ const handleUserInputDataController = async (req, res) => {
 
 const getAllMessagesGroupedByClientController = async (req, res) => {
   try {
-    const groupedMessages = await getAllMessagesGroupedByClient();
+    const userId = req.user.id;
+    console.log(userId)
+    const groupedMessages = await getAllMessagesGroupedByClient(userId);
     res.status(200).json(groupedMessages);
   } catch (error) {
     console.error('Error fetching grouped messages:', error);
@@ -69,8 +70,9 @@ const getMessagesByClientIdController = async (req, res) => {
 
 const sendMessageController = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { to, message, initialMessage, manual } = req.body;
-    await sendMessage(to, message, initialMessage, manual);
+    await sendMessage(to, message, userId, initialMessage, manual);
     res.status(200).json({ message: 'Message sent' });
   } catch (error) {
     console.error('Error sending message:', error);
@@ -125,12 +127,13 @@ const getCustomListController = async (req, res) => {
 
 const sendMessagesToSelectedClients = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { ids, messageTemplate } = req.body;
     for (const id of ids) {
       const client = await getClientById(id);
       if (client) {
         const personalizedMessage = messageTemplate.replace('{firstName}', client.firstname);
-        await sendMessage(client.phonenumber, personalizedMessage);
+        await sendMessage(client.phonenumber, personalizedMessage, userId);
       } else {
         console.log(`Client not found for id: ${id}`);
       }
@@ -177,7 +180,8 @@ const clearSuggestedResponseController = async (req, res) => {
 
 const getMessageMetricsController = async (req, res) => {
   try {
-    const metrics = await getMessageMetrics();
+    const userId = req.user.id;
+    const metrics = await getMessageMetrics(userId);
     res.status(200).json(metrics);
   } catch (error) {
     console.error('Error fetching message metrics:', error);
@@ -187,7 +191,8 @@ const getMessageMetricsController = async (req, res) => {
 
 const getMostRecentMessagePerClientController = async (req, res) => {
   try {
-    const recentMessages = await getMostRecentMessagePerClient();
+    const userId = req.user.id;
+    const recentMessages = await getMostRecentMessagePerClient(userId);
     res.status(200).json(recentMessages);
   } catch (error) {
     console.error('Error fetching most recent messages per client:', error);
@@ -197,7 +202,8 @@ const getMostRecentMessagePerClientController = async (req, res) => {
 
 const getSuggestedResponseCountController = async (req, res) => {
   try {
-    const count = await countSuggestedResponses();
+    const userId = req.user.id;
+    const count = await countSuggestedResponses(userId);
     res.status(200).json({ count });
   } catch (error) {
     console.error('Error fetching suggested response count:', error);

@@ -1,18 +1,13 @@
-const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
-const fs = require('fs');
-const os = require('os');
-const path = require('path')
 const {createAppointment} = require ('../../model/appointment')
-const {checkClientExists, getClientByPhoneNumber, createClient, getClientById} = require ('../../model/clients')
-const dbUtils = require('../../model/dbUtils')
+const {getClientByPhoneNumber, createClient, getClientById} = require ('../../model/clients')
 const {getAvailability, getAvailabilityAdmin} = require('./getAvailability')
 const axios = require('axios');
 const moment = require('moment-timezone');
 const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 
-async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray) {
+async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray, userId) {
     const acuityApiUrl = 'https://acuityscheduling.com/api/v1/appointments';
     const auth = {
         username: process.env.ACUITY_USER_ID,
@@ -59,7 +54,7 @@ async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, e
     }
 }
 
-async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, addOnArray = []) {
+async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, addOnArray = [], userId) {
     console.log("Client ID:", clientId);
     console.log("Date:", date);
     console.log("Start Time:", startTime);
@@ -100,7 +95,7 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
   }
 }
 
-async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray) {
+async function bookAppointment(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray, userId) {
     console.log("Date:", date);
     console.log("Start Time:", startTime);
     console.log("First Name:", fname);
@@ -121,7 +116,7 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
 
     const endTime = addMinutes(startTime, totalDuration);
 
-    const availability = await getAvailability(date, appointmentType, addOnArray);
+    const availability = await getAvailability(date, appointmentType, addOnArray, userId);
     console.log(availability);
 
     // Check if the appointment is available
@@ -131,16 +126,15 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     }
 
     try {
-        const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray);
-        // console.log(acuityAppointment);
-        const client = await getClientByPhoneNumber(phone);
+        const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray, userId);
+        const client = await getClientByPhoneNumber(phone, userId);
         if (client.id != '') {
             const clientId = client.id;
             // await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", price);
         } else {
             console.log("Client does not exist");
-            await createClient(fname, lname, phone, email, "");
-            const newClient = await getClientByPhoneNumber(phone);
+            await createClient(fname, lname, phone, email, "", userId);
+            const newClient = await getClientByPhoneNumber(phone, userId);
             // await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, newClient.id, "", price);
         }
         return "Appointment booked successfully";
@@ -150,7 +144,7 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
     } 
 }
 
-async function bookAppointmentInternal(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray) {
+async function bookAppointmentInternal(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray, userId) {
     console.log("Date:", date);
     console.log("Start Time:", startTime);
     console.log("First Name:", fname);
@@ -170,7 +164,7 @@ async function bookAppointmentInternal(date, startTime, fname, lname, phone, ema
 
     const endTime = addMinutes(startTime, totalDuration);
 
-    const availability = await getAvailability(date, appointmentType, addOnArray);
+    const availability = await getAvailability(date, appointmentType, addOnArray, userId);
     console.log(availability);
 
     const availabilityCheck = isAppointmentAvailable(availability, startTime, endTime);
@@ -179,17 +173,17 @@ async function bookAppointmentInternal(date, startTime, fname, lname, phone, ema
     }
 
     try {
-        const client = await getClientByPhoneNumber(phone);
+        const client = await getClientByPhoneNumber(phone, userId);
         let clientId;
         if (client.id !== '') {
             clientId = client.id;
         } else {
             console.log("Client does not exist");
-            await createClient(fname, lname, phone, email, "");
-            const newClient = await getClientByPhoneNumber(phone);
+            await createClient(fname, lname, phone, email, "", userId);
+            const newClient = await getClientByPhoneNumber(phone, userId);
             clientId = newClient.id;
         }
-        await createAppointment(appointmentType, null, date, startTime, endTime, clientId, "", price);
+        await createAppointment(appointmentType, null, date, startTime, endTime, clientId, "", price, userId);
         return "Appointment booked successfully";
     } catch (error) {
         console.error(error);
@@ -197,7 +191,7 @@ async function bookAppointmentInternal(date, startTime, fname, lname, phone, ema
     } 
 }
 
-async function bookAppointmentAdminInternal(clientId, date, startTime, appointmentType, addOnArray = []) {
+async function bookAppointmentAdminInternal(clientId, date, startTime, appointmentType, addOnArray = [], userId) {
     console.log("Client ID:", clientId);
     console.log("Date:", date);
     console.log("Start Time:", startTime);
@@ -230,7 +224,7 @@ async function bookAppointmentAdminInternal(clientId, date, startTime, appointme
     const endTime = moment(`${date} ${startTime}`).add(totalDuration, 'minutes').format('HH:mm');
 
     try {
-        await createAppointment(appointmentType, null, date, startTime, endTime, clientId, "", totalPrice);
+        await createAppointment(appointmentType, null, date, startTime, endTime, clientId, "", totalPrice, userId);
         return "Appointment booked successfully";
     } catch (error) {
         console.error(error);

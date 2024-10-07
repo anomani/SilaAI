@@ -1,27 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
-import { getFillMyCalendarStatus, setFillMyCalendarStatus } from '../services/api';
+import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Button } from 'react-native';
+import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser } from '../services/api';
 import { Ionicons } from '@expo/vector-icons'; // Make sure to import this
 import Footer from '../components/Footer'; // Import the Footer component
+import { useRoute } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SettingsPage = ({ navigation }) => { // Add navigation prop
   const [fillMyCalendar, setFillMyCalendar] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [user, setUser] = useState(null);
+  const route = useRoute();
+  const { handleLogout } = route.params;
 
   useEffect(() => {
-    const fetchStatus = async () => {
+    const fetchData = async () => {
       try {
-        const response = await getFillMyCalendarStatus();
-        setFillMyCalendar(response.status);
+        const [calendarStatus, userData] = await Promise.all([
+          getFillMyCalendarStatus(),
+          getCurrentUser()
+        ]);
+        setFillMyCalendar(calendarStatus.status);
+        setUser(userData);
       } catch (err) {
-        setError('Failed to fetch status');
+        setError('Failed to fetch data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchStatus();
+    fetchData();
   }, []);
 
   const handleToggle = async () => {
@@ -38,20 +47,34 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
   };
 
   if (loading) {
-    return <ActivityIndicator size="large" color="#ffffff" style={styles.loading} />;
+    return (
+      <SafeAreaView style={styles.pageContainer}>
+        <ActivityIndicator size="large" color="#ffffff" style={styles.loading} />
+      </SafeAreaView>
+    );
   }
 
   if (error) {
-    return <Text style={styles.error}>{error}</Text>;
+    return (
+      <SafeAreaView style={styles.pageContainer}>
+        <Text style={styles.error}>{error}</Text>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <View style={styles.pageContainer}>
+    <SafeAreaView style={styles.pageContainer}>
       <View style={styles.container}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.title}>Settings</Text>
+        {user && (
+          <View style={styles.userInfo}>
+            <Text style={styles.infoText}>Username: {user.username}</Text>
+            <Text style={styles.infoText}>Phone Number: {user.phoneNumber}</Text>
+          </View>
+        )}
         <View style={styles.setting}>
           <Text style={styles.label}>Fill My Calendar</Text>
           <Switch
@@ -61,9 +84,10 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
             thumbColor={fillMyCalendar ? '#f5dd4b' : '#f4f3f4'}
           />
         </View>
+        <Button title="Logout" onPress={handleLogout} />
       </View>
       <Footer navigation={navigation} />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -89,6 +113,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginBottom: 24,
     marginLeft: 40, // Add left margin to avoid overlapping with back button
+  },
+  userInfo: {
+    marginBottom: 20,
+    padding: 10,
+    backgroundColor: '#2c2c2e',
+    borderRadius: 8,
+  },
+  infoText: {
+    fontSize: 16,
+    color: '#fff',
+    marginBottom: 5,
   },
   setting: {
     flexDirection: 'row',

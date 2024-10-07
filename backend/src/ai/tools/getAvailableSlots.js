@@ -1,11 +1,9 @@
-const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
 const {getAppointmentsByDay} = require('../../model/appointment')
-const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 
 
-async function getAvailableSlots(startDate, endDate) {
+async function getAvailableSlots(startDate, endDate, userId) {
     console.log("Start Date:", startDate);
     console.log("End Date:", endDate);
 
@@ -15,7 +13,7 @@ async function getAvailableSlots(startDate, endDate) {
 
     while (currentDate <= endDateObj) {
         const dayString = currentDate.toISOString().split('T')[0];
-        const dayAvailability = await getAllAvailableSlotsForDay(dayString);
+        const dayAvailability = await getAllAvailableSlotsForDay(dayString, userId);
 
         if (dayAvailability.length > 0) {
             // Group slots by their group number
@@ -47,7 +45,7 @@ async function getAvailableSlots(startDate, endDate) {
 
 // machine()
 
-async function getAllAvailableSlotsForDay(day) {
+async function getAllAvailableSlotsForDay(day, userId) {
     const date = new Date(day);
     const dayOfWeek = date.getDay();
     if (dayOfWeek === 0 || dayOfWeek === 1) {
@@ -61,7 +59,7 @@ async function getAllAvailableSlotsForDay(day) {
         return [];
     }
 
-    const appointments = await getAppointmentsByDay(day);
+    const appointments = await getAppointmentsByDay(day, userId);
     // Sort appointments by start time
     appointments.sort((a, b) => new Date(`${day}T${a.starttime}`) - new Date(`${day}T${b.starttime}`));
 
@@ -180,15 +178,5 @@ function determineGroup(startTime) {
     if (hour < 15) return 1;
     return 2; // All slots after 15:00 are now group 2
 }
-
-
-// async function main() {
-//     const availableSlots = await getAvailableSlots('2024-09-18', '2024-09-25');
-    
-//     console.log(JSON.stringify(availableSlots, null, 2));
-
-// }
-
-// main()
 
 module.exports = {getAvailableSlots};

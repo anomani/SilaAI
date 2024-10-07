@@ -1,10 +1,9 @@
-const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
 const {getAppointmentsByDay} = require('../../model/appointment')
 const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 
-async function getAvailability(day, appointmentType, addOnArray, clientId = null) {
+async function getAvailability(day, appointmentType, addOnArray, userId, clientId = null) {
     console.log("Day:", day);
     console.log("Appointment Type:", appointmentType);
     console.log("Add-ons:", addOnArray);
@@ -22,6 +21,7 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
     try {
         const date = new Date(day);
         const dayOfWeek = date.getDay();
+        console.log("Day of Week:", dayOfWeek);
         if (dayOfWeek === 0 || dayOfWeek === 1) {
             return []
         }
@@ -30,7 +30,7 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
             return []
         }
 
-        const appointments = await getAppointmentsByDay(day);
+        const appointments = await getAppointmentsByDay(userId, day);
         const availableSlots = [];
 
         const now = new Date();
@@ -73,7 +73,7 @@ async function getAvailability(day, appointmentType, addOnArray, clientId = null
     }
 }
 
-async function getAvailabilityCron(day, appointmentType, addOnArray, clientId = null) {
+async function getAvailabilityCron(day, appointmentType, addOnArray, userId, clientId = null) {
     console.log("Day:", day);
     console.log("Appointment Type:", appointmentType);
     console.log("Add-ons:", addOnArray);
@@ -99,7 +99,7 @@ async function getAvailabilityCron(day, appointmentType, addOnArray, clientId = 
             return []
         }
 
-        const appointments = await getAppointmentsByDay(day);
+        const appointments = await getAppointmentsByDay(userId, day);
         const availableSlots = [];
 
         const now = new Date();
@@ -182,7 +182,7 @@ function getCurrentDate() {
 }
 
 
-async function findNextAvailableSlots(startDay, appointmentType, addOnArray, numberOfSlots = 5) {
+async function findNextAvailableSlots(startDay, appointmentType, addOnArray, userId, numberOfSlots = 5) {
   const appointmentTypeInfo = appointmentTypes[appointmentType];
   if (!appointmentTypeInfo) {
     throw new Error(`Invalid appointment type: ${appointmentType}`);
@@ -196,7 +196,7 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, num
 
   while (availableSlots.length < numberOfSlots && daysChecked < 14) {
     const dayString = currentDay.toISOString().split('T')[0];
-    const dayAvailability = await getAvailability(dayString, appointmentType, addOnArray);
+    const dayAvailability = await getAvailability(dayString, appointmentType, addOnArray, userId);
     
     if (Array.isArray(dayAvailability) && dayAvailability.length > 0) {
       for (const slot of dayAvailability) {
@@ -214,5 +214,6 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, num
 
   return availableSlots;
 }
+
 
 module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots, getAvailabilityCron}

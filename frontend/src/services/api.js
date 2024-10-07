@@ -1,10 +1,22 @@
 import axios from 'axios';
+import { getToken } from '../utils/auth';
 
 // Replace with your backend API URL
-// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
+});
+
+// Add a request interceptor
+api.interceptors.request.use(async (config) => {
+  const token = await getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
 });
 
 // Implement exponential backoff
@@ -67,7 +79,9 @@ export const handleChat = async (message) => {
 
 export const getAppointmentsByDay = async (date) => {
   try {
-    const response = await retryRequest(() => throttledRequest(() => api.get(`/appointments/${date}`)));
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get(`/appointments/${date}`)
+    ));
     return response.data;
   } catch (error) {
     console.error('Error fetching appointments:', error);
@@ -246,7 +260,7 @@ export const setMessagesRead = async (clientId) => {
 
 export const savePushToken = async (phoneNumber, pushToken) => {
   try {
-    await retryRequest(() => throttledRequest(() => api.post('/save-push-token', { phoneNumber, pushToken })));
+    await retryRequest(() => throttledRequest(() => api.post('/save-push-token', { pushToken })));
   } catch (error) {
     console.error('Error saving push token:', error);
     throw error;
@@ -255,12 +269,8 @@ export const savePushToken = async (phoneNumber, pushToken) => {
 
 export const getCustomList = async (id) => {
   try {
-    console.log(id)
-    const response = await fetch(`${API_URL}/chat/custom-list?id=${id}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch custom list');
-    }
-    return await response.json();
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/chat/custom-list`, { params: { id } })));
+    return response.data;
   } catch (error) {
     console.error('Error in getCustomList:', error);
     throw error;
@@ -346,7 +356,9 @@ export const getAIPrompt = async (clientId) => {
 
 export const getClientAppointmentsAroundCurrent = async (clientId, currentAppointmentId) => {
   try {
-    const response = await axios.get(`${API_URL}/appointments/client/${clientId}/around-current/${currentAppointmentId}`);
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get(`/appointments/client/${clientId}/around-current/${currentAppointmentId}`)
+    ));
     return response.data;
   } catch (error) {
     console.error('Error fetching client appointments around current:', error);
@@ -356,7 +368,7 @@ export const getClientAppointmentsAroundCurrent = async (clientId, currentAppoin
 
 export const getNotesByClientId = async (clientId) => {
   try {
-    const response = await axios.get(`${API_URL}/notes/${clientId}`);
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/notes/${clientId}`)));
     return response.data;
   } catch (error) {
     console.error('Error fetching notes:', error);
@@ -366,7 +378,7 @@ export const getNotesByClientId = async (clientId) => {
 
 export const createNote = async (clientId, content) => {
   try {
-    const response = await axios.post(`${API_URL}/notes`, { clientId, content });
+    const response = await retryRequest(() => throttledRequest(() => api.post('/notes', { clientId, content })));
     return response.data;
   } catch (error) {
     console.error('Error creating note:', error);
@@ -401,7 +413,7 @@ export const rescheduleAppointment = async (appointmentId, newDate, newStartTime
 
 export const getClientAutoRespond = async (clientId) => {
   try {
-    const response = await axios.get(`${API_URL}/clients/auto-respond/${clientId}`);
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/clients/auto-respond/${clientId}`)));
     return response.data.autoRespond;
   } catch (error) {
     console.error('Error fetching client auto-respond:', error);
@@ -411,7 +423,9 @@ export const getClientAutoRespond = async (clientId) => {
 
 export const updateClientAutoRespond = async (clientId, autoRespond) => {
   try {
-    const response = await axios.put(`${API_URL}/clients/auto-respond/${clientId}`, { autoRespond });
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.put(`/clients/auto-respond/${clientId}`, { autoRespond })
+    ));
     return response.data;
   } catch (error) {
     console.error('Error updating client auto-respond:', error);
@@ -467,7 +481,7 @@ export const deleteClientMedia = async (mediaId) => {
 
 export const getSuggestedResponse = async (clientId) => {
   try {
-    const response = await axios.get(`${API_URL}/chat/suggested-response/${clientId}`);
+    const response = await retryRequest(() => throttledRequest(() => api.get(`/chat/suggested-response/${clientId}`)));
     return response.data.suggestedResponse;
   } catch (error) {
     console.error('Error fetching suggested response:', error);
@@ -477,7 +491,7 @@ export const getSuggestedResponse = async (clientId) => {
 
 export const clearSuggestedResponse = async (clientId) => {
   try {
-    await axios.delete(`${API_URL}/chat/suggested-response/${clientId}`);
+    await retryRequest(() => throttledRequest(() => api.delete(`/chat/suggested-response/${clientId}`)));
   } catch (error) {
     console.error('Error clearing suggested response:', error);
     throw error;
@@ -567,6 +581,64 @@ export const updateAppointmentDetails = async (appointmentId, appointmentData) =
     return response.data;
   } catch (error) {
     console.error('Error updating appointment details:', error);
+    throw error;
+  }
+};
+
+export const login = async (phoneNumber, password) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.post('/users/login', { phoneNumber, password })
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error logging in:', error);
+    throw error;
+  }
+};
+
+export const register = async (username, password, email, phoneNumber) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.post('/users/register', { username, password, email, phoneNumber })
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error registering:', error);
+    throw error;
+  }
+};
+
+export const logout = async () => {
+  try {
+    await removeToken();
+    // You might want to clear other app state here
+  } catch (error) {
+    console.error('Error logging out:', error);
+    throw error;
+  }
+};
+
+export const getCurrentUser = async () => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    console.log('Sending token:', token);
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get('/users/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+    ));
+    console.log('Response:', response);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching current user:', error);
+    if (error.response) {
+      console.error('Response status:', error.response.status);
+      console.error('Response data:', error.response.data);
+    }
     throw error;
   }
 };

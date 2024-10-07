@@ -1,14 +1,15 @@
 const dbUtils = require('./dbUtils');
 const { appointmentTypes } = require('./appointmentTypes');
 
-async function createClient(firstName, lastName, phoneNumber, email, notes) {
+async function createClient(firstName, lastName, phoneNumber, email, notes, user_id) {
+    console.log('[createClient] user_id:', user_id);
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO Client (firstName, lastName, phoneNumber, email, notes)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO Client (firstName, lastName, phoneNumber, email, notes, user_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING id
     `;
-    const values = [firstName, lastName, phoneNumber, email, notes];
+    const values = [firstName, lastName, phoneNumber, email, notes, user_id];
     try {
         const res = await db.query(sql, values);
         console.log('Client Created with ID:', res.rows[0].id);
@@ -19,14 +20,15 @@ async function createClient(firstName, lastName, phoneNumber, email, notes) {
     }
 }
 
-async function createAltClient(firstName, lastName, phoneNumber, email, daysSinceLastAppointment, notes) {
+async function createAltClient(firstName, lastName, phoneNumber, email, daysSinceLastAppointment, notes, user_id) {
+    console.log('[createAltClient] user_id:', user_id);
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO Client (firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO Client (firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment, user_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id
     `;
-    const values = [firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment];
+    const values = [firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment, user_id];
     try {
         const res = await db.query(sql, values);
         console.log('Client Created with ID:', res.rows[0].id);
@@ -85,11 +87,13 @@ async function deleteClient(clientId) {
     }
 }
 
-async function getAllClients() {
+async function getAllClients(user_id) {
+    console.log('[getAllClients] user_id:', user_id);
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Client ORDER BY LOWER(lastName), LOWER(firstName)';
+    const sql = 'SELECT * FROM Client WHERE user_id = $1 ORDER BY LOWER(lastName), LOWER(firstName)';
+    const values = [user_id];
     try {
-        const res = await db.query(sql);
+        const res = await db.query(sql, values);
         return res.rows;
     } catch (err) {
         console.error('Error fetching clients:', err.message);
@@ -97,10 +101,11 @@ async function getAllClients() {
     }
 }
 
-async function checkClientExists(phoneNumber) {
+async function checkClientExists(phoneNumber, user_id) {
+    console.log('[checkClientExists] user_id:', user_id);
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Client WHERE phoneNumber = $1';
-    const values = [phoneNumber];
+    const sql = 'SELECT * FROM Client WHERE phoneNumber = $1 AND user_id = $2';
+    const values = [phoneNumber, user_id];
     try {
         const res = await db.query(sql, values);
         return res.rows[0];
@@ -110,14 +115,16 @@ async function checkClientExists(phoneNumber) {
     }
 }
 
-async function getClientByPhoneNumber(phoneNumber) {
+async function getClientByPhoneNumber(phoneNumber, user_id) {
+    console.log('[getClientByPhoneNumber] user_id:', user_id);
     const db = dbUtils.getDB();
     const sql = `
         SELECT * FROM Client 
-        WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phoneNumber, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE($1, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '')
-        OR phoneNumber = $2
+        WHERE (REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phoneNumber, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE($1, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '')
+        OR phoneNumber = $1)
+        AND user_id = $2
     `;
-    const values = [phoneNumber, phoneNumber];
+    const values = [phoneNumber, user_id];
     try {
         const res = await db.query(sql, values);
         if (res.rows[0]) {
@@ -139,7 +146,7 @@ async function getClientByPhoneNumber(phoneNumber) {
     }
 }
 
-async function followUp(days) {
+async function followUp(days, user_id) {
     const db = dbUtils.getDB();
 
     // Ensure days is a number
@@ -148,8 +155,8 @@ async function followUp(days) {
         throw new Error("The 'days' parameter must be a valid number");
     }
 
-    const sql = 'SELECT * FROM Client WHERE daysSinceLastAppointment >= $1';
-    const values = [daysNumber];
+    const sql = 'SELECT * FROM Client WHERE daysSinceLastAppointment >= $1 AND user_id = $2';
+    const values = [daysNumber, user_id];
     try {
         const res = await db.query(sql, values);
         console.log('Clients found:', res.rows);
@@ -160,7 +167,7 @@ async function followUp(days) {
     }
 }
 
-async function searchForClients(query) {
+async function searchForClients(query, user_id) {
     const db = dbUtils.getDB();
     
     // Validate and convert query to string
@@ -171,10 +178,10 @@ async function searchForClients(query) {
 
     const sql = `
         SELECT * FROM Client
-        WHERE firstName LIKE $1 OR lastName LIKE $2
+        WHERE (firstName LIKE $1 OR lastName LIKE $2) AND user_id = $3
     `;
 
-    const values = [searchQuery, searchQuery];
+    const values = [searchQuery, searchQuery, user_id];
     try {
         const res = await db.query(sql, values);
         return res.rows;
@@ -232,12 +239,13 @@ async function updateClientOutreachDate(clientId, outreachDate) {
     }
 }
 
-async function getClientByName(firstName, lastName) {
+async function getClientByName(firstName, lastName, user_id) {
+    console.log('[getClientByName] user_id:', user_id);
     console.log("First Name:", firstName);
     console.log("Last Name:", lastName);
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Client WHERE LOWER(firstName) = LOWER($1) AND LOWER(lastName) = LOWER($2)';
-    const values = [firstName, lastName];
+    const sql = 'SELECT * FROM Client WHERE LOWER(firstName) = LOWER($1) AND LOWER(lastName) = LOWER($2) AND user_id = $3';
+    const values = [firstName, lastName, user_id];
     try {
         const res = await db.query(sql, values);
         console.log("Result:", res.rows[0]);
@@ -298,7 +306,8 @@ async function updateClientNames(clientId, firstName, lastName) {
  * and haven't been contacted in the last 90 days.
  * @returns {Promise<Array>} List of old clients eligible for outreach, sorted by most recent visit
  */
-async function getOldClients() {
+async function getOldClients(user_id) {
+    console.log('[getOldClients] user_id:', user_id);
     const db = dbUtils.getDB();
     const inactivityThresholdDays = 42; // Clients inactive for 6 weeks
     const outreachThresholdDays = 90; // No outreach in the last 90 days
@@ -338,11 +347,12 @@ async function getOldClients() {
             (a.lastAppointmentDate IS NULL OR a.lastAppointmentDate <= $2)
             AND (c.outreach_date IS NULL OR c.outreach_date <= $3)
             AND c.id NOT IN (SELECT clientid FROM FutureAppointments)
+            AND c.user_id = $4
         ORDER BY a.lastAppointmentDate DESC NULLS LAST
         LIMIT 100
     `;
 
-    const values = [currentDate, pastThresholdDate, outreachThresholdDate];
+    const values = [currentDate, pastThresholdDate, outreachThresholdDate, user_id];
 
     try {
         const res = await db.query(sql, values);
@@ -391,16 +401,19 @@ async function updateClientOutreachInfo(clientId) {
  * @param {number} [days=30] - The number of days to look back for outreach contacts.
  * @returns {Promise<number>} The count of customers contacted.
  */
-async function getNumberOfCustomersContacted(days = 30) {
+async function getNumberOfCustomersContacted(days = 30, user_id) {
+    console.log('[getNumberOfCustomersContacted] user_id:', user_id);
     const db = dbUtils.getDB();
     const sql = `
         SELECT COUNT(DISTINCT id) as contacted_count
         FROM Client
         WHERE outreach_date >= CURRENT_DATE - INTERVAL '${days} days'
+        AND user_id = $1
     `;
+    const values = [user_id];
 
     try {
-        const res = await db.query(sql);
+        const res = await db.query(sql, values);
         return parseInt(res.rows[0].contacted_count, 10);
     } catch (err) {
         console.error('Error getting number of customers contacted:', err.message);

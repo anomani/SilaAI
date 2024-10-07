@@ -1,13 +1,14 @@
 const dbUtils = require('./dbUtils');
 
-async function createAppointment(appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod, addOns) {
+async function createAppointment(appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod, addOns, userId) {
+    console.log('[createAppointment] userId:', userId);
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO Appointment (appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod, addOns)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        INSERT INTO Appointment (appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod, addOns, user_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING id
     `;
-    const values = [appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod, addOns];
+    const values = [appointmentType, acuityId, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod, addOns, userId];
     try {
         const res = await db.query(sql, values);
         console.log('Appointment Created with ID:', res.rows[0].id);
@@ -81,14 +82,15 @@ async function deleteAppointment(appointmentId) {
     }
 }
 
-async function getAppointmentsByDay(date) {
+async function getAppointmentsByDay(userId, date) {
+    console.log('[getAppointmentsByDay] userId:', userId);
     const db = dbUtils.getDB();
     const sql = `
         SELECT * FROM Appointment 
-        WHERE date = $1 
+        WHERE date = $1 AND user_id = $2
         ORDER BY startTime
     `;
-    const values = [date];
+    const values = [date, userId];
     try {
         const res = await db.query(sql, values);
         return res.rows;
@@ -98,10 +100,11 @@ async function getAppointmentsByDay(date) {
     }
 }
 
-async function getAllAppointmentsByClientId(clientId) {
+async function getAllAppointmentsByClientId(clientId, userId) {
+    console.log('[getAllAppointmentsByClientId] userId:', userId);
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Appointment WHERE clientId = $1 ORDER BY date DESC';
-    const values = [clientId];
+    const sql = 'SELECT * FROM Appointment WHERE clientId = $1 AND user_id = $2 ORDER BY date DESC';
+    const values = [clientId, userId];
     try {
         const res = await db.query(sql, values);
         return res.rows;
@@ -151,19 +154,20 @@ async function findAndUpdateAppointmentByAcuityId(acuityId, updateData) {
     }
 }
 
-async function getUpcomingAppointments(clientId, limit = 5) {
+async function getUpcomingAppointments(clientId, limit = 5, userId) {
+    console.log('[getUpcomingAppointments] userId:', userId);
     const db = dbUtils.getDB();
     const currentDate = new Date().toISOString().split('T')[0];
     console.log(currentDate)
     const query = `
         SELECT * FROM Appointment
-        WHERE clientid = $1 AND date >= $2
-    ORDER BY date ASC, starttime ASC
-    LIMIT $3
+        WHERE clientid = $1 AND date >= $2 AND user_id = $3
+        ORDER BY date ASC, starttime ASC
+        LIMIT $4
     `;
-  const res = await db.query(query, [clientId, currentDate, limit]);
-  console.log(res.rows)
-  return res.rows;
+    const res = await db.query(query, [clientId, currentDate, userId, limit]);
+    console.log(res.rows)
+    return res.rows;
 }
 
 // async function main() {
@@ -173,14 +177,15 @@ async function getUpcomingAppointments(clientId, limit = 5) {
 // main();
 
 
-async function createBlockedTime(date, startTime, endTime, reason) {
+async function createBlockedTime(date, startTime, endTime, reason, userId) {
+    console.log('[createBlockedTime] userId:', userId);
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO Appointment (appointmentType, date, startTime, endTime, details, clientId, price)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO Appointment (appointmentType, date, startTime, endTime, details, clientId, price, user_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id
     `;
-    const values = ['BLOCKED_TIME', date, startTime, endTime, reason, null, 0];
+    const values = ['BLOCKED_TIME', date, startTime, endTime, reason, null, 0, userId];
     try {
         const res = await db.query(sql, values);
         console.log('Blocked time created with ID:', res.rows[0].id);
@@ -243,10 +248,11 @@ async function updateAppointmentPayment(appointmentId, paid, tipAmount, paymentM
     }
 }
 
-async function getUnpaidAppointmentsByDate(date) {
+async function getUnpaidAppointmentsByDate(date, userId) {
+    console.log('[getUnpaidAppointmentsByDate] userId:', userId);
     const db = dbUtils.getDB();
-    const sql = 'SELECT * FROM Appointment WHERE date = $1 AND paid = false';
-    const values = [date];
+    const sql = 'SELECT * FROM Appointment WHERE date = $1 AND paid = false AND user_id = $2';
+    const values = [date, userId];
     try {
         const res = await db.query(sql, values);
         return res.rows;
@@ -280,15 +286,15 @@ async function rescheduleAppointment(appointmentId, newDate, newStartTime, newEn
     }
 }
 
-async function getAppointmentMetrics() {
+async function getAppointmentMetrics(userId) {
   const db = dbUtils.getDB();
   const metrics = {};
   try {
-    console.log("Starting to fetch appointment metrics");
+    console.log("Starting to fetch appointment metrics for userId:", userId);
 
     // Total number of appointments
-    const totalAppointmentsQuery = 'SELECT COUNT(*) FROM Appointment';
-    const totalAppointmentsResult = await db.query(totalAppointmentsQuery);
+    const totalAppointmentsQuery = 'SELECT COUNT(*) FROM Appointment WHERE user_id = $1';
+    const totalAppointmentsResult = await db.query(totalAppointmentsQuery, [userId]);
     metrics.totalAppointments = parseInt(totalAppointmentsResult.rows[0].count);
     console.log("Total appointments:", metrics.totalAppointments);
 
@@ -296,11 +302,11 @@ async function getAppointmentMetrics() {
     const appointmentsPerDayQuery = `
       SELECT date, COUNT(*) as count
       FROM Appointment
-      WHERE TO_DATE(date, 'YYYY-MM-DD') >= CURRENT_DATE - INTERVAL '30 days'
+      WHERE user_id = $1 AND TO_DATE(date, 'YYYY-MM-DD') >= CURRENT_DATE - INTERVAL '30 days'
       GROUP BY date
       ORDER BY date
     `;
-    const appointmentsPerDayResult = await db.query(appointmentsPerDayQuery);
+    const appointmentsPerDayResult = await db.query(appointmentsPerDayQuery, [userId]);
     metrics.appointmentsPerDay = appointmentsPerDayResult.rows;
     console.log("Appointments per day:", metrics.appointmentsPerDay);
 
@@ -308,16 +314,17 @@ async function getAppointmentMetrics() {
     const appointmentTypeDistributionQuery = `
       SELECT appointmenttype, COUNT(*) as count
       FROM Appointment
+      WHERE user_id = $1
       GROUP BY appointmenttype
       ORDER BY count DESC
     `;
-    const appointmentTypeDistributionResult = await db.query(appointmentTypeDistributionQuery);
+    const appointmentTypeDistributionResult = await db.query(appointmentTypeDistributionQuery, [userId]);
     metrics.appointmentTypeDistribution = appointmentTypeDistributionResult.rows;
     console.log("Appointment type distribution:", metrics.appointmentTypeDistribution);
 
     // Number of unique clients
-    const uniqueClientsQuery = 'SELECT COUNT(DISTINCT clientid) FROM Appointment';
-    const uniqueClientsResult = await db.query(uniqueClientsQuery);
+    const uniqueClientsQuery = 'SELECT COUNT(DISTINCT clientid) FROM Appointment WHERE user_id = $1';
+    const uniqueClientsResult = await db.query(uniqueClientsQuery, [userId]);
     metrics.uniqueClients = parseInt(uniqueClientsResult.rows[0].count);
     console.log("Unique clients:", metrics.uniqueClients);
 
@@ -329,18 +336,19 @@ async function getAppointmentMetrics() {
     const frequentClientsQuery = `
       SELECT clientid, COUNT(*) as appointment_count
       FROM Appointment
+      WHERE user_id = $1
       GROUP BY clientid
       ORDER BY appointment_count DESC
       LIMIT 5
     `;
-    const frequentClientsResult = await db.query(frequentClientsQuery);
+    const frequentClientsResult = await db.query(frequentClientsQuery, [userId]);
     metrics.mostFrequentClients = frequentClientsResult.rows;
     console.log("Most frequent clients:", metrics.mostFrequentClients);
 
     // Total revenue
-    const totalRevenueQuery = 'SELECT SUM(price) as total_revenue FROM Appointment';
-    const totalRevenueResult = await db.query(totalRevenueQuery);
-    metrics.totalRevenue = parseFloat(totalRevenueResult.rows[0].total_revenue);
+    const totalRevenueQuery = 'SELECT SUM(price) as total_revenue FROM Appointment WHERE user_id = $1';
+    const totalRevenueResult = await db.query(totalRevenueQuery, [userId]);
+    metrics.totalRevenue = parseFloat(totalRevenueResult.rows[0].total_revenue) || 0;
     console.log("Total revenue:", metrics.totalRevenue);
 
     // Average appointment price
@@ -351,11 +359,11 @@ async function getAppointmentMetrics() {
     const paymentMethodDistributionQuery = `
       SELECT paymentmethod, COUNT(*) as count
       FROM Appointment
-      WHERE paymentmethod IS NOT NULL
+      WHERE user_id = $1 AND paymentmethod IS NOT NULL
       GROUP BY paymentmethod
       ORDER BY count DESC
     `;
-    const paymentMethodDistributionResult = await db.query(paymentMethodDistributionQuery);
+    const paymentMethodDistributionResult = await db.query(paymentMethodDistributionQuery, [userId]);
     metrics.paymentMethodDistribution = paymentMethodDistributionResult.rows;
     console.log("Payment method distribution:", metrics.paymentMethodDistribution);
 
@@ -363,25 +371,26 @@ async function getAppointmentMetrics() {
     const paidVsUnpaidQuery = `
       SELECT paid, COUNT(*) as count
       FROM Appointment
+      WHERE user_id = $1
       GROUP BY paid
     `;
-    const paidVsUnpaidResult = await db.query(paidVsUnpaidQuery);
+    const paidVsUnpaidResult = await db.query(paidVsUnpaidQuery, [userId]);
     metrics.paidVsUnpaid = paidVsUnpaidResult.rows;
     console.log("Paid vs Unpaid appointments:", metrics.paidVsUnpaid);
 
     // Total tips
-    const totalTipsQuery = 'SELECT SUM(tipamount) as total_tips FROM Appointment WHERE tipamount IS NOT NULL';
-    const totalTipsResult = await db.query(totalTipsQuery);
-    metrics.totalTips = parseFloat(totalTipsResult.rows[0].total_tips);
+    const totalTipsQuery = 'SELECT SUM(tipamount) as total_tips FROM Appointment WHERE user_id = $1 AND tipamount IS NOT NULL';
+    const totalTipsResult = await db.query(totalTipsQuery, [userId]);
+    metrics.totalTips = parseFloat(totalTipsResult.rows[0].total_tips) || 0;
     console.log("Total tips:", metrics.totalTips);
 
     // Average tip amount
-    const avgTipQuery = 'SELECT AVG(tipamount) as avg_tip FROM Appointment WHERE tipamount IS NOT NULL';
-    const avgTipResult = await db.query(avgTipQuery);
-    metrics.avgTipAmount = parseFloat(avgTipResult.rows[0].avg_tip);
+    const avgTipQuery = 'SELECT AVG(tipamount) as avg_tip FROM Appointment WHERE user_id = $1 AND tipamount IS NOT NULL';
+    const avgTipResult = await db.query(avgTipQuery, [userId]);
+    metrics.avgTipAmount = parseFloat(avgTipResult.rows[0].avg_tip) || 0;
     console.log("Average tip amount:", metrics.avgTipAmount);
 
-    console.log("Finished fetching all metrics:", metrics);
+    console.log("Finished fetching all metrics for userId:", userId);
     return metrics;
   } catch (err) {
     console.error('Error fetching appointment metrics:', err);
@@ -389,7 +398,7 @@ async function getAppointmentMetrics() {
   }
 }
 
-async function getEndingAppointments(currentTime) {
+async function getEndingAppointments(currentTime, userId) {
     const db = dbUtils.getDB();
     const currentDate = currentTime.toISOString().split('T')[0];
     const currentTimeString = currentTime.toTimeString().split(' ')[0].slice(0, 5);
@@ -398,10 +407,10 @@ async function getEndingAppointments(currentTime) {
         SELECT a.*, c.phonenumber, c.firstname, c.lastname
         FROM Appointment a
         JOIN Client c ON a.clientId = c.id
-        WHERE a.date = $1 AND a.endTime = $2
+        WHERE a.date = $1 AND a.endTime = $2 AND a.user_id = $3
     `;
     
-    const res = await db.query(query, [currentDate, currentTimeString]);
+    const res = await db.query(query, [currentDate, currentTimeString, userId]);
     return res.rows;
 }
 
