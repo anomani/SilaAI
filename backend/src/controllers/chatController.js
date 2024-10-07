@@ -32,12 +32,13 @@ const handleChatRequest = async (req, res) => {
 
 const handleUserInputDataController = async (req, res) => {
   try {
+    const { userId } = req.body;
     const { message } = req.body;
     console.log(message)
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
-    const responseMessage = await handleUserInputData(message);
+    const responseMessage = await handleUserInputData(message, userId);
     res.json({ message: responseMessage });
   } catch (error) {
     console.error('Error handling user input data:', error);
