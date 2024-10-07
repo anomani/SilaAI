@@ -16,8 +16,10 @@ const { createRecurringAppointments, createRecurringAppointmentsAdmin } = requir
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { getUserById } = require('../model/users');
+const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
 // Add this object to store queries
 const queryStore = {};
+const sessions = new Map();
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -38,7 +40,7 @@ const tools = [
       properties: {
         query: {
           type: "string",
-          description: "The SQL query to get the information"
+          description: "The SQL query to get the information. Use $1 as a placeholder for userId."
         }
       },
       required: ["query"]
@@ -373,14 +375,59 @@ const tools = [
 }
 ];
 
-async function createAssistant(date) {
+async function createAssistant(date, userId) {
   const instructionsPath = path.join(__dirname, 'Prompts', 'dataInstructions.txt');
-  const assistantInstructions = fs.readFileSync(instructionsPath, 'utf8');
+  let assistantInstructions = fs.readFileSync(instructionsPath, 'utf8');
+
+  // Fetch appointment types and add-ons for the user
+  const appointmentTypes = await getAppointmentTypes(userId);
+  const addOns = await getAddOns(userId);
+
+  // Group appointment types by group number
+  const groupedAppointmentTypes = appointmentTypes.reduce((acc, type) => {
+    if (!acc[type.group_number]) {
+      acc[type.group_number] = [];
+    }
+    acc[type.group_number].push(type);
+    return acc;
+  }, {});
+
+  // Create a string representation of appointment types
+  let appointmentTypesString = '';
+  for (const [group, types] of Object.entries(groupedAppointmentTypes)) {
+    appointmentTypesString += `Group ${group}:\n`;
+    types.forEach(type => {
+      const price = typeof type.price === 'number' ? `CA$${type.price.toFixed(2)}` : type.price;
+      appointmentTypesString += `  ${type.name} (${type.duration} minutes @ ${price})\n`;
+    });
+    
+    // Add availability information for the group
+    if (types[0].availability) {
+      appointmentTypesString += '  Availability:\n';
+      for (const [day, times] of Object.entries(types[0].availability)) {
+        appointmentTypesString += `    ${day}: ${times.join(', ')}\n`;
+      }
+    }
+    appointmentTypesString += '\n';
+  }
+  console.log(appointmentTypesString);
+  // Create a string representation of add-ons
+  const addOnsString = addOns.map(addon => {
+    const price = typeof addon.price === 'number' ? `CA$${addon.price.toFixed(2)}` : addon.price;
+    return `${addon.name}: ${addon.duration} minutes @ ${price}\n  Compatible with: ${addon.compatible_appointment_types.join(', ')}`;
+  }).join('\n\n');
+  console.log(addOnsString);
+  // Add the appointment types and add-ons information to the beginning of the instructions
+  assistantInstructions = `Appointment Types:\n${appointmentTypesString}\nAdd-ons:\n${addOnsString}\n\n${assistantInstructions}`;
+
+  // Add the current date to the instructions
+  assistantInstructions += `\n\nCurrent Date: ${date}`;
+
   if (!assistant) {
     assistant = await openai.beta.assistants.create({
-      instructions: assistantInstructions + `\nDate: ${date}`,
+      instructions: assistantInstructions,
       name: "Client Data",
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       tools: tools,
       temperature: 1
     });
@@ -424,7 +471,7 @@ async function handleUserInputData(userMessage, userId) {
   try {
     const date = getCurrentDate();
     console.log(date)
-    const assistant = await createAssistant(date);
+    const assistant = await createAssistant(date, userId);
     const thread = await createThread(userId, false);
     
     // Check if there's an active run
@@ -483,7 +530,8 @@ async function handleUserInputData(userMessage, userId) {
           try {
             if (funcName === "getInfo") {
               console.log("getInfo", args.query);
-              output = await getInfo(args.query);
+              // Pass userId to getInfo function
+              output = await getInfo(args.query, userId);
             } else if (funcName === "sendMessages") {
               console.log("sendMessages", args.phoneNumbers, args.message);
               // output = await sendMessages(args.phoneNumbers, args.message);
