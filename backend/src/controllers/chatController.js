@@ -32,7 +32,7 @@ const handleChatRequest = async (req, res) => {
 
 const handleUserInputDataController = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.user.id;
     const { message } = req.body;
     console.log(message)
     if (!message) {
