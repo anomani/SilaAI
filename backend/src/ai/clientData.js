@@ -14,7 +14,8 @@ const { cancelAppointment, cancelAppointmentById } = require('./tools/cancelAppo
 const { createBlockedTime } = require('../model/appointment');
 const { createRecurringAppointments, createRecurringAppointmentsAdmin } = require('./tools/recurringAppointments');
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
-
+const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
+const { getUserById } = require('../model/users');
 // Add this object to store queries
 const queryStore = {};
 
@@ -387,21 +388,44 @@ async function createAssistant(date) {
   return assistant;
 }
 
-async function createThread() {
-  if (!thread) {
-    thread = await openai.beta.threads.create();
+async function createThread(userId, initialMessage = false) {
+  console.log('Function: createThread');
+  console.log('Parameters:');
+  console.log('userId:', userId);
+  console.log('initialMessage:', initialMessage);
+  const user = await getUserById(userId);
+  try {
+    let thread;
+    
+    // Check if a thread already exists for this phone number
+    const existingThread = await getThreadByPhoneNumber(user.business_number, user.id);
+
+    if (existingThread && !initialMessage) {
+      // Thread exists, retrieve it from OpenAI
+      console.log('Retrieving existing thread from OpenAI');
+      thread = await openai.beta.threads.retrieve(existingThread.thread_id);
+    } else {
+      // Create a new thread
+      thread = await openai.beta.threads.create();
+      
+      // Store the new thread in the database
+      await saveThread(user.business_number, thread.id, user.id);
+    }
+
+    sessions.set(user.business_number, thread);
+    return thread;
+  } catch (error) {
+    console.error(`Error in createThread for ${user.business_number}:`, error);
+    throw error;
   }
-  return thread;
 }
 
-
-async function handleUserInputData(userMessage) {
+async function handleUserInputData(userMessage, userId) {
   try {
     const date = getCurrentDate();
     console.log(date)
     const assistant = await createAssistant(date);
-    const thread = await createThread();
-
+    const thread = await createThread(userId, false);
     
     // Check if there's an active run
     const runs = await openai.beta.threads.runs.list(thread.id);
@@ -483,21 +507,22 @@ async function handleUserInputData(userMessage) {
                 args.date,
                 args.startTime,
                 args.appointmentType,
-                args.addOns || []
+                args.addOns || [],
+                userId
               );
             } else if (funcName === "getClientByName") {
-              const result = await getClientByName(args.firstName, args.lastName);
+              const result = await getClientByName(args.firstName, args.lastName, userId);
               if (result === undefined || result === null) {
                 output = "No client found with the given name. Check the name and you can try again";
               } else {
                 output = result;
               }
             } else if (funcName === "getAvailability") {
-              output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group);
+              output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group, userId);
             } else if (funcName === "cancelAppointmentById") {
-              output = await cancelAppointmentById(args.clientId, args.date);
+              output = await cancelAppointmentById(args.clientId, args.date, userId);
             } else if (funcName === "blockTime") {
-              output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason);
+              output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason, userId);
             } else if (funcName === "findRecurringAvailability") {
               output = await findRecurringAvailability(
                 args.initialDate,
@@ -505,7 +530,8 @@ async function handleUserInputData(userMessage) {
                 args.addOns || [],
                 args.group,
                 args.recurrenceRule,
-                args.clientId
+                userId,
+                args.clientId,
               );
             } else if (funcName === "createRecurringAppointmentsAdmin") {
               output = await createRecurringAppointmentsAdmin(
@@ -515,7 +541,8 @@ async function handleUserInputData(userMessage) {
                 args.appointmentType,
                 args.addOns || [],
                 args.group,
-                args.recurrenceRule
+                args.recurrenceRule,
+                userId
               );
             } else {
               throw new Error(`Unknown function: ${funcName}`);
