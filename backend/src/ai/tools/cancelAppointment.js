@@ -1,16 +1,9 @@
-const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
-const fs = require('fs');
-const os = require('os');
-const path = require('path')
 const {getClientByPhoneNumber, getClientById} = require ('../../model/clients') 
 const {deleteAppointment, getAppointmentsByDay} = require ('../../model/appointment')
-const dbUtils = require('../../model/dbUtils')
 const axios = require('axios');
 
-const apiKey = process.env.BROWSERCLOUD_API_KEY;
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function cancelAcuityAppointment(acuityId) {
     try {
@@ -35,9 +28,9 @@ async function cancelAcuityAppointment(acuityId) {
     }
 }
 
-async function cancelAppointment(phoneNumber, date) {
-    const client = await getClientByPhoneNumber(phoneNumber)
-    const appointmentsForDay = await getAppointmentsByDay(date)
+async function cancelAppointment(phoneNumber, date, userId) {
+    const client = await getClientByPhoneNumber(phoneNumber, userId)
+    const appointmentsForDay = await getAppointmentsByDay(date, userId)
     const appointment = appointmentsForDay.find(appointment => appointment.clientid === client.id)
 
     try {
@@ -67,14 +60,14 @@ async function cancelAppointment(phoneNumber, date) {
     } 
 }
 
-async function cancelAppointmentById(clientId, date) {
+async function cancelAppointmentById(clientId, date, userId) {
     try {
         const client = await getClientById(clientId);
         if (!client) {
             return "Client not found";
         }
 
-        const appointmentsForDay = await getAppointmentsByDay(date);
+        const appointmentsForDay = await getAppointmentsByDay(date, userId);
         console.log(appointmentsForDay);
         const appointment = appointmentsForDay.find(appointment => appointment.clientid === clientId);
         if (!appointment) {
@@ -96,9 +89,9 @@ async function cancelAppointmentById(clientId, date) {
     } 
 }
 
-async function cancelAppointmentInternal(phoneNumber, date) {
-    const client = await getClientByPhoneNumber(phoneNumber)
-    const appointmentsForDay = await getAppointmentsByDay(date)
+async function cancelAppointmentInternal(phoneNumber, date, userId) {
+    const client = await getClientByPhoneNumber(phoneNumber, userId)
+    const appointmentsForDay = await getAppointmentsByDay(date, userId)
     const appointment = appointmentsForDay.find(appointment => appointment.clientid === client.id)
 
     if (!appointment) {
@@ -114,14 +107,14 @@ async function cancelAppointmentInternal(phoneNumber, date) {
     }
 }
 
-async function cancelAppointmentByIdInternal(clientId, date) {
+async function cancelAppointmentByIdInternal(clientId, date, userId) {
     try {
         const client = await getClientById(clientId);
         if (!client) {
             return "Client not found";
         }
 
-        const appointmentsForDay = await getAppointmentsByDay(date);
+        const appointmentsForDay = await getAppointmentsByDay(date, userId);
         const appointment = appointmentsForDay.find(appointment => appointment.clientid === clientId);
         if (!appointment) {
             return "Appointment not found";

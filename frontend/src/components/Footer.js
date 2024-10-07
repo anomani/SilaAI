@@ -15,11 +15,11 @@ const Footer = ({ navigation }) => {
     }
   };
 
-  useEffect(() => {
-    updatePendingCount();
-    const interval = setInterval(updatePendingCount, 60000); // Update every minute
-    return () => clearInterval(interval);
-  }, []);
+  // useEffect(() => {
+  //   updatePendingCount();
+  //   const interval = setInterval(updatePendingCount, 60000); // Update every minute
+  //   return () => clearInterval(interval);
+  // }, []);
 
   return (
     <View style={styles.footer}>

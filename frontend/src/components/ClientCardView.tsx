@@ -24,11 +24,18 @@ import avatarImage from '../../assets/avatar.png';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import ImageGallery from './ImageGallery';
 import * as ImagePicker from 'expo-image-picker';
 import PaymentModal, { PaymentData } from './PaymentModal';
 import CameraComponent from './CameraComponent';
 import { Video } from 'expo-av';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+// Define your types
+type RootStackParamList = {
+  ClientMessages: { clientid: string; clientName: string };
+};
 
 interface Appointment {
   id: string;
@@ -64,7 +71,7 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
   console.log('Current index:', currentIndex);
   console.log('All appointments:', allAppointments);
 
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAddNoteModalVisible, setIsAddNoteModalVisible] = useState<boolean>(false);
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState<boolean>(false);
@@ -86,6 +93,12 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
   const [showCamera, setShowCamera] = useState<boolean>(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedAppointment, setEditedAppointment] = useState(appointment);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [datePickerDate, setDatePickerDate] = useState(new Date());
+  const [startTimePickerDate, setStartTimePickerDate] = useState(new Date());
+  const [endTimePickerDate, setEndTimePickerDate] = useState(new Date());
 
   // Extract clientId from the appointment object
   const currentClientId = appointment?.clientid;
@@ -475,7 +488,6 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
         appointmentType: editedAppointment.appointmenttype,
         price: parseFloat(editedAppointment.price.toString()),
       };
-
       const updatedAppointment = await updateAppointmentDetails(
         appointment.id,
         updatedAppointmentData
@@ -491,7 +503,6 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
       // Update the local appointment state
       setEditedAppointment(updatedAppointment);
 
-      // Optionally, you can add a success message here
       Alert.alert('Success', 'Appointment updated successfully');
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -506,6 +517,33 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
 
   const handleInputChange = (field: string, value: string) => {
     setEditedAppointment(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleDateChange = (event: any, selectedDate: Date | undefined) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      handleInputChange('date', formattedDate);
+      setDatePickerDate(selectedDate);
+    }
+  };
+
+  const handleStartTimeChange = (event: any, selectedTime: Date | undefined) => {
+    setShowStartTimePicker(false);
+    if (selectedTime) {
+      const formattedTime = selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      handleInputChange('startTime', formattedTime);
+      setStartTimePickerDate(selectedTime);
+    }
+  };
+
+  const handleEndTimeChange = (event: any, selectedTime: Date | undefined) => {
+    setShowEndTimePicker(false);
+    if (selectedTime) {
+      const formattedTime = selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      handleInputChange('endTime', formattedTime);
+      setEndTimePickerDate(selectedTime);
+    }
   };
 
   console.log('ClientCardView rendered. showGallery:', showGallery);
@@ -560,90 +598,75 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
           </View>
         )}
 
-        <View style={styles.headerContainer}>
-          <TouchableOpacity 
-            style={styles.addPhotoButton}
-            onPress={handleAddMediaPress}
-          >
-            <Text style={styles.addPhotoButtonText}>Add Media</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <View style={styles.mediaContainer}>
-          {clientMedia.length > 0 ? (
-            <>
-              <TouchableOpacity onPress={() => handleMediaPress(0)}>
-                {clientMedia[0].media_type === 'image' ? (
-                  <Image 
-                    source={{ uri: clientMedia[0].media_url }} 
-                    style={styles.clientMedia} 
-                  />
-                ) : (
-                  <View style={styles.clientMedia}>
-                    <Ionicons name="videocam" size={50} color="#007AFF" />
-                  </View>
-                )}
+        <View style={styles.clientInfoContainer}>
+          <View style={styles.avatarAndMediaContainer}>
+            <View style={styles.avatarContainer}>
+              {clientMedia.length > 0 ? (
+                <TouchableOpacity onPress={() => handleMediaPress(0)}>
+                  {clientMedia[0].media_type === 'image' ? (
+                    <Image 
+                      source={{ uri: clientMedia[0].media_url }} 
+                      style={styles.clientMedia} 
+                    />
+                  ) : (
+                    <View style={styles.clientMedia}>
+                      <Ionicons name="videocam" size={50} color="#007AFF" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <Image source={avatarImage} style={styles.clientMedia} />
+              )}
+            </View>
+            <TouchableOpacity 
+              style={styles.addMediaButton}
+              onPress={handleAddMediaPress}
+            >
+              <Text style={styles.addMediaButtonText}>Add Media</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.clientDetailsContainer}>
+            <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity style={styles.actionButton} onPress={handleCallPress}>
+                <Ionicons name="call" size={24} color="#fff" />
+                <Text style={styles.actionButtonText}>Call</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.galleryButton}
-                onPress={() => setShowGallery(true)}
-              >
-                <Ionicons name="images" size={24} color="#007AFF" />
-                <Text style={styles.galleryButtonText}>
-                  View Gallery ({clientMedia.length})
-                </Text>
+              <TouchableOpacity style={styles.actionButton} onPress={handleMessagePress}>
+                <Ionicons name="chatbubble" size={24} color="#fff" />
+                <Text style={styles.actionButtonText}>Message</Text>
               </TouchableOpacity>
-            </>
-          ) : (
-            <Image source={avatarImage} style={styles.clientMedia} />
-          )}
+              <TouchableOpacity style={styles.actionButton} onPress={handleEditPress}>
+                <Ionicons name="create" size={24} color="#fff" />
+                <Text style={styles.actionButtonText}>Edit</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-        
-        <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
-        
-        {/* Add Call and Message buttons */}
-        <View style={styles.actionButtonsContainer}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleCallPress}>
-            <Ionicons name="call" size={24} color="#fff" />
-            <Text style={styles.actionButtonText}>Call</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={handleMessagePress}>
-            <Ionicons name="chatbubble" size={24} color="#fff" />
-            <Text style={styles.actionButtonText}>Message</Text>
-          </TouchableOpacity>
-        </View>
-        
+
         {isEditMode ? (
-          <View style={styles.editContainer}>
+          <>
+            <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+              <Text style={styles.editableText}>{editedAppointment.date}</Text>
+            </TouchableOpacity>
+            <View style={styles.timeContainer}>
+              <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
+                <Text style={styles.editableText}>{editedAppointment.startTime}</Text>
+              </TouchableOpacity>
+              <Text style={styles.timeSeparator}>-</Text>
+              <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
+                <Text style={styles.editableText}>{editedAppointment.endTime}</Text>
+              </TouchableOpacity>
+            </View>
             <TextInput
-              style={styles.editInput}
-              value={editedAppointment.date}
-              onChangeText={(value) => handleInputChange('date', value)}
-              placeholder="Date (YYYY-MM-DD)"
-            />
-            <TextInput
-              style={styles.editInput}
-              value={editedAppointment.startTime}
-              onChangeText={(value) => handleInputChange('startTime', value)}
-              placeholder="Start Time (HH:MM)"
-            />
-            <TextInput
-              style={styles.editInput}
-              value={editedAppointment.endTime}
-              onChangeText={(value) => handleInputChange('endTime', value)}
-              placeholder="End Time (HH:MM)"
-            />
-            <TextInput
-              style={styles.editInput}
+              style={styles.editableText}
               value={editedAppointment.appointmenttype}
               onChangeText={(value) => handleInputChange('appointmenttype', value)}
-              placeholder="Appointment Type"
             />
             <TextInput
-              style={styles.editInput}
+              style={styles.editableText}
               value={editedAppointment.price.toString()}
               onChangeText={(value) => handleInputChange('price', value)}
-              placeholder="Price"
               keyboardType="numeric"
             />
             <View style={styles.editButtonsContainer}>
@@ -654,16 +677,13 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
                 <Text style={styles.editButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </>
         ) : (
           <>
             <Text style={styles.cardDate}>{appointment.date}</Text>
             <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
             <Text style={styles.cardType}>{appointment.appointmenttype}</Text>
             <Text style={styles.cardPrice}>${appointment.price}</Text>
-            <TouchableOpacity style={styles.editButton} onPress={handleEditPress}>
-              <Text style={styles.editButtonText}>Edit Appointment</Text>
-            </TouchableOpacity>
           </>
         )}
         
@@ -805,6 +825,31 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
           <Text style={styles.navButtonText}>›</Text>
         </TouchableOpacity>
       </View>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={datePickerDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
+      {showStartTimePicker && (
+        <DateTimePicker
+          value={startTimePickerDate}
+          mode="time"
+          display="default"
+          onChange={handleStartTimeChange}
+        />
+      )}
+      {showEndTimePicker && (
+        <DateTimePicker
+          value={endTimePickerDate}
+          mode="time"
+          display="default"
+          onChange={handleEndTimeChange}
+        />
+      )}
     </ScrollView>
   );
 };
@@ -1429,6 +1474,105 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  clientInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    width: '100%',
+  },
+  avatarAndMediaContainer: {
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  avatarContainer: {
+    marginBottom: 10,
+  },
+  clientDetailsContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  clientMedia: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  cardClientName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    flex: 1,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    marginBottom: 8,
+  },
+  actionButtonText: {
+    color: '#fff',
+    marginLeft: 4,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  addMediaButton: {
+    backgroundColor: '#007AFF',
+    padding: 8,
+    borderRadius: 5,
+    alignSelf: 'center',
+  },
+  addMediaButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  editableText: {
+    backgroundColor: '#3a3a3c',
+    color: '#fff',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    fontSize: 16,
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  timeSeparator: {
+    color: '#fff',
+    fontSize: 16,
+    marginHorizontal: 5,
+  },
+  cardNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingHorizontal: 10,
+  },
+  navButton: {
+    padding: 10,
+  },
+  navButtonText: {
+    fontSize: 24,
+    color: '#007AFF',
+  },
+  appointmentCounterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appointmentCounter: {
+    fontSize: 16,
+    color: '#fff',
   },
 });
 

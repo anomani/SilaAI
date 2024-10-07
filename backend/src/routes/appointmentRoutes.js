@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { authenticateToken } = require('../middleware/authMiddleware');
 const { 
     getAppointmentsByDate, 
     createNewAppointment, 
@@ -14,16 +15,17 @@ const {
     updateAppointmentDetailsController
 } = require('../controllers/appointmentController');
 
-router.get('/appointments/:date', getAppointmentsByDate);
-router.post('/appointments', createNewAppointment);
-router.get('/appointments/client/:clientId', getAppointmentsByClientId);
-router.delete('/appointments/:appointmentId', delAppointment);
-router.post('/appointments/acuity', bookAppointmentWithAcuityController);
-router.post('/appointments/blocked-time', createBlockedTimeController);
-router.get('/appointments/client/:clientId/around-current/:currentAppointmentId', getClientAppointmentsAroundCurrentController);
-router.put('/appointments/:appointmentId/payment', updateAppointmentPaymentController);
-router.put('/appointments/:appointmentId/reschedule', rescheduleAppointmentController);
-router.get('/metrics', getAppointmentMetricsController);
-router.put('/appointments/:appointmentId', updateAppointmentDetailsController);
+// Apply authenticateToken middleware to all routes that need it
+router.get('/appointments/:date', authenticateToken, getAppointmentsByDate);
+router.post('/appointments', authenticateToken, createNewAppointment);
+router.get('/appointments/client/:clientId', authenticateToken, getAppointmentsByClientId);
+router.delete('/appointments/:appointmentId', authenticateToken, delAppointment);
+router.post('/appointments/acuity', authenticateToken, bookAppointmentWithAcuityController);
+router.post('/appointments/blocked-time', authenticateToken, createBlockedTimeController);
+router.get('/appointments/client/:clientId/around-current/:currentAppointmentId', authenticateToken, getClientAppointmentsAroundCurrentController);
+router.put('/appointments/:appointmentId/payment', authenticateToken, updateAppointmentPaymentController);
+router.put('/appointments/:appointmentId/reschedule', authenticateToken, rescheduleAppointmentController);
+router.get('/metrics', authenticateToken, getAppointmentMetricsController);
+router.put('/appointments/:appointmentId', authenticateToken, updateAppointmentDetailsController);
 
 module.exports = router;

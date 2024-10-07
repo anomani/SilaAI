@@ -325,22 +325,28 @@ const tools = [
   }
 ];
 
-async function createThread(phoneNumber, initialMessage = false) {
+async function createThread(phoneNumber, initialMessage = false, userId) {
+  console.log('Function: createThread');
+  console.log('Parameters:');
+  console.log('phoneNumber:', phoneNumber);
+  console.log('initialMessage:', initialMessage);
+  console.log('userId:', userId);
   try {
     let thread;
     
     // Check if a thread already exists for this phone number
-    const existingThread = await getThreadByPhoneNumber(phoneNumber);
+    const existingThread = await getThreadByPhoneNumber(phoneNumber, userId);
 
     if (existingThread && !initialMessage) {
       // Thread exists, retrieve it from OpenAI
+      console.log('Retrieving existing thread from OpenAI');
       thread = await openai.beta.threads.retrieve(existingThread.thread_id);
     } else {
       // Create a new thread
       thread = await openai.beta.threads.create();
       
       // Store the new thread in the database
-      await saveThread(phoneNumber, thread.id);
+      await saveThread(phoneNumber, thread.id, userId);
     }
 
     sessions.set(phoneNumber, thread);
@@ -424,7 +430,7 @@ async function createTemporaryAssistant(phoneNumber) {
   return newAssistant;
 }
 
-async function handleToolCalls(requiredActions, client, phoneNumber) {
+async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
   console.log(requiredActions)
   const toolOutputs = [];
 
@@ -441,11 +447,11 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
           throw new Error(`Invalid appointment type: ${args.appointmentType}`);
         }
         totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
-        output = await getAvailability(args.day, args.appointmentType, args.addOns, client.id);
+        output = await getAvailability(args.day, args.appointmentType, args.addOns, userId, client.id);
         if (output.length === 0) {
           output = {
             requestedDay: args.day,
-            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns)
+            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, userId)
           };
         }
         break;
@@ -462,14 +468,15 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
           client.email,
           args.appointmentType,
           totalPrice,
-          args.addOns
+          args.addOns,
+          userId
         );
         break;
       case "cancelAppointment":
-        output = await cancelAppointment(client.phonenumber, args.date);
+        output = await cancelAppointment(client.phonenumber, args.date, userId);
         break;
       case "getAllAppointmentsByClientId":
-        output = await getAllAppointmentsByClientId(client.id);
+        output = await getAllAppointmentsByClientId(client.id, userId);
         break;
       case "createClient":
         console.log("creating client")
@@ -481,6 +488,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
           args.appointmentDuration,
           args.group,
           args.recurrenceRule,
+          userId,
           client.id
         );
         break;
@@ -496,12 +504,14 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
           args.appointmentDuration,
           args.group,
           args.price,
-          args.addOnArray,
-          args.recurrenceRule
+          args.addOns,
+          args.recurrenceRule,
+          userId,
+          client.id
         );
         break;
       case "getUpcomingAppointments":
-        output = await getUpcomingAppointments(client.id, args.limit);
+        output = await getUpcomingAppointments(args.clientId, args.limit, userId);
         break;
       case "getCurrentDate":
         output = getCurrentDate();
@@ -513,7 +523,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
         await updateAssistantInstructions(client.phonenumber);
         break;
       case "rescheduleAppointmentByPhoneAndDate":
-        output = await rescheduleAppointmentByPhoneAndDate(client.phonenumber, args.currentDate, args.newDate, args.newStartTime);
+        output = await rescheduleAppointmentByPhoneAndDate(client.phonenumber, args.currentDate, args.newDate, args.newStartTime, userId);
         break;
       case "createWaitlistRequest":
         console.log("Creating waitlist request with the following parameters:");
@@ -531,7 +541,8 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
           args.endDate,
           args.startTime,
           args.endTime,
-          args.appointmentType
+          args.appointmentType,
+          userId
         );
         break;
       default:
@@ -549,7 +560,8 @@ async function handleToolCalls(requiredActions, client, phoneNumber) {
   return toolOutputs;
 }
 
-async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
+
+async function handleToolCallsInternal(requiredActions, client, phoneNumber, userId) {
   console.log(requiredActions)
   const toolOutputs = [];
 
@@ -566,11 +578,11 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
           throw new Error(`Invalid appointment type: ${args.appointmentType}`);
         }
         totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
-        output = await getAvailability(args.day, args.appointmentType, args.addOns, client.id);
+        output = await getAvailability(args.day, args.appointmentType, args.addOns, userId, client.id);
         if (output.length === 0) {
           output = {
             requestedDay: args.day,
-            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns)
+            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, userId)
           };
         }
         break;
@@ -587,18 +599,19 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
           client.email,
           args.appointmentType,
           totalPrice,
-          args.addOns
+          args.addOns,
+          userId
         );
         break;
       case "cancelAppointment":
         output = await cancelAppointmentInternal(client.phonenumber, args.date);
         break;
       case "getAllAppointmentsByClientId":
-        output = await getAllAppointmentsByClientId(client.id);
+        output = await getAllAppointmentsByClientId(client.id, userId);
         break;
       case "createClient":
         console.log("creating client")
-        output = await createClient(args.firstName, args.lastName, phoneNumber);
+        output = await createClient(args.firstName, args.lastName, phoneNumber, userId);
         break;
       case "findRecurringAvailability":
         output = await findRecurringAvailability(
@@ -606,7 +619,8 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
           args.appointmentDuration,
           args.group,
           args.recurrenceRule,
-          client.id
+          client.id,
+          userId
         );
         break;
       case "createRecurringAppointments":
@@ -621,12 +635,13 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber) {
           args.appointmentDuration,
           args.group,
           args.price,
-          args.addOnArray,
-          args.recurrenceRule
+          args.addOns,
+          args.recurrenceRule,
+          userId
         );
         break;
       case "getUpcomingAppointments":
-        output = await getUpcomingAppointments(client.id, args.limit);
+        output = await getUpcomingAppointments(args.clientId, args.limit, userId);
         break;
       case "getCurrentDate":
         output = getCurrentDate();
@@ -690,15 +705,13 @@ async function updateAssistantInstructions(phoneNumber) {
   }
 }
 
-
-
-async function handleUserInput(userMessages, phoneNumber) {
+async function handleUserInput(userMessages, phoneNumber, userId) {
   console.log("userMessages", userMessages)
   try {
-    const client = await getClientByPhoneNumber(phoneNumber);
+    const client = await getClientByPhoneNumber(phoneNumber, userId);
     console.log(`Client found: ${JSON.stringify(client)}`);
 
-    let thread = await createThread(phoneNumber);
+    let thread = await createThread(phoneNumber, false, userId);
 
     // Add all user messages to the thread
     for (const message of userMessages) {
@@ -714,10 +727,10 @@ async function handleUserInput(userMessages, phoneNumber) {
     let fname, lname, email;
 
     if (!client.firstname && !client.lastname) {
-      thread = await createThread(phoneNumber); 
+      thread = await createThread(phoneNumber, false, userId); 
       assistant = await createTemporaryAssistant(phoneNumber);
     } else {
-      const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1))[0];
+      const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1, userId))[0];
       let upcomingAppointment = '';
       if (upcomingAppointmentJSON) {
         const appointmentDate = upcomingAppointmentJSON.date;
@@ -726,7 +739,7 @@ async function handleUserInput(userMessages, phoneNumber) {
       }
 
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
-      const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0,5);
+      const appointment = (await getAllAppointmentsByClientId(client.id, userId)).slice(0,5);
       console.log("appointment", appointment)
 
       let appointmentType = '';
@@ -738,7 +751,7 @@ async function handleUserInput(userMessages, phoneNumber) {
       lname = client.lastname;
       email = client.email;
       const phone = client.phonenumber;   
-      thread = await createThread(phoneNumber); 
+      thread = await createThread(phoneNumber, false, userId); 
       assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment);
     }
 
@@ -773,7 +786,7 @@ async function handleUserInput(userMessages, phoneNumber) {
         } else if (runStatus.status === "requires_action") {
           console.log("requires action")
           const requiredActions = runStatus.required_action.submit_tool_outputs;
-          const toolOutputs = await handleToolCalls(requiredActions, client, phoneNumber);
+          const toolOutputs = await handleToolCalls(requiredActions, client, phoneNumber, userId);
 
           await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
             tool_outputs: toolOutputs
@@ -804,12 +817,12 @@ async function handleUserInput(userMessages, phoneNumber) {
   }
 }
 
-async function handleUserInputInternal(userMessages, phoneNumber) {
+async function handleUserInputInternal(userMessages, phoneNumber, userId) {
   try {
-    const client = await getClientByPhoneNumber(phoneNumber);
+    const client = await getClientByPhoneNumber(phoneNumber, userId);
     console.log(`Client found: ${JSON.stringify(client)}`);
 
-    let thread = await createThread(phoneNumber);
+    let thread = await createThread(phoneNumber, false, userId);
 
     // Add all user messages to the thread
     for (const message of userMessages) {
@@ -824,10 +837,10 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
     let fname, lname, email;
 
     if (!client.firstname && !client.lastname) {
-      thread = await createThread(phoneNumber); 
+      thread = await createThread(phoneNumber, false, userId); 
       assistant = await createTemporaryAssistant(phoneNumber);
     } else {
-      const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1))[0];
+      const upcomingAppointmentJSON = (await getUpcomingAppointments(client.id, 1, userId))[0];
       let upcomingAppointment = '';
       if (upcomingAppointmentJSON) {
         const appointmentDate = upcomingAppointmentJSON.date;
@@ -836,7 +849,7 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
       }
 
       const messages = (await getMessagesByClientId(client.id)).slice(-10);
-      const appointment = (await getAllAppointmentsByClientId(client.id)).slice(0,5);
+      const appointment = (await getAllAppointmentsByClientId(client.id, userId)).slice(0,5);
       console.log("appointment", appointment)
       let appointmentType = '';
       if (appointment.length > 0) {
@@ -846,7 +859,7 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
       lname = client.lastname;
       email = client.email;
       const phone = client.phonenumber;   
-      thread = await createThread(phoneNumber); 
+      thread = await createThread(phoneNumber, false, userId); 
       assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment);
     }
 
@@ -880,7 +893,7 @@ async function handleUserInputInternal(userMessages, phoneNumber) {
         } else if (runStatus.status === "requires_action") {
           console.log("requires action")
           const requiredActions = runStatus.required_action.submit_tool_outputs;
-          const toolOutputs = await handleToolCallsInternal(requiredActions, client, phoneNumber);
+          const toolOutputs = await handleToolCallsInternal(requiredActions, client, phoneNumber, userId);
 
           await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
             tool_outputs: toolOutputs
@@ -1032,4 +1045,4 @@ async function shouldAIRespond(userMessages, thread) {
 }
 
 
-module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal};
+module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal, handleToolCalls, handleToolCallsInternal};

@@ -1,13 +1,13 @@
 const dbUtils = require('./dbUtils');
 
-async function createWaitlistRequest(clientId, requestType, startDate, endDate, startTime, endTime, appointmentType) {
+async function createWaitlistRequest(clientId, requestType, startDate, endDate, startTime, endTime, appointmentType, user_id) {
     const db = dbUtils.getDB();
     const sql = `
-        INSERT INTO WaitlistRequest (clientId, requestType, startDate, endDate, startTime, endTime, appointmentType)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO WaitlistRequest (clientId, requestType, startDate, endDate, startTime, endTime, appointmentType, user_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id
     `;
-    const values = [clientId, requestType, startDate, endDate, startTime, endTime, appointmentType];
+    const values = [clientId, requestType, startDate, endDate, startTime, endTime, appointmentType, user_id];
     try {
         const res = await db.query(sql, values);
         return res.rows[0].id;
@@ -17,14 +17,14 @@ async function createWaitlistRequest(clientId, requestType, startDate, endDate, 
     }
 }
 
-async function getActiveWaitlistRequests() {
+async function getActiveWaitlistRequests(user_id) {
     const db = dbUtils.getDB();
     const sql = `
         SELECT * FROM WaitlistRequest
-        WHERE notified = FALSE
+        WHERE notified = FALSE AND user_id = $1
     `;
     try {
-        const res = await db.query(sql);
+        const res = await db.query(sql, [user_id]);
         return res.rows;
     } catch (err) {
         console.error('Error fetching active waitlist requests:', err.message);

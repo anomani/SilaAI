@@ -1,9 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Button } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 const Homepage = ({ navigation }) => {
+  const route = useRoute();
+  const { handleLogout } = route.params;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -58,6 +62,13 @@ const Homepage = ({ navigation }) => {
             <Text style={styles.menuSubtitle}>Manage your settings</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Logout</Text>
+            <Text style={styles.menuSubtitle}>Sign out of your account</Text>
+          </View>
+          <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
       <Footer navigation={navigation} />

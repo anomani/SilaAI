@@ -1,7 +1,7 @@
 const { getFillMyCalendarStatus, setFillMyCalendarStatus } = require('../model/settings');
 
 async function getFillMyCalendar(req, res) {
-  const userId = 1; // Change this to the actual user ID once we have authentication
+  const userId = req.user.id;
   try {
     const status = await getFillMyCalendarStatus(userId);
     res.json({ status });
@@ -12,7 +12,7 @@ async function getFillMyCalendar(req, res) {
 }
 
 async function setFillMyCalendar(req, res) {
-  const userId = 1; // Change this to the actual user ID once we have authentication
+  const userId = req.user.id;
   try {
     const { status } = req.body;
     await setFillMyCalendarStatus(userId, status);

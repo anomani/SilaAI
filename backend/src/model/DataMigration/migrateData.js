@@ -12,12 +12,12 @@ const client = new Client({
     }
 });
 
-
 const insertClient = async (clientData) => {
     const query = `
         INSERT INTO Client (id, firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
     `;
+
     const values = [
         clientData.id,
         clientData.firstName,

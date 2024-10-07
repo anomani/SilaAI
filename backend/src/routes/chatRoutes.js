@@ -13,7 +13,7 @@ const { getMessageMetricsController } = require('../controllers/chatController')
 const { getMostRecentMessagePerClientController } = require('../controllers/chatController');
 const { getSuggestedResponseCountController } = require('../controllers/chatController');
 const { transcribeAudioController } = require('../controllers/chatController');
-
+const { authenticateToken } = require('../middleware/authMiddleware');
 // Configure multer for handling file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -29,21 +29,21 @@ const upload = multer({
   }
 });
 
-router.post('/schedule', handleChatRequest);
-router.post('/incoming', handleIncomingMessage);
-router.post('/handle-user-input', handleUserInputDataController);
+router.post('/schedule', authenticateToken, handleChatRequest);
+router.post('/incoming', authenticateToken, handleIncomingMessage);
+router.post('/handle-user-input', authenticateToken, handleUserInputDataController);
 router.get('/messages/:clientId', getMessagesByClientIdController);
-router.get('/messages', getAllMessagesGroupedByClientController);
-router.post('/send-message', sendMessageController);
-router.post('/set-messages-read/:clientId', setMessagesReadController);
-router.get('/custom-list', getCustomListController);
-router.post('/send-messages-to-selected-clients', sendMessagesToSelectedClients);
-router.post('/suggested-response', saveSuggestedResponseController);
-router.get('/suggested-response/:clientId', getSuggestedResponseController);
-router.delete('/suggested-response/:clientId', clearSuggestedResponseController);
-router.get('/metrics', getMessageMetricsController);
-router.get('/most-recent-messages', getMostRecentMessagePerClientController);
-router.get('/suggested-response-count', getSuggestedResponseCountController);
+router.get('/messages', authenticateToken, getAllMessagesGroupedByClientController);
+router.post('/send-message', authenticateToken, sendMessageController);
+router.post('/set-messages-read/:clientId', authenticateToken, setMessagesReadController);
+router.get('/custom-list', authenticateToken, getCustomListController);
+router.post('/send-messages-to-selected-clients', authenticateToken, sendMessagesToSelectedClients);
+router.post('/suggested-response', authenticateToken, saveSuggestedResponseController);
+router.get('/suggested-response/:clientId', authenticateToken, getSuggestedResponseController);
+router.delete('/suggested-response/:clientId', authenticateToken, clearSuggestedResponseController);
+router.get('/metrics', authenticateToken, getMessageMetricsController);
+router.get('/most-recent-messages', authenticateToken, getMostRecentMessagePerClientController);
+router.get('/suggested-response-count', authenticateToken, getSuggestedResponseCountController);
 
 // Add the new route for audio transcription
 router.post('/transcribe-audio', upload.single('audio'), transcribeAudioController);

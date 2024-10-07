@@ -1,18 +1,19 @@
 const dbUtils = require('./dbUtils');
 
-async function saveThread(phoneNumber, threadId) {
+async function saveThread(phoneNumber, threadId, user_id) {
+  console.log('[saveThread] user_id:', user_id);
   if (!phoneNumber || !threadId) {
     throw new Error('Invalid phoneNumber or threadId');
   }
   const db = dbUtils.getDB();
 
   const sql = `
-    INSERT INTO threads (phone_number, thread_id)
-    VALUES ($1, $2)
+    INSERT INTO threads (phone_number, thread_id, user_id)
+    VALUES ($1, $2, $3)
     ON CONFLICT (phone_number) DO UPDATE SET thread_id = $2
     RETURNING id
   `;
-  const values = [phoneNumber, threadId];
+  const values = [phoneNumber, threadId, user_id];
   try {
     const res = await db.query(sql, values);
     const newId = res.rows[0].id;
@@ -25,11 +26,12 @@ async function saveThread(phoneNumber, threadId) {
   }
 }
 
-async function getAllThreads() {
+async function getAllThreads(user_id) {
+  console.log('[getAllThreads] user_id:', user_id);
   const db = dbUtils.getDB();
-  const sql = 'SELECT * FROM threads ORDER BY created_at DESC';
+  const sql = 'SELECT * FROM threads WHERE user_id = $1 ORDER BY created_at DESC';
   try {
-    const res = await db.query(sql);
+    const res = await db.query(sql, [user_id]);
     return res.rows;
   } catch (err) {
     console.error('Error fetching all threads:', err.message);
@@ -37,13 +39,14 @@ async function getAllThreads() {
   }
 }
 
-async function getThreadByPhoneNumber(phoneNumber) {
+async function getThreadByPhoneNumber(phoneNumber, user_id) {
+  console.log('[getThreadByPhoneNumber] user_id:', user_id);
   if (!phoneNumber) {
     throw new Error('Invalid phoneNumber');
   }
   const db = dbUtils.getDB();
-  const sql = 'SELECT * FROM threads WHERE phone_number = $1';
-  const values = [phoneNumber];
+  const sql = 'SELECT * FROM threads WHERE phone_number = $1 AND user_id = $2';
+  const values = [phoneNumber, user_id];
   try {
     const res = await db.query(sql, values);
     return res.rows[0];
@@ -53,13 +56,14 @@ async function getThreadByPhoneNumber(phoneNumber) {
   }
 }
 
-async function deleteThreadByPhoneNumber(phoneNumber) {
+async function deleteThreadByPhoneNumber(phoneNumber, user_id) {
+  console.log('[deleteThreadByPhoneNumber] user_id:', user_id);
   if (!phoneNumber) {
     throw new Error('Invalid phoneNumber');
   }
   const db = dbUtils.getDB();
-  const sql = 'DELETE FROM threads WHERE phone_number = $1 RETURNING *';
-  const values = [phoneNumber];
+  const sql = 'DELETE FROM threads WHERE phone_number = $1 AND user_id = $2 RETURNING *';
+  const values = [phoneNumber, user_id];
   try {
     const res = await db.query(sql, values);
     return { deletedCount: res.rowCount };
@@ -69,13 +73,14 @@ async function deleteThreadByPhoneNumber(phoneNumber) {
   }
 }
 
-async function updateThreadId(phoneNumber, newThreadId) {
+async function updateThreadId(phoneNumber, newThreadId, user_id) {
+  console.log('[updateThreadId] user_id:', user_id);
   if (!phoneNumber || !newThreadId) {
     throw new Error('Invalid phoneNumber or newThreadId');
   }
   const db = dbUtils.getDB();
-  const sql = 'UPDATE threads SET thread_id = $2 WHERE phone_number = $1 RETURNING *';
-  const values = [phoneNumber, newThreadId];
+  const sql = 'UPDATE threads SET thread_id = $2 WHERE phone_number = $1 AND user_id = $3 RETURNING *';
+  const values = [phoneNumber, newThreadId, user_id];
   try {
     const res = await db.query(sql, values);
     console.log(`Thread updated for phoneNumber ${phoneNumber}`);
