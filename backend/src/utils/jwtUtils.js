@@ -13,7 +13,7 @@ function generateToken(user) {
       jti: uuidv4() // Add a unique identifier for each token
     }, 
     JWT_SECRET, 
-    { expiresIn: '1d' }
+    { expiresIn: '30d' }
   );
 }
 
