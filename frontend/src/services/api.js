@@ -585,10 +585,10 @@ export const updateAppointmentDetails = async (appointmentId, appointmentData) =
   }
 };
 
-export const login = async (phoneNumber, password) => {
+export const login = async (email, password) => {
   try {
     const response = await retryRequest(() => throttledRequest(() => 
-      api.post('/users/login', { phoneNumber, password })
+      api.post('/users/login', { email, password })
     ));
     return response.data;
   } catch (error) {
