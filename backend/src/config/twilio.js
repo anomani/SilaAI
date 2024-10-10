@@ -95,7 +95,6 @@ async function sendMessages(clients, message, userId) {
 };
 
 async function handleIncomingMessage(req, res) {
-  console.log(req)
   if (!req.body) {
     return res.status(400).send('No request body!');
   }

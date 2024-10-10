@@ -19,7 +19,7 @@ async function handleWebhook(req, res) {
         console.log(req.body)
         const { action, id: appointmentId } = req.body;
         const appointmentDetails = await fetchAppointmentDetails(appointmentId);
-
+        
         switch (action) {
             case 'scheduled':
                 await handleScheduledAppointment(appointmentDetails);

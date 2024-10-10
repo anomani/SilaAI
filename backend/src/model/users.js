@@ -34,8 +34,21 @@ async function getUserByPhoneNumber(phoneNumber) {
   }
 }
 
-async function login(phoneNumber, password) {
-  const user = await getUserByPhoneNumber(phoneNumber);
+async function getUserByEmail(email) {
+  const db = dbUtils.getDB();
+  const sql = 'SELECT * FROM users WHERE email = $1';
+  const values = [email];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error fetching user by email:', err.message);
+    throw err;
+  }
+}
+
+async function login(email, password) {
+  const user = await getUserByEmail(email);
   if (!user) {
     throw new Error('User not found');
   }
@@ -100,8 +113,6 @@ async function getUserByBusinessNumber(businessNumber) {
   }
 }
 
-
-
 module.exports = {
   createUser,
   getUserByPhoneNumber,
@@ -109,5 +120,6 @@ module.exports = {
   addBusinessNumberColumn,
   getUserById,
   getAllUsers,
-  getUserByBusinessNumber  // Add this line
+  getUserByBusinessNumber,
+  getUserByEmail
 };
