@@ -19,9 +19,9 @@ const StrategySchema = z.object({
   // Removed draftCustomerMessage
 });
 
-async function fillMyCalendar() {
+async function fillMyCalendar(userId) {
   try {
-    const suggestedResponsesCount = await getNumberOfSuggestedResponses();
+    const suggestedResponsesCount = await getNumberOfSuggestedResponses(userId);
     if (suggestedResponsesCount >= 20) {
       console.log("Skipping fillMyCalendar: 20 or more suggested responses already stored.");
       return "Skipping fillMyCalendar: 20 or more suggested responses already stored.";
@@ -31,7 +31,7 @@ async function fillMyCalendar() {
     const endDate = new Date();
     endDate.setDate(startDate.getDate() + 7);
 
-    const availableSlots = await getAvailableSlots(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]);
+    const availableSlots = await getAvailableSlots(startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0], userId);
     
     // Calculate total empty spots and categorize them by group
     const slotsByGroup = availableSlots.reduce((acc, day) => {
@@ -51,7 +51,7 @@ async function fillMyCalendar() {
       return "Skipping fillMyCalendar: No empty slots available.";
     }
 
-    const oldClients = await getOldClients();
+    const oldClients = await getOldClients(userId);
     if (oldClients.length === 0) {
       return "No outreach messages sent. No eligible clients.";
     }
@@ -69,7 +69,7 @@ async function fillMyCalendar() {
         group: client.group 
       })),
       outreachStatus: {
-        numberOfCustomersAlreadyContacted: await getNumberOfCustomersContacted()
+        numberOfCustomersAlreadyContacted: await getNumberOfCustomersContacted(30, userId)
       },
       conversionRateEstimate: {
         estimatedConversionRate: 0.05

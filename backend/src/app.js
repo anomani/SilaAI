@@ -21,7 +21,14 @@ app.use(bodyParser.json());
 
 app.get("/", (req, res) => res.send("Uzi Barber App"));
 
+// Add logging middleware for /api routes
+app.use('/api', (req, res, next) => {
+  console.log(req.body);
+  next();
+});
+
 // Routes
+
 app.use('/api/followup', followupRoutes);
 app.use('/api/chat', chatRoutes);  
 app.use('/api', appointmentRoutes);
