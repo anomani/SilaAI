@@ -2,8 +2,8 @@ import axios from 'axios';
 import { getToken } from '../utils/auth';
 
 // Replace with your backend API URL
-// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -11,6 +11,7 @@ const api = axios.create({
 // Add a request interceptor
 api.interceptors.request.use(async (config) => {
   const token = await getToken();
+  console.log("Token", token)
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -621,24 +622,10 @@ export const logout = async () => {
 
 export const getCurrentUser = async () => {
   try {
-    const token = await getToken();
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-    console.log('Sending token:', token);
-    const response = await retryRequest(() => throttledRequest(() => 
-      api.get('/users/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-    ));
-    console.log('Response:', response);
+    const response = await retryRequest(() => throttledRequest(() => api.get('/users/me')));
     return response.data;
   } catch (error) {
     console.error('Error fetching current user:', error);
-    if (error.response) {
-      console.error('Response status:', error.response.status);
-      console.error('Response data:', error.response.data);
-    }
     throw error;
   }
 };
