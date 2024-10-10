@@ -23,7 +23,7 @@ app.get("/", (req, res) => res.send("Uzi Barber App"));
 
 // Add logging middleware for /api routes
 app.use('/api', (req, res, next) => {
-  console.log(req.body);
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
 
