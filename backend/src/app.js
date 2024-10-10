@@ -21,11 +21,11 @@ app.use(bodyParser.json());
 
 app.get("/", (req, res) => res.send("Uzi Barber App"));
 
-// Add logging middleware for /api routes
-app.use('/api', (req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
-  next();
-});
+// // Add logging middleware for /api routes
+// app.use('/api', (req, res, next) => {
+//   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+//   next();
+// });
 
 // Routes
 
