@@ -358,7 +358,7 @@ async function createThread(phoneNumber, initialMessage = false, userId) {
   }
 }
 
-async function createAssistant(fname, lname, phone, messages, appointment, day, client, upcomingAppointment) {
+async function createAssistant(fname, lname, phone, messages, appointment, day, client, upcomingAppointment, userId) {
   const instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
     // Fetch appointment types and add-ons for the user
@@ -792,7 +792,7 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
       email = client.email;
       const phone = client.phonenumber;   
       thread = await createThread(phoneNumber, false, userId); 
-      assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment);
+      assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment, userId);
     }
 
 
@@ -900,7 +900,7 @@ async function handleUserInputInternal(userMessages, phoneNumber, userId) {
       email = client.email;
       const phone = client.phonenumber;   
       thread = await createThread(phoneNumber, false, userId); 
-      assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment);
+      assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment, userId);
     }
 
 
