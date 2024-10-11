@@ -230,6 +230,7 @@ const ClientMessagesScreen = ({ route }) => {
       setLocalMessages(prev => [...prev, tempMessage]);
       setNewMessage('');
       setEditableSuggestedResponse('');
+      setCurrentSuggestedResponse('');
       scrollToBottom();
 
       console.log('Sending message via API'+ messageToSend);
@@ -242,8 +243,6 @@ const ClientMessagesScreen = ({ route }) => {
       setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
       
       // Clear the suggested response after sending
-      setCurrentSuggestedResponse('');
-      // Also clear it from the backend
       await clearSuggestedResponse(clientid);
     } catch (error) {
       console.error('Error sending message:', error);
