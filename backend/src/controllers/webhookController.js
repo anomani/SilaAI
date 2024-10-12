@@ -4,7 +4,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
-
+const { getUserByCalendarID } = require('../model/users');
 async function handleWebhook(req, res) {
     try {
         // const body = JSON.stringify(req.body);
@@ -17,18 +17,19 @@ async function handleWebhook(req, res) {
         //     throw new Error('This message was forged!');
         // }
         console.log(req.body)
-        const { action, id: appointmentId } = req.body;
-        const appointmentDetails = await fetchAppointmentDetails(appointmentId);
-        
+        const { action, id: appointmentId, calendarID } = req.body;
+        const user = await getUserByCalendarID(calendarID);
+        console.log("User:", user);
+        const appointmentDetails = await fetchAppointmentDetails(appointmentId, user);
         switch (action) {
             case 'scheduled':
-                await handleScheduledAppointment(appointmentDetails);
+                await handleScheduledAppointment(appointmentDetails, user.id);
                 break;
             case 'canceled':
-                await handleCanceledAppointment(appointmentDetails);
+                await handleCanceledAppointment(appointmentDetails, user.id);
                 break;
             case 'rescheduled':
-                await handleRescheduledAppointment(appointmentDetails);
+                await handleRescheduledAppointment(appointmentDetails, user.id);
                 break;
             default:
                 console.log(`Received unhandled action: ${action}`);
@@ -41,15 +42,14 @@ async function handleWebhook(req, res) {
     }
 }
 
-async function handleScheduledAppointment(appointmentDetails) {
-    const client = await getOrCreateClient(appointmentDetails);
+async function handleScheduledAppointment(appointmentDetails, userId) {
+    const client = await getOrCreateClient(appointmentDetails, userId);
     const { date, startTime, endTime } = parseAppointmentDateTime(appointmentDetails);
     let appointmentType = appointmentDetails.type;
     const appointmentParts = appointmentType.split('+').map(part => part.trim());
     const parsedAppointmentType = appointmentParts[0];
     // Update appointmentType and addOnArray
     appointmentType = parsedAppointmentType;
-
     // Update addOnArray with the rest of appointmentParts
     const addOnArray = [];
     if (appointmentParts.length > 1) {
@@ -72,18 +72,22 @@ async function handleScheduledAppointment(appointmentDetails) {
         false,
         0,
         null,
-        addOnArray
+        addOnArray,
+        userId
     );
     console.log("Appointment created successfully");
 }
 
-async function handleCanceledAppointment(appointmentDetails) {
-    const client = await getClientByPhoneNumber(appointmentDetails.phone);
+async function handleCanceledAppointment(appointmentDetails, userId) {
+    const client = await getClientByPhoneNumber(appointmentDetails.phone, userId);
     if (!client) {
         throw new Error('Client not found');
     }
 
+    console.log("Client:", client);
     const { date, startTime } = parseAppointmentDateTime(appointmentDetails);
+    console.log("Date:", date);
+    console.log("Start Time:", startTime);
     const appointmentToDelete = await findAppointmentByClientAndTime(client.id, date, startTime);
 
     if (!appointmentToDelete) {
@@ -94,7 +98,7 @@ async function handleCanceledAppointment(appointmentDetails) {
     console.log("Appointment deleted successfully:", appointmentToDelete);
 }
 
-async function handleRescheduledAppointment(appointmentDetails) {
+async function handleRescheduledAppointment(appointmentDetails, userId) {
     const { date, startTime, endTime } = parseAppointmentDateTime(appointmentDetails);
     
     const updatedAppointment = await findAndUpdateAppointmentByAcuityId(
@@ -104,7 +108,7 @@ async function handleRescheduledAppointment(appointmentDetails) {
             startTime,
             endTime,
             appointmentType: appointmentDetails.type,
-            clientId: (await getOrCreateClient(appointmentDetails)).id,
+            clientId: (await getOrCreateClient(appointmentDetails, userId)).id,
             details: JSON.stringify({
                 email: appointmentDetails.email,
                 phone: appointmentDetails.phone,
@@ -122,15 +126,16 @@ async function handleRescheduledAppointment(appointmentDetails) {
     }
 }
 
-async function getOrCreateClient(appointmentDetails) {
-    let client = await getClientByPhoneNumber(appointmentDetails.phone);
+async function getOrCreateClient(appointmentDetails, userId) {
+    let client = await getClientByPhoneNumber(appointmentDetails.phone, userId);
     if (!client.id) {
         const clientId = await createClient(
             appointmentDetails.firstName,
             appointmentDetails.lastName,
             appointmentDetails.phone,
             appointmentDetails.email,
-            ''  // notes field is empty for now
+            '',  // notes field is empty for now
+            userId
         );
         client = { id: clientId };
     }
@@ -153,9 +158,9 @@ function convertToMilitaryTime(time) {
     return `${hour.toString().padStart(2, '0')}:${minutes.substring(0, 2)}`;
 }
 
-async function fetchAppointmentDetails(appointmentId) {
+async function fetchAppointmentDetails(appointmentId, user) {
     const apiUrl = `https://acuityscheduling.com/api/v1/appointments/${appointmentId}`;
-    const auth = Buffer.from(`${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`).toString('base64');
+    const auth = Buffer.from(`${user.acuity_user_id}:${user.acuity_api_key}`).toString('base64');
 
     try {
         const response = await axios.get(apiUrl, {

@@ -113,6 +113,19 @@ async function getUserByBusinessNumber(businessNumber) {
   }
 }
 
+async function getUserByCalendarID(calendarID) {
+  const db = dbUtils.getDB();
+  const sql = 'SELECT * FROM users WHERE calendarid = $1';
+  const values = [calendarID];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error fetching user by calendar ID:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   createUser,
   getUserByPhoneNumber,
@@ -121,5 +134,6 @@ module.exports = {
   getUserById,
   getAllUsers,
   getUserByBusinessNumber,
-  getUserByEmail
+  getUserByEmail,
+  getUserByCalendarID
 };

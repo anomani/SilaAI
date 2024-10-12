@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Button } from 'react-native';
+import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Button, ScrollView } from 'react-native';
 import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser } from '../services/api';
 import { Ionicons } from '@expo/vector-icons'; // Make sure to import this
 import Footer from '../components/Footer'; // Import the Footer component
 import { useRoute } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const SettingsPage = ({ navigation }) => { // Add navigation prop
   const [fillMyCalendar, setFillMyCalendar] = useState(false);
@@ -48,27 +47,29 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.pageContainer}>
+      <View style={styles.container}>
         <ActivityIndicator size="large" color="#ffffff" style={styles.loading} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.pageContainer}>
+      <View style={styles.container}>
         <Text style={styles.error}>{error}</Text>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.pageContainer}>
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Settings</Text>
+    <View style={styles.container}>
+      <ScrollView style={styles.main}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Settings</Text>
+        </View>
         {user && (
           <View style={styles.userInfo}>
             <Text style={styles.infoText}>Username: {user.username}</Text>
@@ -85,38 +86,37 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
           />
         </View>
         <Button title="Logout" onPress={handleLogout} />
-      </View>
+      </ScrollView>
       <Footer navigation={navigation} />
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  pageContainer: {
+  container: {
     flex: 1,
     backgroundColor: '#1c1c1e',
   },
-  container: {
+  main: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     padding: 16,
-    paddingTop: 60,
+    paddingTop: 50, // Adjust this value to match your desired top spacing
   },
   backButton: {
-    position: 'absolute',
-    top: 60,
-    left: 16,
-    zIndex: 1,
+    marginRight: 16,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 24,
-    marginLeft: 40, // Add left margin to avoid overlapping with back button
   },
   userInfo: {
     marginBottom: 20,
-    padding: 10,
+    padding: 16,
     backgroundColor: '#2c2c2e',
     borderRadius: 8,
   },
@@ -131,6 +131,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
     paddingVertical: 20,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
   },
