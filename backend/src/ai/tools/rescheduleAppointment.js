@@ -8,11 +8,11 @@ const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 const { isAppointmentAvailable, addMinutes, isAfter } = require('./bookAppointment');
 const { getAvailability } = require('./getAvailability');
 
-async function rescheduleAppointmentWithAcuity(appointmentId, newDate, newStartTime) {
+async function rescheduleAppointmentWithAcuity(appointmentId, newDate, newStartTime, userId) {
     const acuityApiUrl = `https://acuityscheduling.com/api/v1/appointments/${appointmentId}/reschedule`;
     const auth = {
-        username: process.env.ACUITY_USER_ID,
-        password: process.env.ACUITY_API_KEY
+        username: user.acuity_user_id,
+        password: user.acuity_api_key
     };
 
     const timezone = 'America/New_York';
@@ -49,7 +49,7 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
             return "Client not found";
         }
 
-        const appointmentsForDay = await getAppointmentsByDay(currentDate, userId);
+        const appointmentsForDay = await getAppointmentsByDay(userId, currentDate);
         const appointment = appointmentsForDay.find(appt => appt.clientid === client.id);
         if (!appointment) {
             return "Appointment not found";
@@ -88,9 +88,9 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
         }
 
         // Reschedule with Acuity
-        const acuityResponse = await rescheduleAppointmentWithAcuity(appointment.acuityid, newDate, newStartTime);
+        const acuityResponse = await rescheduleAppointmentWithAcuity(appointment.acuityid, newDate, newStartTime, userId);
 
-        await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime, userId);
+        await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime);
         
         return "Appointment rescheduled successfully"
     } catch (error) {
@@ -110,7 +110,7 @@ async function rescheduleAppointmentByPhoneAndDateInternal(phoneNumber, currentD
             return "Client not found";
         }
 
-        const appointmentsForDay = await getAppointmentsByDay(currentDate, userId);
+        const appointmentsForDay = await getAppointmentsByDay(userId, currentDate);
         const appointment = appointmentsForDay.find(appt => appt.clientid === client.id);
         if (!appointment) {
             return "Appointment not found";
