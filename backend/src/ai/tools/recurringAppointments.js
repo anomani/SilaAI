@@ -33,6 +33,7 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
             } else {
                 console.log('Availability:', availability);
                 
+            
                 const isSlotAvailable = availability.some(slot => {
                     const slotStart = moment(`${formattedDate} ${slot.startTime}`, 'YYYY-MM-DD HH:mm');
                     const slotEnd = moment(`${formattedDate} ${slot.endTime}`, 'YYYY-MM-DD HH:mm');
