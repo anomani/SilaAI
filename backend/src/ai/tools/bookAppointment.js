@@ -6,12 +6,17 @@ const {getAvailability, getAvailabilityAdmin} = require('./getAvailability')
 const axios = require('axios');
 const moment = require('moment-timezone');
 const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
-
+const {getUserById} = require('../../model/users')
 async function bookAppointmentWithAcuity(date, startTime, fname, lname, phone, email, appointmentType, price, addOnArray, userId) {
+    const user = await getUserById(userId);
+    if (!user) {
+        throw new Error(`User not found with ID: ${userId}`);
+    }
+
     const acuityApiUrl = 'https://acuityscheduling.com/api/v1/appointments';
     const auth = {
-        username: process.env.ACUITY_USER_ID,
-        password: process.env.ACUITY_API_KEY
+        username: user.acuity_user_id,
+        password: user.acuity_api_key
     };
 
     const appointmentTypeInfo = appointmentTypes[appointmentType];
@@ -87,7 +92,7 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
 
   try {
     // const acuityAppointment = await bookAppointment(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOns);
-    const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOnArray);
+    const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOnArray, userId);
     return "Appointment booked successfully";
   } catch (error) {
     console.error(error);

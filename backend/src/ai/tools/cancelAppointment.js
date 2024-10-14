@@ -5,15 +5,15 @@ const {deleteAppointment, getAppointmentsByDay} = require ('../../model/appointm
 const axios = require('axios');
 
 
-async function cancelAcuityAppointment(acuityId) {
+async function cancelAcuityAppointment(acuityId, userId) {
     try {
         const response = await axios.put(
             `https://acuityscheduling.com/api/v1/appointments/${acuityId}/cancel`,
             {},
             {
                 auth: {
-                    username: process.env.ACUITY_USER_ID,
-                    password: process.env.ACUITY_API_KEY
+                    username: user.acuity_user_id,
+                    password: user.acuity_api_key
                 },
                 params: {
                     admin: true,
@@ -30,7 +30,7 @@ async function cancelAcuityAppointment(acuityId) {
 
 async function cancelAppointment(phoneNumber, date, userId) {
     const client = await getClientByPhoneNumber(phoneNumber, userId)
-    const appointmentsForDay = await getAppointmentsByDay(date, userId)
+    const appointmentsForDay = await getAppointmentsByDay(userId, date)
     const appointment = appointmentsForDay.find(appointment => appointment.clientid === client.id)
 
     try {
@@ -40,7 +40,7 @@ async function cancelAppointment(phoneNumber, date, userId) {
 
         acuity_id = appointment.acuityid 
         
-        const acuityCancelled = await cancelAcuityAppointment(acuity_id);
+        const acuityCancelled = await cancelAcuityAppointment(acuity_id, userId);
 
         if (acuityCancelled) {
             // await deleteAppointment(appointment.id);
@@ -67,7 +67,7 @@ async function cancelAppointmentById(clientId, date, userId) {
             return "Client not found";
         }
 
-        const appointmentsForDay = await getAppointmentsByDay(date, userId);
+        const appointmentsForDay = await getAppointmentsByDay(userId, date);
         console.log(appointmentsForDay);
         const appointment = appointmentsForDay.find(appointment => appointment.clientid === clientId);
         if (!appointment) {
@@ -75,7 +75,7 @@ async function cancelAppointmentById(clientId, date, userId) {
         }
         const acuity_id = appointment.acuityid;
         
-        const acuityCancelled = await cancelAcuityAppointment(acuity_id);
+        const acuityCancelled = await cancelAcuityAppointment(acuity_id, userId);
 
         if (acuityCancelled) {
             await deleteAppointment(appointment.id);
@@ -91,7 +91,7 @@ async function cancelAppointmentById(clientId, date, userId) {
 
 async function cancelAppointmentInternal(phoneNumber, date, userId) {
     const client = await getClientByPhoneNumber(phoneNumber, userId)
-    const appointmentsForDay = await getAppointmentsByDay(date, userId)
+    const appointmentsForDay = await getAppointmentsByDay(userId, date)
     const appointment = appointmentsForDay.find(appointment => appointment.clientid === client.id)
 
     if (!appointment) {
@@ -114,7 +114,7 @@ async function cancelAppointmentByIdInternal(clientId, date, userId) {
             return "Client not found";
         }
 
-        const appointmentsForDay = await getAppointmentsByDay(date, userId);
+        const appointmentsForDay = await getAppointmentsByDay(userId, date);
         const appointment = appointmentsForDay.find(appointment => appointment.clientid === clientId);
         if (!appointment) {
             return "Appointment not found";
