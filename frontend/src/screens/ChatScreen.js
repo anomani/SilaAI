@@ -200,10 +200,23 @@ const ChatScreen = () => {
   };
 
   const renderItem = ({ item }) => {
-    const idRegex = /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i;
+    console.log("ITEM", item);
     
-    const match = item.text.match(idRegex);
-    const id = match ? match[1] : null;
+    let id = null;
+    if (item.sender === 'bot') {
+      const idRegex = /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i;
+      const match = item.text.match(idRegex);
+      id = match ? match[1] : null;
+    }
+    
+    console.log("ID", id);
+
+    const handleLinkPress = () => {
+      if (id) {
+        console.log('Navigating with id:', id);
+        navigation.navigate('QueryResults', { id });
+      }
+    };
 
     return (
       <View
@@ -214,15 +227,14 @@ const ChatScreen = () => {
       >
         {item.sender === 'bot' && id ? (
           <Text style={styles.messageText}>
-            {item.text.replace(id, '').trim()}
-            {' '}
+            View list{' '}
             <Text
               style={styles.link}
-              onPress={() => handleLinkPress(id)}
+              onPress={handleLinkPress}
             >
-              View list
+              here
             </Text>
-            {' here.'}
+            .
           </Text>
         ) : (
           <Text style={styles.messageText}>{item.text}</Text>

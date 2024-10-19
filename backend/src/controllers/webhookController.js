@@ -4,7 +4,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 const dotenv = require('dotenv');
 dotenv.config({ path: '../../.env' });
-const { getUserByCalendarID } = require('../model/users');
+const { getUserByCalendarID, getUserById } = require('../model/users');
 async function handleWebhook(req, res) {
     try {
         // const body = JSON.stringify(req.body);
@@ -178,9 +178,10 @@ async function fetchAppointmentDetails(appointmentId, user) {
 }
 
 
-async function fetchAllAppointments() {
+async function fetchAllAppointments(userId) {
+    const user = await getUserById(userId);
     const apiUrl = 'https://acuityscheduling.com/api/v1/appointments';
-    const auth = Buffer.from(`${process.env.ACUITY_USER_ID}:${process.env.ACUITY_API_KEY}`).toString('base64');
+    const auth = Buffer.from(`${user.acuity_user_id}:${user.acuity_api_key}`).toString('base64');
     let allAppointments = [];
     let minDate = null;
     const batchSize = 100; // Adjust this value as needed
@@ -220,15 +221,14 @@ async function fetchAllAppointments() {
     return allAppointments;
 }
 
-async function migrateAppointments() {
+async function migrateAppointments(userId) {
     try {
-        const appointments = await fetchAllAppointments();
+        const appointments = await fetchAllAppointments(userId);
         console.log(`Starting migration of ${appointments.length} appointments...`);
         
         for (const appointment of appointments) {
             const { date, startTime, endTime } = parseAppointmentDateTime(appointment);
-            const client = await getOrCreateClient(appointment);
-            
+            const client = await getOrCreateClient(appointment, userId);
             await createAppointment(
                 appointment.type,
                 appointment.id,
@@ -242,7 +242,12 @@ async function migrateAppointments() {
                     dateCreated: appointment.dateCreated,
                     datetimeCreated: appointment.datetimeCreated
                 }),
-                appointment.price
+                appointment.price,
+                false,
+                0,
+                null,
+                [],
+                userId
             );
         }
         console.log("All appointments migrated successfully");
@@ -251,5 +256,10 @@ async function migrateAppointments() {
     }
 }
 
+async function main() {
+    await migrateAppointments(67);
+    console.log("Migration complete");
+}
 
+main()
 module.exports = { handleWebhook, migrateAppointments };

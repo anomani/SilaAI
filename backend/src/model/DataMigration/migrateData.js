@@ -1,72 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
-const { Client } = require('pg');
-const dotenv = require('dotenv')
-dotenv.config({path : '../../../.env'})
-console.log(process.env.DATABASE_URL)
-const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-      rejectUnauthorized: false
-    }
-});
+const dotenv = require('dotenv');
+const { createClient } = require('../clients');
 
-const insertClient = async (clientData) => {
-    const query = `
-        INSERT INTO Client (id, firstName, lastName, phoneNumber, email, notes, daysSinceLastAppointment)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `;
-
-    const values = [
-        clientData.id,
-        clientData.firstName,
-        clientData.lastName,
-        clientData.phoneNumber,
-        clientData.email,
-        clientData.notes,
-        clientData.daysSinceLastAppointment
-    ];
-    await client.query(query, values);
-};
-
-const insertMessage = async (messageData) => {
-    const query = `
-        INSERT INTO Messages (id, fromText, toText, body, date, clientId)
-        VALUES ($1, $2, $3, $4, $5, $6)
-    `;
-    const values = [
-        messageData.id,
-        messageData.fromText,
-        messageData.toText,
-        messageData.body,
-        messageData.date,
-        messageData.clientId
-    ];
-    await client.query(query, values);
-};
-
-const insertAppointment = async (appointmentData) => {
-    const query = `
-        INSERT INTO Appointment (id, clientId, date, startTime, endTime, appointmentType, details)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `;
-    const values = [
-        appointmentData.id,
-        appointmentData.clientId,
-        appointmentData.date,
-        appointmentData.startTime,
-        appointmentData.endTime,
-        appointmentData.appointmentType,
-        appointmentData.details
-    ];
-    await client.query(query, values);
-};
+dotenv.config({path : '../../../.env'});
 
 const csvFilePaths = {
     client: path.join(__dirname, 'client.csv'),
-    message: path.join(__dirname, 'message.csv'),
-    appointment: path.join(__dirname, 'appointment.csv')
+    // ... other paths if needed
 };
 
 const readCSV = (filePath, insertFunction) => {
@@ -75,14 +17,13 @@ const readCSV = (filePath, insertFunction) => {
         fs.createReadStream(filePath)
             .pipe(csv())
             .on('data', (row) => {
-                rows.push(row);
+                rows.push(row); 
             })
             .on('end', async () => {
                 console.log(`${filePath} file successfully processed`);
                 try {
                     for (const row of rows) {
-                        console.log(row.id)
-                        if(row.daysSinceLastAppointment === '') {
+                        if (row.daysSinceLastAppointment === '') {
                             row.daysSinceLastAppointment = 0;
                         }
                         await insertFunction(row);
@@ -98,21 +39,40 @@ const readCSV = (filePath, insertFunction) => {
     });
 };
 
+const insertClient = async (clientData) => {
+    console.log(clientData);
+    try {
+        const firstName = clientData['First Name'];
+        const lastName = clientData['Last Name'];
+        const phoneNumber = clientData['Phone'];
+        const email = clientData['Email'];
+        const notes = clientData['Notes'];
+        const daysSinceLastAppointment = parseInt(clientData['Days Since Last Appointment']) || 0;
+
+        const clientId = await createClient(
+            firstName,
+            lastName,
+            phoneNumber,
+            email,
+            notes,
+            67,
+            daysSinceLastAppointment
+        );
+        console.log(`Successfully inserted client with id: ${clientId}`);
+    } catch (error) {
+        console.error(`Error inserting client:`, error.message);
+        throw error;
+    }
+};
+
 async function migrateData() {
     try {
-        await client.connect();
-        // await readCSV(csvFilePaths.client, insertClient);
-        // await readCSV(csvFilePaths.message, insertMessage);
-        await readCSV(csvFilePaths.appointment, insertAppointment);
+        await readCSV(csvFilePaths.client, insertClient);
+        // ... other migrations if needed
         console.log('Data migration completed');
     } catch (err) {
         console.error('Error during data migration', err.message);
-    } finally {
-        await client.end();
     }
 }
-
-
-
 
 migrateData();
