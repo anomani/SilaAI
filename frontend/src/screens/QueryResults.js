@@ -20,6 +20,7 @@ const QueryResults = ({ route }) => {
   const fetchQueryResults = async () => {
     setLoading(true);
     try {
+      console.log(id)
       const cleanId = id.replace(/[()]/g, '');
       const data = await getCustomList(cleanId);
       setClients(data);
@@ -96,7 +97,7 @@ const QueryResults = ({ route }) => {
             </View>
             <FlatList
               data={filteredClients}
-              keyExtractor={(item) => item.id.toString()}
+              keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
                 <TouchableOpacity onPress={() => handleClientPress(item)}>
                   <View style={styles.clientItem}>

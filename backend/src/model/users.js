@@ -126,8 +126,45 @@ async function getUserByCalendarID(calendarID) {
   }
 }
 
+async function createUserManual(username, password, email, phoneNumber, isBarber, businessNumber, calendarId, acuityApiKey, acuityUserId) {
+  const db = dbUtils.getDB();
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const sql = `
+    INSERT INTO users (
+      username, password, email, phone_number, is_barber, 
+      business_number, calendarid, acuity_api_key, acuity_user_id
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    RETURNING id
+  `;
+
+  const values = [
+    username, 
+    hashedPassword, 
+    email, 
+    phoneNumber, 
+    isBarber,
+    businessNumber,
+    calendarId,
+    acuityApiKey,
+    acuityUserId
+  ];
+
+  try {
+    const res = await db.query(sql, values);
+    console.log("User created with id:", res.rows[0].id);
+    return { id: res.rows[0].id };
+  } catch (err) {
+    console.error('Error creating user:', err.message);
+    throw err;
+  }
+}
+
+
 module.exports = {
   createUser,
+  createUserManual,
   getUserByPhoneNumber,
   login,
   addBusinessNumberColumn,
