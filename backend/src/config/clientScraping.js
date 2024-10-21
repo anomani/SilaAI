@@ -66,6 +66,7 @@ async function getClients() {
         for (let i = 1214; i < clientLinksCount; i++) {
             console.log("Index: ", i)
             try {
+                
                 await page.waitForSelector("td.lastName.css-1b3r7q", { visible: true, timeout: SELECTOR_TIMEOUT });
                 // Click on the client link by index
                 await page.evaluate(index => {
