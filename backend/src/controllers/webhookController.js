@@ -256,10 +256,10 @@ async function migrateAppointments(userId) {
     }
 }
 
-async function main() {
-    await migrateAppointments(67);
-    console.log("Migration complete");
-}
+// async function main() {
+//     await migrateAppointments(67);
+//     console.log("Migration complete");
+// }
 
-main()
+// main()
 module.exports = { handleWebhook, migrateAppointments };

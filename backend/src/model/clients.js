@@ -146,6 +146,12 @@ async function getClientByPhoneNumber(phoneNumber, user_id) {
     }
 }
 
+async function main () {
+    const client = await getClientByPhoneNumber("+16476866712", 67);
+    console.log(client)
+}
+main()
+
 async function followUp(days, user_id) {
     const db = dbUtils.getDB();
 
