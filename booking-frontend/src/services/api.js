@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api'; // Keep this as is, assuming your backend is still on port 3001
+const API_URL = 'https://localhost:3000/api'; // Keep this as is, assuming your backend is still on port 3001
 
 export const getAvailabilities = async (date, appointmentType) => {
   try {

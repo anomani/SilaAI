@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
 const bodyParser = require('body-parser');
 const followupRoutes = require('./routes/followupRoutes');
 const chatRoutes = require('./routes/chatRoutes');
@@ -41,6 +42,7 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
+
 // Initialize cron jobs
 cronJobs.initializeCronJobs();
 

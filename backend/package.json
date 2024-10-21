@@ -15,6 +15,7 @@
         "bcrypt": "^5.1.1",
         "body-parser": "^1.20.2",
         "bull": "^4.15.1",
+        "cors": "^2.8.5",
         "csv-parser": "^3.0.0",
         "expo-server-sdk": "^3.10.0",
         "express": "^4.19.2",
