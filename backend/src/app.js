@@ -42,7 +42,7 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
-
+app.use(cors());
 // Initialize cron jobs
 cronJobs.initializeCronJobs();
 

@@ -29,4 +29,5 @@ router.put('/appointments/:appointmentId/reschedule', authenticateToken, resched
 router.get('/metrics', authenticateToken, getAppointmentMetricsController);
 router.put('/appointments/:appointmentId', authenticateToken, updateAppointmentDetailsController);
 router.get('/availabilities', getAvailabilities);
+
 module.exports = router;    
