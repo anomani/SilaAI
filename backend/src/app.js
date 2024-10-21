@@ -42,7 +42,14 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
-app.use(cors());
+
+// Enable CORS for all routes
+app.use(cors({
+  origin: 'http://localhost:8080', // Allow requests from your frontend
+  methods: 'GET, POST, PUT, DELETE', // Allow common HTTP methods
+  allowedHeaders: 'Content-Type, Authorization', // Allow specific headers
+}));
+
 // Initialize cron jobs
 cronJobs.initializeCronJobs();
 
