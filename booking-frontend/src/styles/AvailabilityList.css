@@ -1,0 +1,57 @@
+.availability-list {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.time-zone {
+  text-align: right;
+  margin-bottom: 20px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.week-grid {
+  display: flex;
+  justify-content: space-between;
+  overflow-x: auto;
+}
+
+.day-column {
+  flex: 1;
+  min-width: 120px;
+  margin: 0 5px;
+}
+
+.day-header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.day-name {
+  font-weight: bold;
+}
+
+.day-date {
+  font-size: 0.9em;
+  color: #666;
+}
+
+.time-slots {
+  display: flex;
+  flex-direction: column;
+}
+
+.time-slot {
+  margin: 5px 0;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.time-slot:hover {
+  background-color: #e0e0e0;
+}

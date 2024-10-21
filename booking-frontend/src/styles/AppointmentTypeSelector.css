@@ -1,0 +1,20 @@
+.category-selector {
+  margin-top: 30px;
+}
+
+.appointment-type {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.appointment-type button {
+  background-color: #7cc0ff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
