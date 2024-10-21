@@ -80,6 +80,8 @@ async function getClients() {
 
                 const clientName = await page.$eval(".field-rendered.edit-client", el => el.innerText);
                 const clientNumber = await page.$eval("a.real-link[data-testid='added-client-phone']", el => el.innerText);
+
+                
                 const startTime = await page.$eval(".start-time", el => el.innerText);
                 const endTime = await page.$eval(".end-time", el => el.innerText);
                 const dateOfAppointment = await page.$eval("a[data-testid='docket-appointment-detail-link']", el => el.innerText);
@@ -187,7 +189,6 @@ async function getClientsSquarespace() {
             try {
                 const clientElements = await frame.$$('td.lastName');
                 if (clientElements.length > 0) {
-                    console.log(`Found ${clientElements.length} client elements in this frame`);
                     targetFrame = frame;
                     break;
                 }
@@ -214,7 +215,7 @@ async function getClientsSquarespace() {
                 const clientLinksCount = await targetFrame.$$eval("td.lastName", links => links.length);
                 console.log(`Found ${clientLinksCount} clients`);
 
-                for (let i = 0; i < clientLinksCount; i++) {
+                for (let i = 837; i < clientLinksCount; i++) {
                     try {
                         await targetFrame.waitForSelector("td.lastName", { visible: true });
                         // Click on the client link by index
@@ -223,50 +224,54 @@ async function getClientsSquarespace() {
                         }, i);
 
                         await targetFrame.waitForSelector(".start-time");
-
                         const clientName = await targetFrame.$eval(".field-rendered.edit-client", el => el.innerText);
                         const clientNumber = await targetFrame.$eval("a.real-link[data-testid='added-client-phone']", el => el.innerText);
-                        const startTime = await targetFrame.$eval(".start-time", el => el.innerText);
-                        const endTime = await targetFrame.$eval(".end-time", el => el.innerText);
-                        const dateOfAppointment = await targetFrame.$eval("a[data-testid='docket-appointment-detail-link']", el => el.innerText);
-                        const typeOfAppointment = await targetFrame.$eval(".appointment-type-name", el => el.innerText);
 
-                        await targetFrame.click("a[data-testid='docket-appointment-detail-link']");
+                        await targetFrame.waitForSelector(".appointment-item", { timeout: 10000 });
+                        const appointments = await targetFrame.$$(".appointment-item");
+                        console.log("Number of appointments: ", appointments.length)
+                        for (const appointmentElement of appointments) {
+                            const startTime = await appointmentElement.$eval(".start-time", el => el.innerText);
+                            const endTime = await appointmentElement.$eval(".end-time", el => el.innerText);
+                            const dateOfAppointment = await appointmentElement.$eval("a[data-testid='docket-appointment-detail-link']", el => el.innerText);
+                            const typeOfAppointment = await appointmentElement.$eval(".appointment-type-name", el => el.innerText);
+                            const cleanedTypeOfAppointment = typeOfAppointment.replace(/\\n\\t/g, '');
+                            // Convert times to HH:MM in military time
+                            const startTimeMilitary = moment(startTime, ["h:mm A"]).format("HH:mm");
+                            const endTimeMilitary = moment(endTime, ["h:mm A"]).format("HH:mm");
+                            // Convert date to YYYY-MM-DD
+                            const dateOfAppointmentFormatted = moment(dateOfAppointment, "dddd, MMMM D, YYYY").format("YYYY-MM-DD");
+                            await targetFrame.click("a[data-testid='docket-appointment-detail-link']");
+                            console.log("Appointment detail link clicked")
+                            let paymentPriceNumeric;
+                            try {   
+                                await targetFrame.waitForSelector("span.payment-price[data-testid='payment-price-text']", { visible: true, timeout: 10000 });
+                                const paymentPrice = await targetFrame.$eval("span.payment-price[data-testid='payment-price-text']", el => el.innerText);
+                                paymentPriceNumeric = paymentPrice.replace(/[^0-9.]/g, '');
+                                await targetFrame.click("a.detail-nav-link.btn.btn-inverse.hidden-print.detail-nav-link[data-testid='appt-details-close-btn']");
+                                console.log("Payment price close button clicked")
+                            }
+                            catch(e) {
+                                await targetFrame.click("a.detail-nav-link.btn.btn-inverse.hidden-print.detail-nav-link[data-testid='appt-details-close-btn']");
+                                console.log("Payment price close button clicked")
+                            }   
 
-                        let paymentPriceNumeric;
-                        try {
-                            await targetFrame.waitForSelector("span.payment-price[data-testid='payment-price-text']", { visible: true, timeout: 10000 });
-                            const paymentPrice = await targetFrame.$eval("span.payment-price[data-testid='payment-price-text']", el => el.innerText);
-                            paymentPriceNumeric = paymentPrice.replace(/[^0-9.]/g, '');
-                            await targetFrame.click("a.detail-nav-link.btn.btn-inverse.hidden-print.detail-nav-link[data-testid='appt-details-close-btn']");
+                            await targetFrame.waitForSelector(".start-time", { timeout: 10000 });
+                            console.log({
+                                clientName,
+                                clientNumber,
+                                startTime: startTimeMilitary,
+                                endTime: endTimeMilitary,
+                                dateOfAppointment: dateOfAppointmentFormatted,
+                                typeOfAppointment: cleanedTypeOfAppointment,
+                                paymentPrice: paymentPriceNumeric
+                            });
+                            const client = await getClientByPhoneNumber(clientNumber, userId);
+                            console.log(client)
+                            if (client) {
+                                const appointment = await createAppointment(cleanedTypeOfAppointment, null, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "", paymentPriceNumeric, null, null, null, null, userId);
+                            }
                         }
-                        catch(e) {
-                            await targetFrame.click("a.detail-nav-link.btn.btn-inverse.hidden-print.detail-nav-link[data-testid='appt-details-close-btn']");
-                        }
-                        await targetFrame.waitForSelector(".start-time", { timeout: 10000 });
-
-                        console.log(paymentPriceNumeric)
-                        // Convert times to HH:MM in military time
-                        const startTimeMilitary = moment(startTime, ["h:mm A"]).format("HH:mm");
-                        const endTimeMilitary = moment(endTime, ["h:mm A"]).format("HH:mm");
-                        // Convert date to YYYY-MM-DD
-                        const dateOfAppointmentFormatted = moment(dateOfAppointment, "dddd, MMMM D, YYYY").format("YYYY-MM-DD");
-                        console.log({
-                            clientName,
-                            clientNumber,
-                            startTime: startTimeMilitary,
-                            endTime: endTimeMilitary,
-                            dateOfAppointment: dateOfAppointmentFormatted,
-                            typeOfAppointment,
-                            paymentPriceNumeric
-                        });
-                        console.log(`Processing client at index ${i}`);
-                        const client = await getClientByPhoneNumber(clientNumber, userId)
-                        console.log(client)
-                        if(client) {
-                            const appointment = await createAppointment(typeOfAppointment, null, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "", paymentPriceNumeric, null, null, null, null, userId)
-                        }
-
                         await targetFrame.click("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
                         console.log("Back button clicked");
                         

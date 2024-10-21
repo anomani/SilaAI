@@ -200,4 +200,22 @@ async function updateAppointmentDetailsController(req, res) {
   }
 }
 
-module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController, rescheduleAppointmentController, getAppointmentMetricsController, updateAppointmentDetailsController };
+// Add this new function to the existing file
+async function getAvailabilities(req, res) {
+  try {
+    const { date, appointmentType } = req.query;
+    console.log("getAvailabilities", req.query);
+
+    // Static list of available times for all days
+    const availableTimes = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'];
+
+    console.log("availableTimes", availableTimes);
+
+    res.status(200).json(availableTimes);
+  } catch (error) {
+    console.error('Error fetching availabilities:', error);
+    res.status(500).send(`Error fetching availabilities: ${error.message}`);
+  }
+}
+
+module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController, rescheduleAppointmentController, getAppointmentMetricsController, updateAppointmentDetailsController, getAvailabilities };
