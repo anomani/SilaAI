@@ -4,6 +4,7 @@ const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
 const { getAppointmentMetrics } = require('../model/appointment');
 const { updateAppointmentDetails } = require('../model/appointment');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const { getTimeSlots } = require('../ai/tools/getAvailability');
 
 async function createNewAppointment(req, res) {
   try {
@@ -200,18 +201,23 @@ async function updateAppointmentDetailsController(req, res) {
   }
 }
 
-// Add this new function to the existing file
 async function getAvailabilities(req, res) {
   try {
-    const { date, appointmentType } = req.query;
-    console.log("getAvailabilities", req.query);
+    const userId = 1; //CHANGE THIS
+    const { date, appointmentType, addOns } = req.query;
+    console.log("getAvailabilities", { userId, date, appointmentType, addOns });
 
-    // Static list of available times for all days
-    const availableTimes = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'];
+    if (!date || !appointmentType) {
+      return res.status(400).send('Missing required fields: date and appointmentType');
+    }
 
-    console.log("availableTimes", availableTimes);
+    // Parse addOns if it's a string
+    const addOnArray = addOns ? JSON.parse(addOns) : [];
 
-    res.status(200).json(availableTimes);
+    const timeSlots = await getTimeSlots(userId, date, appointmentType, []);
+
+    console.log("Available time slots:", timeSlots);
+    res.status(200).json(timeSlots);
   } catch (error) {
     console.error('Error fetching availabilities:', error);
     res.status(500).send(`Error fetching availabilities: ${error.message}`);
