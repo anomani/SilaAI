@@ -14,7 +14,6 @@ async function getAvailability(day, appointmentType, addOnArray, userId, clientI
     }
     
     const group = appointmentTypeInfo.group;
-    console.log("Group:", group);
 
     const duration = calculateTotalDuration(appointmentType, addOnArray);
 
@@ -216,4 +215,40 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, use
 }
 
 
-module.exports = {getAvailability, getCurrentDate, findNextAvailableSlots, getAvailabilityCron}
+
+async function getTimeSlots(userId, day, appointmentType, addOnArray) {
+
+  // Calculate the total duration of the appointment
+  const duration = calculateTotalDuration(appointmentType, addOnArray);
+
+  // Get the availability ranges
+  const availabilityRanges = await getAvailability(day, appointmentType, addOnArray, userId);
+
+  const timeSlots = [];
+
+  for (const range of availabilityRanges) {
+    let currentTime = new Date(`${day}T${range.startTime}`);
+    const endTime = new Date(`${day}T${range.endTime}`);
+
+    while (currentTime.getTime() + duration * 60000 <= endTime.getTime()) {
+      const slotEndTime = new Date(currentTime.getTime() + duration * 60000);
+      timeSlots.push({
+        startTime: currentTime.toTimeString().slice(0, 5),
+        endTime: slotEndTime.toTimeString().slice(0, 5)
+      });
+      currentTime = slotEndTime;
+    }
+  }
+
+  return timeSlots;
+}
+
+
+// Don't forget to export the new function
+module.exports = {
+  getAvailability,
+  getCurrentDate,
+  findNextAvailableSlots,
+  getAvailabilityCron,
+  getTimeSlots
+};
