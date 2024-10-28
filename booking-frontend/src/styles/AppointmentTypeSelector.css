@@ -1,20 +1,121 @@
 .category-selector {
   margin-top: 30px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .appointment-type {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 15px;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 20px;
+  margin-bottom: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  transition: all 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.appointment-type:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.appointment-type span {
+  font-size: 1.1em;
+  font-weight: 500;
 }
 
 .appointment-type button {
-  background-color: #7cc0ff;
+  background-color: #007bff;
   color: white;
   border: none;
-  padding: 8px 16px;
+  padding: 10px 20px;
+  border-radius: 5px;
   cursor: pointer;
   text-transform: uppercase;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.appointment-type button:hover {
+  background-color: #0056b3;
+}
+
+/* Add responsive design */
+@media (max-width: 480px) {
+  .appointment-type {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .appointment-type span {
+    margin-bottom: 10px;
+  }
+  
+  .appointment-type button {
+    width: 100%;
+  }
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.main-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: #666;
+}
+
+.appointment-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .appointment-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .appointment-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.appointment-card {
+  height: 100%;
+}
+
+.book-button {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: #007bff;
+  color: white;
+  text-align: center;
+  border-radius: 0.375rem;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.book-button:hover {
+  background-color: #0056b3;
 }

@@ -13,7 +13,12 @@ const {
     rescheduleAppointmentController,
     getAppointmentMetricsController,
     updateAppointmentDetailsController,
-    getAvailabilities
+    getAvailabilities,
+    getCompatibleAddOnsController,
+    getAppointmentTypeById,
+    getAppointmentDetails,
+    confirmAppointment,
+    getAppointmentTypesForUser
 } = require('../controllers/appointmentController');
 
 // Apply authenticateToken middleware to all routes that need it
@@ -28,6 +33,15 @@ router.put('/appointments/:appointmentId/payment', authenticateToken, updateAppo
 router.put('/appointments/:appointmentId/reschedule', authenticateToken, rescheduleAppointmentController);
 router.get('/metrics', authenticateToken, getAppointmentMetricsController);
 router.put('/appointments/:appointmentId', authenticateToken, updateAppointmentDetailsController);
+router.post('/appointments/confirm', confirmAppointment);
+
+// Update the /availabilities route to use appointmentTypeId
 router.get('/availabilities', getAvailabilities);
 
-module.exports = router;    
+// Add these new routes
+router.get('/compatible-addons', getCompatibleAddOnsController);
+router.get('/appointment-types/:appointmentTypeId', getAppointmentTypeById);
+router.get('/appointment-details/:appointmentTypeId', getAppointmentDetails);
+router.get('/appointment-types', getAppointmentTypesForUser);
+
+module.exports = router;

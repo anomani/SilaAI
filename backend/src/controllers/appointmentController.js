@@ -5,6 +5,33 @@ const { getAppointmentMetrics } = require('../model/appointment');
 const { updateAppointmentDetails } = require('../model/appointment');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { getTimeSlots } = require('../ai/tools/getAvailability');
+const { getCompatibleAddOns } = require('../model/appTypes');
+const { getAppointmentTypeDetails, getAppointmentTypeAndAddOnNames } = require('../model/appTypes');
+const { getClientByPhoneNumber, createClient, getClientById } = require('../model/clients');
+const { 
+  getAppointmentTypes, 
+  getAddOns, 
+  getAppointmentTypeByIdFromDB
+} = require('../model/appTypes');
+
+// Add this helper function at the top of the file or just before confirmAppointment
+function convertTo24HourFormat(time12h) {
+  const [time, modifier] = time12h.split(' ');
+  let [hours, minutes] = time.split(':');
+  
+  hours = parseInt(hours, 10);
+  
+  if (hours === 12) {
+    hours = 0;
+  }
+  
+  if (modifier === 'PM') {
+    hours += 12;
+  }
+  
+  return `${hours.toString().padStart(2, '0')}:${minutes}`;
+}
+
 
 async function createNewAppointment(req, res) {
   try {
@@ -204,24 +231,196 @@ async function updateAppointmentDetailsController(req, res) {
 async function getAvailabilities(req, res) {
   try {
     const userId = 1; //CHANGE THIS
-    const { date, appointmentType, addOns } = req.query;
-    console.log("getAvailabilities", { userId, date, appointmentType, addOns });
+    const { date, appointmentTypeId, addOnIds } = req.query;
+    console.log("getAvailabilities", { userId, date, appointmentTypeId, addOnIds });
 
-    if (!date || !appointmentType) {
-      return res.status(400).send('Missing required fields: date and appointmentType');
+    if (!date || !appointmentTypeId) {
+      return res.status(400).send('Missing required fields: date and appointmentTypeId');
     }
 
-    // Parse addOns if it's a string
-    const addOnArray = addOns ? JSON.parse(addOns) : [];
+    const parsedAddOnIds = addOnIds ? JSON.parse(addOnIds) : [];
 
-    const timeSlots = await getTimeSlots(userId, date, appointmentType, []);
+    const nextFiveAvailableDays = await getNextFiveAvailableDays(userId, date, parseInt(appointmentTypeId), parsedAddOnIds);
+    const compatibleAddOns = await getCompatibleAddOns(userId, parseInt(appointmentTypeId));
 
-    console.log("Available time slots:", timeSlots);
-    res.status(200).json(timeSlots);
+    console.log("Next five available days:", nextFiveAvailableDays);
+    res.status(200).json({ availableDays: nextFiveAvailableDays, compatibleAddOns });
   } catch (error) {
     console.error('Error fetching availabilities:', error);
     res.status(500).send(`Error fetching availabilities: ${error.message}`);
   }
 }
 
-module.exports = { createNewAppointment, getAppointmentsByDate, getAppointmentsByClientId, delAppointment, bookAppointmentWithAcuityController, createBlockedTimeController, getClientAppointmentsAroundCurrentController, updateAppointmentPaymentController, rescheduleAppointmentController, getAppointmentMetricsController, updateAppointmentDetailsController, getAvailabilities };
+async function getNextFiveAvailableDays(userId, startDate, appointmentTypeId, addOnIds) {
+  const availableDays = [];
+  let currentDate = new Date(startDate);
+  
+  while (availableDays.length < 5) {
+    const dateString = currentDate.toISOString().split('T')[0];
+    const timeSlots = await getTimeSlots(userId, dateString, appointmentTypeId, addOnIds);
+    
+    if (timeSlots.length > 0) {
+      availableDays.push({ date: dateString, timeSlots });
+    }
+    
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return availableDays;
+}
+
+async function getCompatibleAddOnsController(req, res) {
+  try {
+    const userId = 1; // CHANGE THIS to get the actual user ID
+    const { appointmentTypeId } = req.query;
+
+    if (!appointmentTypeId) {
+      return res.status(400).send('Missing required field: appointmentTypeId');
+    }
+
+    const compatibleAddOns = await getCompatibleAddOns(userId, parseInt(appointmentTypeId));
+    res.status(200).json(compatibleAddOns);
+  } catch (error) {
+    console.error('Error fetching compatible add-ons:', error);
+    res.status(500).send(`Error fetching compatible add-ons: ${error.message}`);
+  }
+}
+
+async function getAppointmentTypeById(req, res) {
+  try {
+    const userId = 1; // CHANGE THIS to get the actual user ID
+    const { appointmentTypeId } = req.params;
+
+    if (!appointmentTypeId) {
+      return res.status(400).send('Missing required field: appointmentTypeId');
+    }
+
+    const appointmentType = await getAppointmentTypeByIdFromDB(userId, parseInt(appointmentTypeId));
+    if (!appointmentType) {
+      return res.status(404).send('Appointment type not found');
+    }
+    res.status(200).json(appointmentType);
+  } catch (error) {
+    console.error('Error fetching appointment type:', error);
+    res.status(500).send(`Error fetching appointment type: ${error.message}`);
+  }
+}
+
+async function getAppointmentDetails(req, res) {
+  try {
+    console.log("getAppointmentDetails", req.params, req.query)
+    const userId = 1; // CHANGE THIS to get the actual user ID
+    const { appointmentTypeId } = req.params;
+    const { addOnIds } = req.query;
+
+    if (!appointmentTypeId) {
+      return res.status(400).send('Missing required field: appointmentTypeId');
+    }
+
+    const parsedAddOnIds = addOnIds ? JSON.parse(addOnIds) : [];
+    const details = await getAppointmentTypeDetails(userId, parseInt(appointmentTypeId), parsedAddOnIds);
+    
+    res.status(200).json(details);
+  } catch (error) {
+    console.error('Error fetching appointment details:', error);
+    res.status(500).send(`Error fetching appointment details: ${error.message}`);
+  }
+}
+
+async function confirmAppointment(req, res) {
+  try {
+    const userId = 1; // CHANGE THIS to get the actual user ID
+    const { firstName, lastName, phoneNumber, appointmentTypeId, date, time, addOnIds, price } = req.body;
+    console.log('confirmAppointment', req.body);
+
+    // Check if client exists, if not create a new one
+    let client = await getClientByPhoneNumber(phoneNumber, userId);
+    if (!client.id) {
+      const clientId = await createClient(firstName, lastName, phoneNumber, '', '', userId);
+      client = await getClientById(clientId);
+    }
+
+
+    // Get appointment type and add-on names
+    const { appointmentTypeName, addOnNames } = await getAppointmentTypeAndAddOnNames(userId, parseInt(appointmentTypeId), addOnIds);
+
+    // Convert start and end times to 24-hour format
+    const [startTime12h, endTime12h] = time.split(' - ');
+    const startTime = convertTo24HourFormat(startTime12h);
+    const endTime = convertTo24HourFormat(endTime12h);
+    console.log("startTime", startTime)
+    console.log("endTime", endTime)
+    // Create the appointment
+    const appointmentId = await createAppointment(
+      appointmentTypeName,
+      null, // acuityId
+      date,
+      startTime, // Now in 24-hour format
+      endTime, // Now in 24-hour format
+      client.id,
+      `${appointmentTypeName} with ${addOnNames.length} add-ons: ${addOnNames.join(', ')}`,
+      price,
+      false, // paid
+      0, // tipAmount
+      '', // paymentMethod
+      addOnNames, // Store add-on names directly as an array
+      userId
+    );
+
+    const appointmentData = {
+      appointmentType: appointmentTypeName,
+      date,
+      startTime, // Now in 24-hour format
+      endTime, // Now in 24-hour format
+      clientId: client.id,
+      details: `${appointmentTypeName} with ${addOnNames.length} add-ons: ${addOnNames.join(', ')}`,
+      price,
+      addOns: addOnNames,
+    };
+
+    res.status(201).json({ 
+      message: 'Appointment confirmed', 
+      appointmentId,
+      appointmentDetails: {
+        ...appointmentData,
+        appointmentTypeName,
+        addOns: addOnNames
+      }
+    });
+  } catch (error) {
+    console.error('Error confirming appointment:', error);
+    res.status(500).send(`Error confirming appointment: ${error.message}`);
+  }
+}
+
+async function getAppointmentTypesForUser(req, res) {
+  try {
+    const userId = 1; // CHANGE THIS to get the actual user ID when you implement authentication
+    const appointmentTypes = await getAppointmentTypes(userId);
+    res.status(200).json(appointmentTypes);
+  } catch (error) {
+    console.error('Error fetching appointment types:', error);
+    res.status(500).send(`Error fetching appointment types: ${error.message}`);
+  }
+}
+
+module.exports = { 
+  createNewAppointment, 
+  getAppointmentsByDate, 
+  getAppointmentsByClientId, 
+  delAppointment, 
+  bookAppointmentWithAcuityController, 
+  createBlockedTimeController, 
+  getClientAppointmentsAroundCurrentController, 
+  updateAppointmentPaymentController, 
+  rescheduleAppointmentController, 
+  getAppointmentMetricsController, 
+  updateAppointmentDetailsController, 
+  getAvailabilities, 
+  getCompatibleAddOnsController,
+  getAppointmentTypeById,
+  getAppointmentDetails,
+  confirmAppointment,
+  getAppointmentTypesForUser,
+  convertTo24HourFormat
+};

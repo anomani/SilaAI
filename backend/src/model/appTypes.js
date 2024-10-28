@@ -128,11 +128,114 @@ async function deleteAddOn(userId, addOnId) {
   }
 }
 
+async function getCompatibleAddOns(userId, appointmentTypeId) {
+  const db = dbUtils.getDB();
+  const sql = `
+    SELECT 
+      a.id, 
+      a.name, 
+      a.price, 
+      a.duration
+    FROM 
+      AddOns a
+    WHERE 
+      a.user_id = $1 AND
+      $2::integer = ANY(a.compatible_appointment_types)
+  `;
+  const values = [userId, appointmentTypeId];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows;
+  } catch (err) {
+    console.error('Error fetching compatible add-ons:', err.message);
+    throw err;
+  }
+}
+
+async function getAppointmentTypeByIdFromDB(userId, appointmentTypeId) {
+  const db = dbUtils.getDB();
+  const sql = 'SELECT * FROM AppointmentTypes WHERE user_id = $1 AND id = $2';
+  const values = [userId, appointmentTypeId];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error fetching appointment type by ID:', err.message);
+    throw err;
+  }
+}
+
+async function getAppointmentTypeDetails(userId, appointmentTypeId, addOnIds) {
+  const db = dbUtils.getDB();
+  const appointmentTypeSql = 'SELECT * FROM AppointmentTypes WHERE user_id = $1 AND id = $2';
+  const addOnsSql = 'SELECT * FROM AddOns WHERE user_id = $1 AND id = ANY($2)';
+  
+  try {
+    const appointmentTypeRes = await db.query(appointmentTypeSql, [userId, appointmentTypeId]);
+    const appointmentType = appointmentTypeRes.rows[0];
+
+    if (!appointmentType) {
+      throw new Error('Appointment type not found');
+    }
+
+    let totalPrice = appointmentType.price;
+    let addOns = [];
+
+    if (addOnIds && addOnIds.length > 0) {
+      const addOnsRes = await db.query(addOnsSql, [userId, addOnIds]);
+      addOns = addOnsRes.rows;
+      totalPrice += addOns.reduce((sum, addOn) => sum + addOn.price, 0);
+    }
+
+    return {
+      appointmentType,
+      addOns,
+      totalPrice
+    };
+  } catch (err) {
+    console.error('Error fetching appointment type details:', err.message);
+    throw err;
+  }
+}
+
+async function getAppointmentTypeAndAddOnNames(userId, appointmentTypeId, addOnIds) {
+  const db = dbUtils.getDB();
+  const appointmentTypeSql = 'SELECT name FROM AppointmentTypes WHERE user_id = $1 AND id = $2';
+  const addOnsSql = 'SELECT name FROM AddOns WHERE user_id = $1 AND id = ANY($2)';
+  
+  try {
+    const appointmentTypeRes = await db.query(appointmentTypeSql, [userId, appointmentTypeId]);
+    const appointmentTypeName = appointmentTypeRes.rows[0]?.name;
+
+    if (!appointmentTypeName) {
+      throw new Error('Appointment type not found');
+    }
+
+    let addOnNames = [];
+    if (addOnIds && addOnIds.length > 0) {
+      const addOnsRes = await db.query(addOnsSql, [userId, addOnIds]);
+      addOnNames = addOnsRes.rows.map(row => row.name);
+    }
+
+    return {
+      appointmentTypeName,
+      addOnNames
+    };
+  } catch (err) {
+    console.error('Error fetching appointment type and add-on names:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   getAppointmentTypes,
   getAddOns,
   storeAppointmentType,
   storeAddOn,
   deleteAppointmentType,
-  deleteAddOn
+  deleteAddOn,
+  getCompatibleAddOns,
+  getAppointmentTypeByIdFromDB,
+  getAppointmentTypeDetails,
+  getAppointmentTypeAndAddOnNames
 };

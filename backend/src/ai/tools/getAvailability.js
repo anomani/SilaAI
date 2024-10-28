@@ -1,32 +1,37 @@
 const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
 const {getAppointmentsByDay} = require('../../model/appointment')
-const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
+const { getAppointmentTypes, getAddOns } = require('../../model/appTypes');
 
 async function getAvailability(day, appointmentType, addOnArray, userId, clientId = null) {
     console.log("Day:", day);
     console.log("Appointment Type:", appointmentType);
     console.log("Add-ons:", addOnArray);
     
-    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    // Fetch appointment types and add-ons from the database
+    const appointmentTypes = await getAppointmentTypes(userId);
+    const addOns = await getAddOns(userId);
+
+    // Find the requested appointment type
+    const appointmentTypeInfo = appointmentTypes.find(type => type.name === appointmentType);
     if (!appointmentTypeInfo) {
         throw new Error(`Invalid appointment type: ${appointmentType}`);
     }
     
-    const group = appointmentTypeInfo.group;
-
-    const duration = calculateTotalDuration(appointmentType, addOnArray);
+    const duration = calculateTotalDuration(appointmentTypeInfo, addOnArray, addOns);
 
     try {
         const date = new Date(day);
-        const dayOfWeek = date.getDay();
-        console.log("Day of Week:", dayOfWeek);
-        if (dayOfWeek === 0 || dayOfWeek === 1) {
-            return []
-        }
-        const groupAvailability = getGroupAvailability(group, dayOfWeek);
-        if (!groupAvailability) {
-            return []
+        const dayName = getDayName(date.getDay());
+        console.log("Day of Week:", dayName);
+
+        // Use the availability object directly, no need to parse
+        const availability = appointmentTypeInfo.availability;
+
+        // Get the availability for the specific day of the week
+        const dayAvailability = availability[dayName];
+        if (!dayAvailability || dayAvailability.length === 0) {
+            return [];
         }
 
         const appointments = await getAppointmentsByDay(userId, day);
@@ -35,9 +40,10 @@ async function getAvailability(day, appointmentType, addOnArray, userId, clientI
         const now = new Date();
         const isToday = now.toDateString() === date.toDateString();
 
-        for (const slot of groupAvailability) {
-            const startOfSlot = new Date(`${day}T${slot.start}`);
-            const endOfSlot = new Date(`${day}T${slot.end}`);
+        for (const slot of dayAvailability) {
+            const [start, end] = slot.split('-');
+            const startOfSlot = new Date(`${day}T${start}`);
+            const endOfSlot = new Date(`${day}T${end}`);
             let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
             for (let i = 0; i <= appointments.length; i++) {
                 const appointment = appointments[i];
@@ -72,30 +78,42 @@ async function getAvailability(day, appointmentType, addOnArray, userId, clientI
     }
 }
 
+function getDayName(dayIndex) {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[dayIndex];
+}
+
 async function getAvailabilityCron(day, appointmentType, addOnArray, userId, clientId = null) {
     console.log("Day:", day);
     console.log("Appointment Type:", appointmentType);
     console.log("Add-ons:", addOnArray);
     
-    const appointmentTypeInfo = appointmentTypes[appointmentType];
+    // Fetch appointment types and add-ons from the database
+    const appointmentTypes = await getAppointmentTypes(userId);
+    const addOns = await getAddOns(userId);
+
+    // Find the requested appointment type
+    const appointmentTypeInfo = appointmentTypes.find(type => type.name === appointmentType);
     if (!appointmentTypeInfo) {
         throw new Error(`Invalid appointment type: ${appointmentType}`);
     }
     
-    const group = appointmentTypeInfo.group;
-    console.log("Group:", group);
+    console.log("Appointment Type Info:", JSON.stringify(appointmentTypeInfo, null, 2));
 
-    const duration = calculateTotalDuration(appointmentType, addOnArray);
+    const duration = calculateTotalDuration(appointmentTypeInfo, addOnArray, addOns);
 
     try {
         const date = new Date(day);
-        const dayOfWeek = date.getDay();
-        if (dayOfWeek === 0 || dayOfWeek === 1) {
-            return []
-        }
-        const groupAvailability = getGroupAvailability(group, dayOfWeek);
-        if (!groupAvailability) {
-            return []
+        const dayName = getDayName(date.getDay());
+        console.log("Day of Week:", dayName);
+
+        // Use the availability object directly
+        const availability = appointmentTypeInfo.availability;
+
+        // Get the availability for the specific day of the week
+        const dayAvailability = availability[dayName];
+        if (!dayAvailability || dayAvailability.length === 0) {
+            return {date: day, availableSlots: []};
         }
 
         const appointments = await getAppointmentsByDay(userId, day);
@@ -104,9 +122,10 @@ async function getAvailabilityCron(day, appointmentType, addOnArray, userId, cli
         const now = new Date();
         const isToday = now.toDateString() === date.toDateString();
 
-        for (const slot of groupAvailability) {
-            const startOfSlot = new Date(`${day}T${slot.start}`);
-            const endOfSlot = new Date(`${day}T${slot.end}`);
+        for (const slot of dayAvailability) {
+            const [start, end] = slot.split('-');
+            const startOfSlot = new Date(`${day}T${start}`);
+            const endOfSlot = new Date(`${day}T${end}`);
             let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
             for (let i = 0; i <= appointments.length; i++) {
                 const appointment = appointments[i];
@@ -135,42 +154,20 @@ async function getAvailabilityCron(day, appointmentType, addOnArray, userId, cli
             }
         }
         console.log({date: day, availableSlots: availableSlots});
-        return {date: day, availableSlots: availableSlots}
+        return {date: day, availableSlots: availableSlots};
     } catch (error) {
         console.error("Error:", error);
-        return [];
+        return {date: day, availableSlots: []};
     }
 }
-function calculateTotalDuration(appointmentType, addOnArray) {
-    const appointmentDuration = appointmentTypes[appointmentType].duration;
-    const addOnsDuration = addOnArray.reduce((total, addOn) => total + addOns[addOn].duration, 0);
-    return appointmentDuration + addOnsDuration;
-}
 
-function getGroupAvailability(group, dayOfWeek) {
-    const availabilityMap = {
-        1: {
-            2: [{ start: '09:00', end: '09:30' }, { start: '09:45', end: '11:45' }, { start: '12:00', end: '14:00' }], // Tuesday
-            3: [{ start: '09:00', end: '09:30' }, { start: '09:45', end: '11:45' }, { start: '12:00', end: '14:00' }], // Wednesday
-            4: [{ start: '09:00', end: '09:30' }, { start: '09:45', end: '11:45' }, { start: '12:00', end: '14:00' }], // Thursday
-            5: [{ start: '09:00', end: '09:30' }, { start: '09:45', end: '11:45' }, { start: '15:30', end: '16:00' }], // Friday
-            6: [{ start: '09:45', end: '11:45' }, { start: '12:00', end: '14:00' }] // Saturday
-        },
-        2: {
-            2: [{ start: '15:00', end: '18:00' }], // Tuesday
-            3: [{ start: '15:00', end: '18:00' }], // Wednesday
-            4: [{ start: '15:00', end: '17:00' }], // Thursday
-            5: [{ start: '16:00', end: '17:00' }], // Friday
-            6: [{ start: '15:00', end: '17:00' }]  // Saturday
-        },
-        3: {
-            3: [{ start: '18:00', end: '19:00' }], // Wednesday
-            4: [{ start: '18:00', end: '19:00' }], // Thursday
-            5: [{ start: '18:00', end: '19:00' }], // Friday
-            6: [{ start: '18:00', end: '19:00' }]  // Saturday
-        }
-    };
-    return availabilityMap[group] ? availabilityMap[group][dayOfWeek] : null;
+function calculateTotalDuration(appointmentTypeInfo, addOnArray, allAddOns) {
+    const appointmentDuration = appointmentTypeInfo.duration;
+    const addOnsDuration = addOnArray.reduce((total, addOnName) => {
+        const addOn = allAddOns.find(a => a.name === addOnName);
+        return total + (addOn ? addOn.duration : 0);
+    }, 0);
+    return appointmentDuration + addOnsDuration;
 }
 
 function getCurrentDate() {
@@ -182,67 +179,95 @@ function getCurrentDate() {
 
 
 async function findNextAvailableSlots(startDay, appointmentType, addOnArray, userId, numberOfSlots = 5) {
-  const appointmentTypeInfo = appointmentTypes[appointmentType];
-  if (!appointmentTypeInfo) {
-    throw new Error(`Invalid appointment type: ${appointmentType}`);
-  }
+    console.log("Finding next available slots:", { startDay, appointmentType, addOnArray, userId, numberOfSlots });
 
-  const duration = calculateTotalDuration(appointmentType, addOnArray);
+    // Fetch appointment types and add-ons from the database
+    const appointmentTypes = await getAppointmentTypes(userId);
+    const addOns = await getAddOns(userId);
 
-  let currentDay = new Date(startDay);
-  let availableSlots = [];
-  let daysChecked = 0;
+    // Find the requested appointment type
+    const appointmentTypeInfo = appointmentTypes.find(type => type.name === appointmentType);
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type: ${appointmentType}`);
+    }
 
-  while (availableSlots.length < numberOfSlots && daysChecked < 14) {
-    const dayString = currentDay.toISOString().split('T')[0];
-    const dayAvailability = await getAvailability(dayString, appointmentType, addOnArray, userId);
+    const duration = calculateTotalDuration(appointmentTypeInfo, addOnArray, addOns);
+
+    let currentDay = new Date(startDay);
+    let availableSlots = [];
+    let daysChecked = 0;
+
+    while (availableSlots.length < numberOfSlots && daysChecked < 14) {
+        const dayString = currentDay.toISOString().split('T')[0];
+        const dayAvailability = await getAvailability(dayString, appointmentType, addOnArray, userId);
+        
+        if (Array.isArray(dayAvailability) && dayAvailability.length > 0) {
+            for (const slot of dayAvailability) {
+                availableSlots.push({
+                    date: dayString,
+                    ...slot
+                });
+                if (availableSlots.length >= numberOfSlots) break;
+            }
+        }
+
+        currentDay.setDate(currentDay.getDate() + 1);
+        daysChecked++;
+    }
+
+    console.log("Found available slots:", availableSlots);
+    return availableSlots;
+}
+
+
+
+async function getTimeSlots(userId, day, appointmentTypeId, addOnIds) {
+    console.log("Getting time slots for:", { userId, day, appointmentTypeId, addOnIds });
     
-    if (Array.isArray(dayAvailability) && dayAvailability.length > 0) {
-      for (const slot of dayAvailability) {
-        availableSlots.push({
-          date: dayString,
-          ...slot
-        });
-        if (availableSlots.length >= numberOfSlots) break;
-      }
+    // Fetch appointment types and add-ons from the database
+    const appointmentTypes = await getAppointmentTypes(userId);
+    const allAddOns = await getAddOns(userId);
+
+    // Find the requested appointment type by ID
+    const appointmentTypeInfo = appointmentTypes.find(type => type.id === parseInt(appointmentTypeId));
+    if (!appointmentTypeInfo) {
+        throw new Error(`Invalid appointment type ID: ${appointmentTypeId}`);
     }
 
-    currentDay.setDate(currentDay.getDate() + 1);
-    daysChecked++;
-  }
+    // Filter selected add-ons
+    const selectedAddOns = allAddOns.filter(addOn => addOnIds.includes(addOn.id));
 
-  return availableSlots;
-}
+    // Calculate the total duration of the appointment including selected add-ons
+    const duration = calculateTotalDuration(appointmentTypeInfo, selectedAddOns);
 
+    // Get the availability ranges
+    const availabilityRanges = await getAvailability(day, appointmentTypeInfo.name, selectedAddOns, userId);
 
+    const timeSlots = [];
 
-async function getTimeSlots(userId, day, appointmentType, addOnArray) {
+    for (const range of availabilityRanges) {
+        let currentTime = new Date(`${day}T${range.startTime}`);
+        const endTime = new Date(`${day}T${range.endTime}`);
 
-  // Calculate the total duration of the appointment
-  const duration = calculateTotalDuration(appointmentType, addOnArray);
-
-  // Get the availability ranges
-  const availabilityRanges = await getAvailability(day, appointmentType, addOnArray, userId);
-
-  const timeSlots = [];
-
-  for (const range of availabilityRanges) {
-    let currentTime = new Date(`${day}T${range.startTime}`);
-    const endTime = new Date(`${day}T${range.endTime}`);
-
-    while (currentTime.getTime() + duration * 60000 <= endTime.getTime()) {
-      const slotEndTime = new Date(currentTime.getTime() + duration * 60000);
-      timeSlots.push({
-        startTime: currentTime.toTimeString().slice(0, 5),
-        endTime: slotEndTime.toTimeString().slice(0, 5)
-      });
-      currentTime = slotEndTime;
+        while (currentTime.getTime() + duration * 60000 <= endTime.getTime()) {
+            const slotEndTime = new Date(currentTime.getTime() + duration * 60000);
+            timeSlots.push({
+                startTime: currentTime.toTimeString().slice(0, 5),
+                endTime: slotEndTime.toTimeString().slice(0, 5)
+            });
+            currentTime = slotEndTime;
+        }
     }
-  }
 
-  return timeSlots;
+    console.log("Available time slots:", timeSlots);
+    return timeSlots;
 }
 
+function calculateTotalDuration(appointmentTypeInfo, selectedAddOns) {
+    const appointmentDuration = appointmentTypeInfo.duration;
+    const addOnsDuration = selectedAddOns.reduce((total, addOn) => total + addOn.duration, 0);
+    return appointmentDuration + addOnsDuration;
+}
 
 // Don't forget to export the new function
 module.exports = {
