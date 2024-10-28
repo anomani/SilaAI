@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
+import '../styles/ServiceOptions.css';
 
 function ServiceOptions() {
   const { appointmentType } = useParams();
