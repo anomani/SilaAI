@@ -230,12 +230,12 @@ async function updateAppointmentDetailsController(req, res) {
 
 async function getAvailabilities(req, res) {
   try {
-    const userId = 1; //CHANGE THIS
+    const userId = req.query.userId; // Get from query params instead of URL params
     const { date, appointmentTypeId, addOnIds } = req.query;
     console.log("getAvailabilities", { userId, date, appointmentTypeId, addOnIds });
 
-    if (!date || !appointmentTypeId) {
-      return res.status(400).send('Missing required fields: date and appointmentTypeId');
+    if (!userId || !date || !appointmentTypeId) {
+      return res.status(400).send('Missing required fields: userId, date and appointmentTypeId');
     }
 
     const parsedAddOnIds = addOnIds ? JSON.parse(addOnIds) : [];
@@ -243,7 +243,6 @@ async function getAvailabilities(req, res) {
     const nextFiveAvailableDays = await getNextFiveAvailableDays(userId, date, parseInt(appointmentTypeId), parsedAddOnIds);
     const compatibleAddOns = await getCompatibleAddOns(userId, parseInt(appointmentTypeId));
 
-    console.log("Next five available days:", nextFiveAvailableDays);
     res.status(200).json({ availableDays: nextFiveAvailableDays, compatibleAddOns });
   } catch (error) {
     console.error('Error fetching availabilities:', error);
@@ -271,11 +270,11 @@ async function getNextFiveAvailableDays(userId, startDate, appointmentTypeId, ad
 
 async function getCompatibleAddOnsController(req, res) {
   try {
-    const userId = 1; // CHANGE THIS to get the actual user ID
+    const userId = req.query.userId; // Get from query params
     const { appointmentTypeId } = req.query;
 
-    if (!appointmentTypeId) {
-      return res.status(400).send('Missing required field: appointmentTypeId');
+    if (!userId || !appointmentTypeId) {
+      return res.status(400).send('Missing required fields: userId and appointmentTypeId');
     }
 
     const compatibleAddOns = await getCompatibleAddOns(userId, parseInt(appointmentTypeId));
@@ -288,11 +287,11 @@ async function getCompatibleAddOnsController(req, res) {
 
 async function getAppointmentTypeById(req, res) {
   try {
-    const userId = 1; // CHANGE THIS to get the actual user ID
+    const userId = req.query.userId; // Get from query params
     const { appointmentTypeId } = req.params;
 
-    if (!appointmentTypeId) {
-      return res.status(400).send('Missing required field: appointmentTypeId');
+    if (!userId || !appointmentTypeId) {
+      return res.status(400).send('Missing required fields: userId and appointmentTypeId');
     }
 
     const appointmentType = await getAppointmentTypeByIdFromDB(userId, parseInt(appointmentTypeId));
@@ -308,13 +307,12 @@ async function getAppointmentTypeById(req, res) {
 
 async function getAppointmentDetails(req, res) {
   try {
-    console.log("getAppointmentDetails", req.params, req.query)
-    const userId = 1; // CHANGE THIS to get the actual user ID
+    const userId = req.query.userId; // Get from query params
     const { appointmentTypeId } = req.params;
     const { addOnIds } = req.query;
 
-    if (!appointmentTypeId) {
-      return res.status(400).send('Missing required field: appointmentTypeId');
+    if (!userId || !appointmentTypeId) {
+      return res.status(400).send('Missing required fields: userId and appointmentTypeId');
     }
 
     const parsedAddOnIds = addOnIds ? JSON.parse(addOnIds) : [];
@@ -329,9 +327,12 @@ async function getAppointmentDetails(req, res) {
 
 async function confirmAppointment(req, res) {
   try {
-    const userId = 1; // CHANGE THIS to get the actual user ID
-    const { firstName, lastName, phoneNumber, appointmentTypeId, date, time, addOnIds, price } = req.body;
+    const { userId, firstName, lastName, phoneNumber, appointmentTypeId, date, time, addOnIds, price } = req.body;
     console.log('confirmAppointment', req.body);
+
+    if (!userId) {
+      return res.status(400).send('Missing required field: userId');
+    }
 
     // Check if client exists, if not create a new one
     let client = await getClientByPhoneNumber(phoneNumber, userId);
@@ -395,7 +396,12 @@ async function confirmAppointment(req, res) {
 
 async function getAppointmentTypesForUser(req, res) {
   try {
-    const userId = 1; // CHANGE THIS to get the actual user ID when you implement authentication
+    const userId = req.query.userId; // Get from query params
+
+    if (!userId) {
+      return res.status(400).send('Missing required field: userId');
+    }
+
     const appointmentTypes = await getAppointmentTypes(userId);
     res.status(200).json(appointmentTypes);
   } catch (error) {

@@ -33,6 +33,7 @@ router.put('/appointments/:appointmentId/payment', authenticateToken, updateAppo
 router.put('/appointments/:appointmentId/reschedule', authenticateToken, rescheduleAppointmentController);
 router.get('/metrics', authenticateToken, getAppointmentMetricsController);
 router.put('/appointments/:appointmentId', authenticateToken, updateAppointmentDetailsController);
+
 router.post('/appointments/confirm', confirmAppointment);
 
 // Update the /availabilities route to use appointmentTypeId
