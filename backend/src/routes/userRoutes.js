@@ -40,7 +40,7 @@ router.get('/me', authenticateToken, async (req, res) => {
 
 router.get('/business-name', async (req, res) => {
   try {
-    const userId = 1; // TODO: change this to the actual user id
+    const userId = req.query.userId;
     const user = await getUserById(userId);
     if (!user) {
       console.log('User not found for ID:', userId);
