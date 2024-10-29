@@ -1,0 +1,83 @@
+.appointment-confirmation {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.appointment-summary {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.appointment-summary h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.appointment-summary p {
+  margin: 5px 0;
+}
+
+.add-ons {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.add-ons ul {
+  list-style-type: none;
+  padding-left: 20px;
+  margin: 5px 0;
+}
+
+.add-ons li {
+  margin-bottom: 5px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+input[type="text"],
+input[type="tel"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+}
+
+.checkbox input {
+  margin-right: 10px;
+  margin-top: 5px;
+}
+
+button[type="submit"] {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button[type="submit"]:hover {
+  background-color: #0056b3;
+}
+
+.error-message {
+  color: red;
+  margin-bottom: 15px;
+}

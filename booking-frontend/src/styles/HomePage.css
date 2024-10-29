@@ -1,0 +1,134 @@
+.home-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.logo {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.logo img {
+  max-width: 200px;
+  height: auto;
+}
+
+.appointment-type-selector {
+  margin-top: 40px;
+}
+
+.appointment-type-selector h2 {
+  text-align: center;
+  color: #333;
+  font-size: 1.2em;
+  font-weight: normal;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.appointment-type-selector h2::before {
+  content: "←";
+  margin-right: 10px;
+  color: #666;
+}
+
+.appointment-type-selector h2::after {
+  content: "→";
+  margin-left: 10px;
+  color: #666;
+}
+
+.category-header {
+  font-size: 1.1em;
+  color: #333;
+  margin: 20px 0 10px;
+  padding-left: 10px;
+  border-left: 3px solid #007bff;
+}
+
+.appointment-type {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.appointment-type:hover {
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.appointment-type span {
+  font-size: 1em;
+  color: #333;
+}
+
+.appointment-type button {
+  background-color: #5bc0de;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.3s ease;
+}
+
+.appointment-type button:hover {
+  background-color: #46b8da;
+}
+
+.price {
+  color: #666;
+  font-size: 0.9em;
+  margin-top: 5px;
+}
+
+.description {
+  color: #666;
+  font-size: 0.85em;
+  margin-top: 5px;
+}
+
+/* Add categories styling */
+.category-section {
+  margin-bottom: 30px;
+}
+
+.category-section h3 {
+  color: #333;
+  font-size: 1.1em;
+  margin-bottom: 15px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #eee;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .home-page {
+    padding: 15px;
+  }
+
+  .appointment-type {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .appointment-type button {
+    width: 100%;
+  }
+}
+
+/* Optional: Add a subtle background color to the page */
+body {
+  background-color: #f9f9f9;
+}
