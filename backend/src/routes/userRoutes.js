@@ -38,4 +38,19 @@ router.get('/me', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/business-name', async (req, res) => {
+  try {
+    const userId = 1; // TODO: change this to the actual user id
+    const user = await getUserById(userId);
+    if (!user) {
+      console.log('User not found for ID:', userId);
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ businessName: user.business_name });
+  } catch (error) {
+    console.error('Error fetching business name:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 module.exports = router;
