@@ -289,7 +289,7 @@ async function getAppointmentTypeById(req, res) {
   try {
     const userId = req.query.userId; // Get from query params
     const { appointmentTypeId } = req.params;
-
+    console.log("getAppointmentTypeById", { userId, appointmentTypeId });
     if (!userId || !appointmentTypeId) {
       return res.status(400).send('Missing required fields: userId and appointmentTypeId');
     }
