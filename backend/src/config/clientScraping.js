@@ -52,6 +52,7 @@ async function getClients() {
         });
         await delay(2000)
 
+        
         let previousHeight;
         while (true) {
             previousHeight = await page.evaluate('document.body.scrollHeight');

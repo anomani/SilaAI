@@ -1,6 +1,6 @@
 const { getAllClients, createClient, searchForClients, 
     deleteClient, followUp, getClientById, updateClient, getDaysSinceLastAppointment, 
-    updateClientOutreachDate, getClientAutoRespond, updateClientAutoRespond } = require('../model/clients');
+    updateClientOutreachDate, getClientAutoRespond, updateClientAutoRespond, getClientByPhoneNumber } = require('../model/clients');
 const dbUtils = require('../model/dbUtils');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
@@ -114,4 +114,17 @@ async function updateClientAutoRespondController(req, res) {
     }
 }
 
-module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment, updateClientOutreachDateController, getClientAutoRespondController, updateClientAutoRespondController };
+async function getClientNameByPhone(req, res) {
+    const { phoneNumber, userId } = req.params;
+    try {
+        const client = await getClientByPhoneNumber(phoneNumber, userId);
+        res.status(200).json({
+            firstName: client.firstname || '',
+            lastName: client.lastname || ''
+        });
+    } catch (error) {
+        res.status(500).send(`Error fetching client name: ${error.message}`);
+    }
+}
+
+module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment, updateClientOutreachDateController, getClientAutoRespondController, updateClientAutoRespondController, getClientNameByPhone };
