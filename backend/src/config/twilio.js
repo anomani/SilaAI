@@ -168,14 +168,14 @@ async function handleIncomingMessage(req, res) {
       // Check if the number is the special case
       const formattedAuthor = formatPhoneNumber(Author);
       let delayInMs;
-      
-      if (formattedAuthor === '+12038324011') {
-        // Short delay for special number (1-10 seconds)
-        delayInMs = 1; // 20 seconds delay
-      } else {
-        // Normal delay for other numbers (1-5 minutes)
-        delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
-      }
+      delayInMs = 1;
+      // if (formattedAuthor === '+12038324011') {
+      //   // Short delay for special number (1-10 seconds)
+      //   delayInMs = 1; // 20 seconds delay
+      // } else {
+      //   // Normal delay for other numbers (1-5 minutes)
+      //   // delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
+      // }
       
       setTimeout(() => processDelayedResponse(Author, user.id), delayInMs);
     }
