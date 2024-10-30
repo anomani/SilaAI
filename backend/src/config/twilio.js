@@ -149,15 +149,15 @@ async function handleIncomingMessage(req, res) {
     if (!autoRespond) {
       // If auto_respond is false, don't process the message with AI
       await toggleLastMessageReadStatus(clientId);
-      // await sendNotificationToUser(
-      //   'New Message from ' + client.firstname,
-      //   `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
-      //   clientId,
-      //   client.firstname + ' ' + client.lastname,
-      //   Body,
-      //   false,
-      //   user.id
-      // );
+      await sendNotificationToUser(
+        'New Message from ' + client.firstname,
+        `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
+        clientId,
+        client.firstname + ' ' + client.lastname,
+        Body,
+        false,
+        user.id
+      );
       return res.status(200).send('Message received');
     }
 
@@ -171,7 +171,7 @@ async function handleIncomingMessage(req, res) {
       
       if (formattedAuthor === '+12038324011') {
         // Short delay for special number (1-10 seconds)
-        delayInMs = 20000; // 20 seconds delay
+        delayInMs = 1; // 20 seconds delay
       } else {
         // Normal delay for other numbers (1-5 minutes)
         delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
@@ -204,28 +204,28 @@ async function processDelayedResponse(phoneNumber, userId) {
       if (client.id != '') {
         await toggleLastMessageReadStatus(client.id);
         if (responseMessage === "user" || responseMessage === "User") {
-          // await sendNotificationToUser(
-          //   'New Message from ' + client.firstname,
-          //   `${client.firstname} ${client.lastname}: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
-          //   client.id,
-          //   client.firstname + ' ' + client.lastname,
-          //   lastMessage,
-          //   false,
-          //   userId
-          // );
+          await sendNotificationToUser(
+            'New Message from ' + client.firstname,
+            `${client.firstname} ${client.lastname}: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
+            client.id,
+            client.firstname + ' ' + client.lastname,
+            lastMessage,
+            false,
+            userId
+          );
         }
         else {
           // Save the suggested response
           await saveSuggestedResponse(client.id, responseMessage);
-          // await sendNotificationToUser(
-          //   client.firstname + ' ' + client.lastname,
-          //   responseMessage,
-          //   client.id,
-          //   client.firstname + ' ' + client.lastname,
-          //   lastMessage,
-          //   true,
-          //   userId
-          // );
+          await sendNotificationToUser(
+            client.firstname + ' ' + client.lastname,
+            responseMessage,
+            client.id,
+            client.firstname + ' ' + client.lastname,
+            lastMessage,
+            true,
+            userId
+          );
         }
       } 
       
@@ -239,15 +239,15 @@ async function processDelayedResponse(phoneNumber, userId) {
   } catch (error) {
     console.error('Error processing delayed response:', error);
     const client = await getClientByPhoneNumber(phoneNumber, userId);
-    // await sendNotificationToUser(
-    //   'New Client Message',
-    //   `${client.firstname} ${client.lastname}: ${lastMessage}`,
-    //   client.id,
-    //   client.firstname + ' ' + client.lastname,
-    //   lastMessage,
-    //   false,
-    //   userId
-    // );
+    await sendNotificationToUser(
+      'New Client Message',
+      `${client.firstname} ${client.lastname}: ${lastMessage}`,
+      client.id,
+      client.firstname + ' ' + client.lastname,
+      lastMessage,
+      false,
+      userId
+    );
   }
 }
 
