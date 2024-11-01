@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Platform } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -86,6 +86,7 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
 
 const AppContent: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const navigation = useNavigation();
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
@@ -123,9 +124,32 @@ const AppContent: React.FC = () => {
       const data = response.notification.request.content.data;
       console.log('Notification data:', data);
       
-      // Handle notification responses here
-      // You may need to use a different navigation method here
-      // or pass the navigation as a prop to this component
+      if (data && typeof data === 'object' && isLoggedIn) {
+        const { clientId, clientName, clientMessage, suggestedResponse, notificationType } = data;
+        
+        if (notificationType === 'suggestedResponse') {
+          console.log('Navigating to ClientMessages with suggested response:', { clientId, clientName, suggestedResponse });
+          navigation.navigate('ClientMessages', { 
+            clientid: clientId, 
+            clientName, 
+            suggestedResponse 
+          });
+        } else if (notificationType === 'clientMessage') {
+          console.log('Navigating to ClientMessages with client message:', { clientId, clientName, clientMessage });
+          navigation.navigate('ClientMessages', { 
+            clientid: clientId, 
+            clientName, 
+            clientMessage 
+          });
+        } else if (data.notificationType === 'unpaid_appointments') {
+          navigation.navigate('DailyAppointments');
+        } else if (data.notificationType === 'appointment_ended') {
+          console.log('Navigating to CalendarScreen for ended appointment:', { clientId });
+          navigation.navigate('Calendar', { openAppointmentForClient: clientId });
+        }
+      } else {
+        console.warn('Invalid or missing data in notification, or user not logged in:', data);
+      }
     });
 
     return () => {
@@ -136,7 +160,7 @@ const AppContent: React.FC = () => {
         Notifications.removeNotificationSubscription(responseListener.current);
       }
     };
-  }, []);
+  }, [navigation, isLoggedIn]);
 
   if (isLoggedIn === null) {
     // You might want to show a loading screen here

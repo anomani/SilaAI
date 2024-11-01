@@ -59,7 +59,7 @@ async function getAllAvailableSlotsForDay(day, userId) {
         return [];
     }
 
-    const appointments = await getAppointmentsByDay(day, userId);
+    const appointments = await getAppointmentsByDay(userId, day);
     // Sort appointments by start time
     appointments.sort((a, b) => new Date(`${day}T${a.starttime}`) - new Date(`${day}T${b.starttime}`));
 

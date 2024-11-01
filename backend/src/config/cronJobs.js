@@ -31,8 +31,8 @@ async function initializeCronJobs() {
         }
     });
 
-    // Updated cron job for fillMyCalendar, runs every hour
-    cron.schedule('0 * * * *', async () => {
+    // Updated cron job for fillMyCalendar, runs every minute
+    cron.schedule('* * * * *', async () => {
         try {
             const users = await getAllUsers();
             for (const user of users) {
