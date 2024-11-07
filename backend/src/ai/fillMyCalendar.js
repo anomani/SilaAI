@@ -43,7 +43,7 @@ async function fillMyCalendar(userId) {
       });
       return acc;
     }, {});
-
+    
     const totalEmptySpots = Object.values(slotsByGroup).reduce((sum, count) => sum + count, 0);
     
     if (totalEmptySpots === 0) {

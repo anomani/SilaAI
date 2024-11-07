@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration, TextInput, RefreshControl } from 'react-native';
 import { getAppointmentsByDay, getClientById, createBlockedTime, deleteAppointment, rescheduleAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
@@ -8,6 +8,7 @@ import RescheduleConfirmModal from '../components/RescheduleConfirmModal';
 import BlockTimeModal from '../components/BlockTimeModal';
 import ClientCardView from '../components/ClientCardView';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
+import { Calendar } from 'react-native-calendars';
 
 const CalendarScreen = ({ navigation }) => {
   const route = useRoute();
@@ -357,6 +358,24 @@ const CalendarScreen = ({ navigation }) => {
     setViewMode('card');
   };
 
+  // Add this function near the top of the component
+  const getColorForAppointmentType = (type) => {
+    // Skip if it's a blocked time appointment
+    if (type === 'BLOCKED_TIME') {
+      return 'rgba(255, 149, 0, 0.7)'; // Keep existing blocked time color
+    }
+
+    // Generate a consistent color based on the appointment type string
+    let hash = 0;
+    for (let i = 0; i < type.length; i++) {
+      hash = type.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Generate HSL color with consistent saturation and lightness
+    const hue = Math.abs(hash % 360);
+    return `hsla(${hue}, 70%, 45%, 0.9)`; // Adjusted saturation and lightness for better visibility
+  };
+
   const renderAppointments = () => {
     if (appointments.length === 0) {
       return (
@@ -422,8 +441,8 @@ const CalendarScreen = ({ navigation }) => {
                   styles.appointmentBlock,
                   {
                     top: startPosition,
-                    height: Math.max(duration, 50), // Minimum height of 50px
-                    backgroundColor: isBlockedTime ? 'rgba(255, 149, 0, 0.7)' : '#007AFF',
+                    height: Math.max(duration, 50),
+                    backgroundColor: getColorForAppointmentType(appointment.appointmenttype),
                     width: width,
                     left: left,
                   },
@@ -516,24 +535,81 @@ const CalendarScreen = ({ navigation }) => {
     }
   };
 
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+
+  const handleCustomDateSelect = (day) => {
+    setShowCustomDatePicker(false);
+    // Create date with timezone adjustment
+    const selectedDate = new Date(day.timestamp + new Date().getTimezoneOffset() * 60000);
+    setDate(selectedDate);
+  };
+
+  const renderCustomDatePicker = () => {
+    return (
+      <Modal
+        transparent={true}
+        visible={showCustomDatePicker}
+        onRequestClose={() => setShowCustomDatePicker(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          onPress={() => setShowCustomDatePicker(false)}
+        >
+          <View style={styles.calendarModal}>
+            <Calendar
+              onDayPress={handleCustomDateSelect}
+              current={date.toISOString()}
+              markedDates={{
+                [date.toISOString().split('T')[0]]: { selected: true }
+              }}
+              theme={{
+                backgroundColor: '#2c2c2e',
+                calendarBackground: '#2c2c2e',
+                textSectionTitleColor: '#fff',
+                selectedDayBackgroundColor: '#007AFF',
+                selectedDayTextColor: '#fff',
+                todayTextColor: '#007AFF',
+                dayTextColor: '#fff',
+                textDisabledColor: '#444',
+                monthTextColor: '#fff',
+              }}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchAppointments();
+    setRefreshing(false);
+  }, [date]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerDay}>{formatDay(date)}</Text>
         <View style={styles.headerDateContainer}>
-          <Text style={styles.headerDate}>{formatDate(date)}</Text>
+          <TouchableOpacity onPress={() => setShowCustomDatePicker(true)}>
+            <View style={styles.datePickerButton}>
+              <Text style={styles.headerDate}>{formatDate(date)}</Text>
+              <Ionicons name="calendar" size={24} color="white" style={styles.calendarIcon} />
+            </View>
+          </TouchableOpacity>
         </View>
         <TouchableOpacity style={styles.addButton} onPress={handleAddButtonPress}>
           <Ionicons name="add-circle" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.refreshButton} onPress={fetchAppointments}>
-          <Ionicons name="refresh" size={24} color="#007AFF" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.viewToggleButton} onPress={toggleViewMode}>
           <Ionicons name={viewMode === 'list' ? 'card' : 'list'} size={24} color="#007AFF" />
         </TouchableOpacity>
       </View>
       
+      {renderCustomDatePicker()}
+
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
@@ -544,7 +620,17 @@ const CalendarScreen = ({ navigation }) => {
             <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
           </View>
         ) : (
-          <ScrollView style={styles.calendarContainer}>
+          <ScrollView 
+            style={styles.calendarContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#007AFF"
+                colors={["#007AFF"]}
+              />
+            }
+          >
             <View style={styles.timelineContainer}>
               <View style={styles.timeline}>
                 {renderTimeSlots()}
@@ -667,12 +753,15 @@ const styles = StyleSheet.create({
   headerDateContainer: { 
     backgroundColor: '#007AFF', 
     borderRadius: 50, 
-    padding: 10, 
-    marginTop: 5 
+    padding: 8,  // Reduced from 10
+    marginTop: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '80%',  // Limit the width to prevent overlapping
   },
   headerDate: { 
     color: 'white', 
-    fontSize: 24, 
+    fontSize: 20,  // Reduced from 24
     fontWeight: 'bold' 
   },
   addButton: { 
@@ -925,6 +1014,23 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: 'red',
     zIndex: 1000,
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,  // Reduced from 15
+  },
+  calendarIcon: {
+    marginLeft: 6,  // Reduced from 8
+    size: 20,  // Reduced from 24
+  },
+  calendarModal: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 10,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
   },
 });
 

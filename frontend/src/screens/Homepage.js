@@ -58,8 +58,8 @@ const Homepage = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>
           <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>Settings</Text>
-            <Text style={styles.menuSubtitle}>Manage your settings</Text>
+            <Text style={styles.menuTitle}>Account</Text>
+            <Text style={styles.menuSubtitle}>Manage your account</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
