@@ -31,7 +31,7 @@ const Footer = ({ navigation }) => {
         <Ionicons name="calendar" size={24} color="#fff" />
         <Text style={styles.footerText}>Calendar</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('ChatScreen')}>
+      <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Chat')}>
         <Ionicons name="mic" size={24} color="#fff" />
         <Text style={styles.footerText}>AI</Text>
       </TouchableOpacity>

@@ -31,7 +31,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       console.log('User not found for ID:', userId);
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json({ username: user.username, phoneNumber: user.phone_number });
+    res.json(user);
   } catch (error) {
     console.error('Error fetching user info:', error);
     res.status(500).json({ message: 'Internal server error' });

@@ -20,6 +20,7 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
           getFillMyCalendarStatus(),
           getCurrentUser()
         ]);
+        console.log('User Data:', userData);
         setFillMyCalendar(calendarStatus.status);
         setUser(userData);
       } catch (err) {
@@ -72,8 +73,10 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
         </View>
         {user && (
           <View style={styles.userInfo}>
+            {console.log('User in render:', user)}
             <Text style={styles.infoText}>Username: {user.username}</Text>
             <Text style={styles.infoText}>Phone Number: {user.phoneNumber}</Text>
+            <Text style={styles.infoText}>Booking URL: https://uzicuts.netlify.app/{user.id}</Text>
           </View>
         )}
         <View style={styles.setting}>
