@@ -217,15 +217,15 @@ async function processDelayedResponse(phoneNumber, userId) {
         else {
           // Save the suggested response
           await saveSuggestedResponse(client.id, responseMessage);
-          // await sendNotificationToUser(
-          //   client.firstname + ' ' + client.lastname,
-          //   responseMessage,
-          //   client.id,
-          //   client.firstname + ' ' + client.lastname,
-          //   lastMessage,
-          //   true,
-          //   userId
-          // );
+          await sendNotificationToUser(
+            client.firstname + ' ' + client.lastname,
+            responseMessage,
+            client.id,
+            client.firstname + ' ' + client.lastname,
+            lastMessage,
+            true,
+            userId
+          );
         }
       } 
       
@@ -259,19 +259,19 @@ async function sendNotificationToUser(title, body, clientId, clientName, clientM
     console.log('No push tokens found for the barber');
     return;
   }
-  // const notifications = pushTokens.map(token => ({
-  //   to: token,
-  //   sound: 'default',
-  //   title: clientName,
-  //   body: clientMessage,
-  //   data: { 
-  //     clientId, 
-  //     clientName, 
-  //     clientMessage,
-  //     suggestedResponse: isSuggestedResponse ? body : null,
-  //     notificationType: isSuggestedResponse ? 'suggestedResponse' : 'clientMessage'
-  //   },
-  // }));
+  const notifications = pushTokens.map(token => ({
+    to: token,
+    sound: 'default',
+    title: clientName,
+    body: clientMessage,
+    data: { 
+      clientId, 
+      clientName, 
+      clientMessage,
+      suggestedResponse: isSuggestedResponse ? body : null,
+      notificationType: isSuggestedResponse ? 'suggestedResponse' : 'clientMessage'
+    },
+  }));
 
   try {
     console.log('Sending notifications:', notifications);
