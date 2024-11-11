@@ -100,11 +100,13 @@ async function handleIncomingMessage(req, res) {
   }
   console.log(req.body)
   const { EventType } = req.body;
-  let Author, Body, ConversationSid;
+  let Author, Body, ConversationSid, business_line;
 
   if (EventType === 'onConversationAdd') {
     Author = req.body['MessagingBinding.Address'];
     Body = req.body.MessageBody;
+    business_line = req.body['MessagingBinding.ProxyAddress']
+    console.log("business_line: ", business_line)
   } else if (EventType === 'onMessageAdd') {
     Author = req.body.Author;
     Body = req.body.Body;
@@ -112,10 +114,15 @@ async function handleIncomingMessage(req, res) {
   } else {
     return res.status(400).send('Unsupported EventType');
   }
-
+  
   try {
     console.log(ConversationSid)
-    const business_number = await getContactPhoneNumberFromConversation(ConversationSid)
+    let business_number;
+    if (ConversationSid) {
+      business_number = await getContactPhoneNumberFromConversation(ConversationSid)
+    } else {
+      business_number = business_line
+    }
     console.log("Business Number: ", business_number)
     const user = await getUserByBusinessNumber(business_number)
     console.log(user)
@@ -176,7 +183,7 @@ async function handleIncomingMessage(req, res) {
       //   // Normal delay for other numbers (1-5 minutes)
       //   // delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
       // }
-      
+
       setTimeout(() => processDelayedResponse(Author, user.id), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
