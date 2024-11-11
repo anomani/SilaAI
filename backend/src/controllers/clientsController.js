@@ -19,7 +19,7 @@ async function addClient(req, res) {
     const userId = req.user.id;
     const { firstname, lastname, phonenumber, email } = req.body;
     try {
-        const result = await createClient(firstname, lastname, phonenumber, email, userId);
+        const result = await createClient(firstname, lastname, phonenumber, email, "", userId);
         const client = {
             id: result.insertedId,
             firstname,
