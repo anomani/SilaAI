@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Linking } from 'react-native';
 import { getAppointmentsByClientId, deleteClient, getDaysSinceLastAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -124,9 +124,41 @@ const ClientDetailsScreen = ({ route, navigation }) => {
     );
   };
 
+  const handleMessagePress = () => {
+    navigation.navigate('ClientMessages', { 
+      clientid: client.id, 
+      clientName: `${client.firstname} ${client.lastname}`,
+      suggestedResponse: null,
+      clientMessage: null
+    });
+  };
+
+  const handleCallPress = async () => {
+    try {
+      if (client.phonenumber) {
+        Linking.openURL(`tel:${client.phonenumber}`);
+      } else {
+        Alert.alert('Error', 'No phone number available for this client.');
+      }
+    } catch (error) {
+      console.error('Error making phone call:', error);
+      Alert.alert('Error', 'Failed to make phone call.');
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.name}>{client.firstname} {client.lastname}</Text>
+      <View style={styles.headerContainer}>
+        <Text style={styles.name}>{client.firstname} {client.lastname}</Text>
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleCallPress}>
+            <Ionicons name="call" size={24} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={handleMessagePress}>
+            <Ionicons name="chatbubble" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
       <Text style={styles.details}>Phone: {client.phonenumber}</Text>
       <Text style={styles.details}>Email: {client.email}</Text>
       <Text style={styles.details}>Days since last appointment: {daysSinceLastAppointment}</Text>
@@ -155,7 +187,27 @@ const styles = StyleSheet.create({
   appointmentItem: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#333' },
   appointmentType: { fontSize: 18, color: 'white' },
   appointmentTime: { fontSize: 14, color: '#aaa' },
-  dateHeader: { fontSize: 20, color: 'white', marginTop: 20, marginBottom: 10 }
+  dateHeader: { fontSize: 20, color: 'white', marginTop: 20, marginBottom: 10 },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  actionButton: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 20,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    width: '100%',
+  },
+  name: {
+    fontSize: 24,
+    color: 'white',
+  },
 });
 
 export default ClientDetailsScreen;
