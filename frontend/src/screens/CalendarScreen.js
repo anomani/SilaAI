@@ -25,10 +25,9 @@ const CalendarScreen = ({ navigation }) => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
 
   // Add this constant at the top of the component
-  const HOUR_HEIGHT = 100; // Height of each hour slot in pixels
-  const TOTAL_HOURS = 12; // Number of hours to display (9 AM to 9 PM)
+  const HOUR_HEIGHT = 100;
+  const TOTAL_HOURS = 12;
 
-  // Calculate the total height
   const totalHeight = HOUR_HEIGHT * TOTAL_HOURS;
 
   const [activeDragId, setActiveDragId] = useState(null);
