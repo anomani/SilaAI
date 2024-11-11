@@ -376,8 +376,11 @@ const tools = [
 ];
 
 async function createAssistant(date, userId) {
+  // Replace ${userId} with actual userId in the instructions
   const instructionsPath = path.join(__dirname, 'Prompts', 'dataInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf8');
+  assistantInstructions = assistantInstructions.replace(/\${userId}/g, userId);
+  console.log(assistantInstructions);
 
   // Fetch appointment types and add-ons for the user
   const appointmentTypes = await getAppointmentTypes(userId);
@@ -531,7 +534,7 @@ async function handleUserInputData(userMessage, userId) {
             if (funcName === "getInfo") {
               console.log("getInfo", args.query);
               // Pass userId to getInfo function
-              output = await getInfo(args.query, userId);
+              output = await getInfo(args.query);
             } else if (funcName === "sendMessages") {
               console.log("sendMessages", args.phoneNumbers, args.message);
               // output = await sendMessages(args.phoneNumbers, args.message);
@@ -660,11 +663,11 @@ function getStoredQuery(id) {
   return queryStore[id];
 }
 
-// async function main() {
-//   const resp = await handleUserInputData("Make a list of clients with an appointment next Friday through next Monday");
-//   console.log(resp);
-// }
+async function main() {
+  const resp = await handleUserInputData("How much money have I made last year?", 1);
+  console.log(resp);
+}
 
-// main();
+main();
 
 module.exports = { handleUserInputData, getStoredQuery };
