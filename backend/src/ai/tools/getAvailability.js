@@ -10,10 +10,9 @@ async function main() {
 main();
 
 async function getAvailability(day, appointmentType, addOnArray, userId, clientId = null) {
-    console.log("Day:", day);
-    console.log("Appointment Type:", appointmentType);
-    console.log("Add-ons:", addOnArray);
-    console.log("User ID:", userId);
+    console.log("\n=== Starting getAvailability ===");
+    console.log("Input parameters:", { day, appointmentType, addOnArray, userId, clientId });
+
     // Fetch appointment types and add-ons from the database
     const appointmentTypes = await getAppointmentTypes(userId);
     const addOns = await getAddOns(userId);
@@ -25,68 +24,90 @@ async function getAvailability(day, appointmentType, addOnArray, userId, clientI
     }
     
     const duration = calculateTotalDuration(appointmentTypeInfo, addOnArray, addOns);
+    console.log("Calculated total duration (minutes):", duration);
 
     try {
         const date = new Date(day);
         const dayName = getDayName(date.getDay());
-        console.log("Day of Week:", dayName);
+        console.log("Processing for day:", dayName);
 
-        // Use the availability object directly, no need to parse
         const availability = appointmentTypeInfo.availability;
+        console.log("Full availability object:", availability);
 
-        // Get the availability for the specific day of the week
         const dayAvailability = availability[dayName];
+        console.log("Day's availability slots:", dayAvailability);
         if (!dayAvailability || dayAvailability.length === 0) {
+            console.log("No availability found for this day");
             return [];
         }
 
         const appointments = await getAppointmentsByDay(userId, day);
+        console.log("Existing appointments:", appointments);
         const availableSlots = [];
 
         const now = new Date();
         const isToday = now.toDateString() === date.toDateString();
+        console.log("Is today:", isToday);
 
         for (const slot of dayAvailability) {
-            console.log("Slot:", slot);
-            console.log("Day Availability:", dayAvailability);
+            console.log("\n--- Processing slot:", slot, "---");
             const [start, end] = slot.split('-');
             const startOfSlot = new Date(`${day}T${start}`);
-            console.log("Start of Slot:", startOfSlot);
             const endOfSlot = new Date(`${day}T${end}`);
-            console.log("End of Slot:", endOfSlot);
             let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
-            console.log("Current Time:", currentTime);
+            console.log("Slot window:", {
+                startOfSlot: startOfSlot.toLocaleTimeString(),
+                endOfSlot: endOfSlot.toLocaleTimeString(),
+                currentTime: currentTime.toLocaleTimeString()
+            });
+
             for (let i = 0; i <= appointments.length; i++) {
+                console.log(`\nChecking appointment index: ${i}`);
                 const appointment = appointments[i];
                 if (clientId && appointment && appointment.clientId === clientId) {
-                    // Skip this appointment if it belongs to the current client
-                    console.log("skipping appointment")
+                    console.log("Skipping appointment for current client");
                     continue;
                 }
 
                 const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
                 const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
+                console.log("Checking time window:", {
+                    currentTime: currentTime.toLocaleTimeString(),
+                    appointmentStart: appointmentStart.toLocaleTimeString(),
+                    appointmentEnd: appointmentEnd.toLocaleTimeString(),
+                    requiredDuration: `${duration} minutes`
+                });
+
                 if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000 && currentTime <= endOfSlot) {
-                    console.log("slot is available")
+                    console.log("Found potential slot");
                     const slotEndTime = new Date(Math.min(appointmentStart, endOfSlot));
                     const slotDuration = slotEndTime - currentTime;
+                    console.log("Slot details:", {
+                        slotDuration: `${slotDuration / 60000} minutes`,
+                        requiredDuration: `${duration} minutes`
+                    });
 
                     if (slotDuration >= duration * 60000) {
-                        availableSlots.push({
+                        const newSlot = {
                             startTime: new Date(currentTime).toTimeString().slice(0, 5),
                             endTime: slotEndTime.toTimeString().slice(0, 5)
-                        });
+                        };
+                        console.log("Adding available slot:", newSlot);
+                        availableSlots.push(newSlot);
                     }
                 }
 
                 currentTime = appointmentEnd > currentTime ? appointmentEnd : currentTime;
-                if (currentTime >= endOfSlot) break;
+                if (currentTime >= endOfSlot) {
+                    console.log("Reached end of slot window");
+                    break;
+                }
             }
         }
-        console.log("Available Slots:", availableSlots);
+        console.log("\nFinal available slots:", availableSlots);
         return availableSlots;
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error in getAvailability:", error);
         return [];
     }
 }
