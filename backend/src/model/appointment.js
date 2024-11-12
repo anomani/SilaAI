@@ -99,13 +99,7 @@ async function getAppointmentsByDay(userId, date) {
         throw err;
     }
 }
-async function main() {
-    const res = await getAppointmentsByDay(1, '2024-11-08');
-    console.log("Hello", res);
 
-}
-
-main();
 
 
 async function getAllAppointmentsByClientId(clientId, userId) {
