@@ -380,7 +380,6 @@ async function createAssistant(date, userId) {
   const instructionsPath = path.join(__dirname, 'Prompts', 'dataInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf8');
   assistantInstructions = assistantInstructions.replace(/\${userId}/g, userId);
-  console.log(assistantInstructions);
 
   // Fetch appointment types and add-ons for the user
   const appointmentTypes = await getAppointmentTypes(userId);
@@ -430,7 +429,7 @@ async function createAssistant(date, userId) {
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions,
       name: "Client Data",
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       tools: tools,
       temperature: 1
     });
@@ -439,10 +438,6 @@ async function createAssistant(date, userId) {
 }
 
 async function createThread(userId, initialMessage = false) {
-  console.log('Function: createThread');
-  console.log('Parameters:');
-  console.log('userId:', userId);
-  console.log('initialMessage:', initialMessage);
   const user = await getUserById(userId);
   try {
     let thread;
@@ -452,7 +447,6 @@ async function createThread(userId, initialMessage = false) {
 
     if (existingThread && !initialMessage) {
       // Thread exists, retrieve it from OpenAI
-      console.log('Retrieving existing thread from OpenAI');
       thread = await openai.beta.threads.retrieve(existingThread.thread_id);
     } else {
       // Create a new thread
@@ -473,7 +467,6 @@ async function createThread(userId, initialMessage = false) {
 async function handleUserInputData(userMessage, userId) {
   try {
     const date = getCurrentDate();
-    console.log(date)
     const assistant = await createAssistant(date, userId);
     const thread = await createThread(userId, false);
     
@@ -510,7 +503,6 @@ async function handleUserInputData(userMessage, userId) {
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
         if (assistantMessage) {
-          console.log(assistantMessage.content[0].text.value);
           return assistantMessage.content[0].text.value;
         }
       } else if (runStatus.status === "requires_action") {
@@ -525,7 +517,6 @@ async function handleUserInputData(userMessage, userId) {
             args = JSON.parse(action.function.arguments);
           } catch (parseError) {
             console.error('Error parsing function arguments:', parseError);
-            console.log('Raw arguments:', action.function.arguments);
             continue; // Skip this tool call and move to the next one
           }
 
@@ -569,7 +560,7 @@ async function handleUserInputData(userMessage, userId) {
                 output = result;
               }
             } else if (funcName === "getAvailability") {
-              output = await getAvailability(args.day, args.appointmentType, args.addOns, args.group, userId);
+              output = await getAvailability(args.day, args.appointmentType, args.addOns, userId);
             } else if (funcName === "cancelAppointmentById") {
               output = await cancelAppointmentById(args.clientId, args.date, userId);
             } else if (funcName === "blockTime") {
@@ -663,11 +654,11 @@ function getStoredQuery(id) {
   return queryStore[id];
 }
 
-async function main() {
-  const resp = await handleUserInputData("How much money have I made last year?", 1);
-  console.log(resp);
-}
+// async function main() {
+//   const resp = await handleUserInputData("How much money have I made last year?", 1);
+//   console.log(resp);
+// }
 
-main();
+// main();
 
 module.exports = { handleUserInputData, getStoredQuery };

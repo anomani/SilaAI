@@ -2,12 +2,18 @@ const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
 const {getAppointmentsByDay} = require('../../model/appointment')
 const { getAppointmentTypes, getAddOns } = require('../../model/appTypes');
+async function main() {
+    const availability = await getAvailability("2024-11-22", "Adult Cut", ["Beard Grooming"], 1);
+    console.log(availability);
+}
+
+main();
 
 async function getAvailability(day, appointmentType, addOnArray, userId, clientId = null) {
     console.log("Day:", day);
     console.log("Appointment Type:", appointmentType);
     console.log("Add-ons:", addOnArray);
-    
+    console.log("User ID:", userId);
     // Fetch appointment types and add-ons from the database
     const appointmentTypes = await getAppointmentTypes(userId);
     const addOns = await getAddOns(userId);
@@ -41,14 +47,20 @@ async function getAvailability(day, appointmentType, addOnArray, userId, clientI
         const isToday = now.toDateString() === date.toDateString();
 
         for (const slot of dayAvailability) {
+            console.log("Slot:", slot);
+            console.log("Day Availability:", dayAvailability);
             const [start, end] = slot.split('-');
             const startOfSlot = new Date(`${day}T${start}`);
+            console.log("Start of Slot:", startOfSlot);
             const endOfSlot = new Date(`${day}T${end}`);
+            console.log("End of Slot:", endOfSlot);
             let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
+            console.log("Current Time:", currentTime);
             for (let i = 0; i <= appointments.length; i++) {
                 const appointment = appointments[i];
                 if (clientId && appointment && appointment.clientId === clientId) {
                     // Skip this appointment if it belongs to the current client
+                    console.log("skipping appointment")
                     continue;
                 }
 
@@ -71,6 +83,7 @@ async function getAvailability(day, appointmentType, addOnArray, userId, clientI
                 if (currentTime >= endOfSlot) break;
             }
         }
+        console.log("Available Slots:", availableSlots);
         return availableSlots;
     } catch (error) {
         console.error("Error:", error);
