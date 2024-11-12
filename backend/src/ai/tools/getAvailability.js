@@ -10,9 +10,10 @@ async function main() {
 main();
 
 async function getAvailability(day, appointmentType, addOnArray, userId, clientId = null) {
-    console.log("\n=== Starting getAvailability ===");
-    console.log("Input parameters:", { day, appointmentType, addOnArray, userId, clientId });
-
+    console.log("Day:", day);
+    console.log("Appointment Type:", appointmentType);
+    console.log("Add-ons:", addOnArray);
+    console.log("User ID:", userId);
     // Fetch appointment types and add-ons from the database
     const appointmentTypes = await getAppointmentTypes(userId);
     const addOns = await getAddOns(userId);
@@ -23,91 +24,65 @@ async function getAvailability(day, appointmentType, addOnArray, userId, clientI
         throw new Error(`Invalid appointment type: ${appointmentType}`);
     }
     
-    const duration = calculateTotalDuration(appointmentTypeInfo, addOnArray, addOns);
-    console.log("Calculated total duration (minutes):", duration);
-
+    const duration = calculateTotalDuration(appointmentTypeInfo, addOns);
+    console.log("Duration:", duration);
     try {
         const date = new Date(day);
         const dayName = getDayName(date.getDay());
-        console.log("Processing for day:", dayName);
+        console.log("Day of Week:", dayName);
 
+        // Use the availability object directly, no need to parse
         const availability = appointmentTypeInfo.availability;
-        console.log("Full availability object:", availability);
 
+        // Get the availability for the specific day of the week
         const dayAvailability = availability[dayName];
-        console.log("Day's availability slots:", dayAvailability);
         if (!dayAvailability || dayAvailability.length === 0) {
-            console.log("No availability found for this day");
             return [];
         }
 
         const appointments = await getAppointmentsByDay(userId, day);
-        console.log("Existing appointments:", appointments);
         const availableSlots = [];
 
         const now = new Date();
         const isToday = now.toDateString() === date.toDateString();
-        console.log("Is today:", isToday);
 
         for (const slot of dayAvailability) {
-            console.log("\n--- Processing slot:", slot, "---");
             const [start, end] = slot.split('-');
             const startOfSlot = new Date(`${day}T${start}`);
             const endOfSlot = new Date(`${day}T${end}`);
             let currentTime = isToday ? new Date(Math.max(startOfSlot, now)) : startOfSlot;
-            console.log("Slot window:", {
-                startOfSlot: startOfSlot.toLocaleTimeString(),
-                endOfSlot: endOfSlot.toLocaleTimeString(),
-                currentTime: currentTime.toLocaleTimeString()
-            });
-
+            console.log("Current Time:", currentTime);
             for (let i = 0; i <= appointments.length; i++) {
-                console.log(`\nChecking appointment index: ${i}`);
                 const appointment = appointments[i];
                 if (clientId && appointment && appointment.clientId === clientId) {
-                    console.log("Skipping appointment for current client");
+                    // Skip this appointment if it belongs to the current client
+                    console.log("skipping appointment")
                     continue;
                 }
 
                 const appointmentStart = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].starttime}`) : endOfSlot;
                 const appointmentEnd = i < appointments.length ? new Date(`${appointments[i].date}T${appointments[i].endtime}`) : endOfSlot;
-                console.log("Checking time window:", {
-                    currentTime: currentTime.toLocaleTimeString(),
-                    appointmentStart: appointmentStart.toLocaleTimeString(),
-                    appointmentEnd: appointmentEnd.toLocaleTimeString(),
-                    requiredDuration: `${duration} minutes`
-                });
-
                 if (currentTime < appointmentStart && (appointmentStart - currentTime) >= duration * 60000 && currentTime <= endOfSlot) {
-                    console.log("Found potential slot");
+                    console.log("slot is available")
                     const slotEndTime = new Date(Math.min(appointmentStart, endOfSlot));
                     const slotDuration = slotEndTime - currentTime;
-                    console.log("Slot details:", {
-                        slotDuration: `${slotDuration / 60000} minutes`,
-                        requiredDuration: `${duration} minutes`
-                    });
 
                     if (slotDuration >= duration * 60000) {
-                        const newSlot = {
+                        availableSlots.push({
                             startTime: new Date(currentTime).toTimeString().slice(0, 5),
                             endTime: slotEndTime.toTimeString().slice(0, 5)
-                        };
-                        console.log("Adding available slot:", newSlot);
-                        availableSlots.push(newSlot);
+                        });
                     }
                 }
 
                 currentTime = appointmentEnd > currentTime ? appointmentEnd : currentTime;
-                if (currentTime >= endOfSlot) {
-                    console.log("Reached end of slot window");
-                    break;
-                }
+                if (currentTime >= endOfSlot) break;
             }
         }
-        console.log("\nFinal available slots:", availableSlots);
+        console.log("Available Slots:", availableSlots);
         return availableSlots;
     } catch (error) {
-        console.error("Error in getAvailability:", error);
+        console.error("Error:", error);
         return [];
     }
 }
@@ -298,8 +273,11 @@ async function getTimeSlots(userId, day, appointmentTypeId, addOnIds) {
 }
 
 function calculateTotalDuration(appointmentTypeInfo, selectedAddOns) {
+    console.log("Selected Add-ons:", selectedAddOns);
     const appointmentDuration = appointmentTypeInfo.duration;
+    console.log("Appointment Duration:", appointmentDuration);
     const addOnsDuration = selectedAddOns.reduce((total, addOn) => total + addOn.duration, 0);
+    console.log("Add-ons Duration:", addOnsDuration);
     return appointmentDuration + addOnsDuration;
 }
 
