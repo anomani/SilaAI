@@ -23,6 +23,7 @@ const CalendarScreen = ({ navigation }) => {
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [isBlockTimeModalVisible, setIsBlockTimeModalVisible] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [isDraggable, setIsDraggable] = useState(false);
 
   // Add this constant at the top of the component
   const HOUR_HEIGHT = 100;
@@ -65,6 +66,7 @@ const CalendarScreen = ({ navigation }) => {
     if (event.nativeEvent.oldState === State.ACTIVE) {
       // End of pan gesture
       setActiveDragId(null);
+      setIsDraggable(false);
       panY.setValue(0);
       setDraggedAppointment(appointment);
       const newTime = calculateNewTime(appointment.startTime, event.nativeEvent.translationY);
@@ -420,20 +422,29 @@ const CalendarScreen = ({ navigation }) => {
       const left = column * 210; // 210 to add some space between appointments
 
       appointmentBlocks.push(
-        <PanGestureHandler
+        <TouchableOpacity
           key={appointment.id}
-          onGestureEvent={onPanGestureEvent}
-          onHandlerStateChange={(event) => onPanHandlerStateChange(event, appointment)}
-          minDist={10}
+          onPress={() => handleAppointmentPress(appointment, index)}
+          onLongPress={() => {
+            Vibration.vibrate(50);
+            setIsDraggable(true);
+            setActiveDragId(appointment.id);
+          }}
+          delayLongPress={300}
         >
-          <Animated.View style={[
-            { zIndex: activeDragId === appointment.id ? 1000 : 1 },
-            activeDragId === appointment.id ? {
-              transform: [{ translateY: dragPositions[appointment.id] || 0 }]
-            } : null
-          ]}>
-            <TouchableOpacity
-              onPress={() => handleAppointmentPress(appointment, index)}
+          <PanGestureHandler
+            enabled={isDraggable}
+            onGestureEvent={onPanGestureEvent}
+            onHandlerStateChange={(event) => onPanHandlerStateChange(event, appointment)}
+            minDist={10}
+          >
+            <Animated.View
+              style={[
+                { zIndex: activeDragId === appointment.id ? 1000 : 1 },
+                activeDragId === appointment.id ? {
+                  transform: [{ translateY: dragPositions[appointment.id] || 0 }]
+                } : null
+              ]}
             >
               <Animated.View
                 style={[
@@ -471,9 +482,9 @@ const CalendarScreen = ({ navigation }) => {
                     : `${appointment.startTime || 'No Start'} - ${appointment.endTime || 'No End'}`}
                 </Text>
               </Animated.View>
-            </TouchableOpacity>
-          </Animated.View>
-        </PanGestureHandler>
+            </Animated.View>
+          </PanGestureHandler>
+        </TouchableOpacity>
       );
     });
 
