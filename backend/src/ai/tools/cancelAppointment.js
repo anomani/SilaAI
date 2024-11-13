@@ -6,6 +6,9 @@ const axios = require('axios');
 
 
 async function cancelAcuityAppointment(acuityId, userId) {
+    console.log("Cancelling Acuity appointment")
+    console.log("Acuity ID:", acuityId)
+    console.log("User ID:", userId)
     try {
         const response = await axios.put(
             `https://acuityscheduling.com/api/v1/appointments/${acuityId}/cancel`,
@@ -29,6 +32,9 @@ async function cancelAcuityAppointment(acuityId, userId) {
 }
 
 async function cancelAppointment(phoneNumber, date, userId) {
+    console.log("Cancelling appointment")
+    console.log("Phone Number:", phoneNumber)
+    console.log("Date:", date)
     const client = await getClientByPhoneNumber(phoneNumber, userId)
     const appointmentsForDay = await getAppointmentsByDay(userId, date)
     const appointment = appointmentsForDay.find(appointment => appointment.clientid === client.id)
