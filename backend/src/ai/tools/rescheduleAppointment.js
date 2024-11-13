@@ -4,11 +4,13 @@ const moment = require('moment-timezone');
 dotenv.config({path : '../../../.env'});
 const {getClientByPhoneNumber} = require('../../model/clients');
 const {getAppointmentsByDay, rescheduleAppointment} = require('../../model/appointment');
+const { getUserById } = require('../../model/users');
 const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 const { isAppointmentAvailable, addMinutes, isAfter } = require('./bookAppointment');
 const { getAvailability } = require('./getAvailability');
 
 async function rescheduleAppointmentWithAcuity(appointmentId, newDate, newStartTime, userId) {
+    const user = await getUserById(userId);
     const acuityApiUrl = `https://acuityscheduling.com/api/v1/appointments/${appointmentId}/reschedule`;
     const auth = {
         username: user.acuity_user_id,
