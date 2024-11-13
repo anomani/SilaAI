@@ -2,12 +2,6 @@ const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
 const {getAppointmentsByDay} = require('../../model/appointment')
 const { getAppointmentTypes, getAddOns } = require('../../model/appTypes');
-async function main() {
-    const availability = await getAvailability("2024-11-22", "Adult Cut", ["Beard Grooming"], 1);
-    console.log(availability);
-}
-
-main();
 
 async function getAvailability(day, appointmentType, addOnArray, userId, clientId = null) {
     console.log("Day:", day);
