@@ -2,6 +2,7 @@ const dotenv = require('dotenv')
 dotenv.config({path : '../../../.env'})
 const {getClientByPhoneNumber, getClientById} = require ('../../model/clients') 
 const {deleteAppointment, getAppointmentsByDay} = require ('../../model/appointment')
+const {getUserById} = require('../../model/users')
 const axios = require('axios');
 
 
@@ -9,6 +10,7 @@ async function cancelAcuityAppointment(acuityId, userId) {
     console.log("Cancelling Acuity appointment")
     console.log("Acuity ID:", acuityId)
     console.log("User ID:", userId)
+    const user = await getUserById(userId);
     try {
         const response = await axios.put(
             `https://acuityscheduling.com/api/v1/appointments/${acuityId}/cancel`,
