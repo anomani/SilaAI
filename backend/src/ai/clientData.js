@@ -412,13 +412,11 @@ async function createAssistant(date, userId) {
     }
     appointmentTypesString += '\n';
   }
-  console.log(appointmentTypesString);
   // Create a string representation of add-ons
   const addOnsString = addOns.map(addon => {
     const price = typeof addon.price === 'number' ? `CA$${addon.price.toFixed(2)}` : addon.price;
     return `${addon.name}: ${addon.duration} minutes @ ${price}\n  Compatible with: ${addon.compatible_appointment_types.join(', ')}`;
   }).join('\n\n');
-  console.log(addOnsString);
   // Add the appointment types and add-ons information to the beginning of the instructions
   assistantInstructions = `Appointment Types:\n${appointmentTypesString}\nAdd-ons:\n${addOnsString}\n\n${assistantInstructions}`;
 
