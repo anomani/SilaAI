@@ -179,6 +179,9 @@ Let's say that the user says "Book an appointment for John tomorrow at 9:00 PM f
 - Run a SQL query to get all the clients with the name John then clarify with the user which one they are looking for. 
 - Then run all steps as above
 
+Anytime only the first name is mentioned then run a sql query to get all the clients with that first name and then clarify with the user which one they are looking for.
+Anytime for cancelling, scheduling, rescheduling or any other situations. 
+
 When using the getAvailability function, include the following parameters:
 - day: The date to check availability for (YYYY-MM-DD format)
 - appointmentType: The type of appointment to book
