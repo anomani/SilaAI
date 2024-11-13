@@ -43,6 +43,9 @@ async function handleWebhook(req, res) {
 }
 
 async function handleScheduledAppointment(appointmentDetails, userId) {
+    console.log("Handling scheduled appointment")
+    console.log("Appointment Details:", appointmentDetails)
+    console.log("User ID:", userId)
     const client = await getOrCreateClient(appointmentDetails, userId);
     const { date, startTime, endTime } = parseAppointmentDateTime(appointmentDetails);
     let appointmentType = appointmentDetails.type;
