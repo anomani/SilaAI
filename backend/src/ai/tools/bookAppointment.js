@@ -91,8 +91,8 @@ async function bookAppointmentAdmin(clientId, date, startTime, appointmentType, 
   const endTime = moment(`${date} ${startTime}`).add(totalDuration, 'minutes').format('HH:mm');
 
   try {
-    const acuityAppointment = await bookAppointment(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOns,userId);
-    // const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOnArray, userId);
+    // const acuityAppointment = await bookAppointment(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOns);
+    const acuityAppointment = await bookAppointmentWithAcuity(date, startTime, client.firstname, client.lastname, client.phonenumber, client.email, appointmentType, totalPrice, addOnArray, userId);
     return "Appointment booked successfully";
   } catch (error) {
     console.error(error);
@@ -135,7 +135,7 @@ async function bookAppointment(date, startTime, fname, lname, phone, email, appo
         const client = await getClientByPhoneNumber(phone, userId);
         if (client.id != '') {
             const clientId = client.id;
-            await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", price,false,0,null,[], userId);
+            // await createAppointment(appointmentType, acuityAppointment.id, date, startTime, endTime, clientId, "", price);
         } else {
             console.log("Client does not exist");
             await createClient(fname, lname, phone, email, "", userId);
