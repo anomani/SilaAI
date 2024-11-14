@@ -175,7 +175,7 @@ async function handleIncomingMessage(req, res) {
       // Check if the number is the special case
       const formattedAuthor = formatPhoneNumber(Author);
       let delayInMs;
-      delayInMs = 1;
+      delayInMs = 30000;
       // if (formattedAuthor === '+12038324011') {
       //   // Short delay for special number (1-10 seconds)
       //   delayInMs = 1; // 20 seconds delay
