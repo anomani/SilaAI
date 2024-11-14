@@ -156,15 +156,15 @@ async function handleIncomingMessage(req, res) {
     if (!autoRespond) {
       // If auto_respond is false, don't process the message with AI
       await toggleLastMessageReadStatus(clientId);
-      await sendNotificationToUser(
-        'New Message from ' + client.firstname,
-        `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
-        clientId,
-        client.firstname + ' ' + client.lastname,
-        Body,
-        false,
-        user.id
-      );
+      // await sendNotificationToUser(
+      //   'New Message from ' + client.firstname,
+      //   `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
+      //   clientId,
+      //   client.firstname + ' ' + client.lastname,
+      //   Body,
+      //   false,
+      //   user.id
+      // );
       return res.status(200).send('Message received');
     }
 
@@ -224,15 +224,15 @@ async function processDelayedResponse(phoneNumber, userId) {
         else {
           // Save the suggested response
           await saveSuggestedResponse(client.id, responseMessage, userId);
-          await sendNotificationToUser(
-            client.firstname + ' ' + client.lastname,
-            responseMessage,
-            client.id,
-            client.firstname + ' ' + client.lastname,
-            lastMessage,
-            true,
-            userId
-          );
+          // await sendNotificationToUser(
+          //   client.firstname + ' ' + client.lastname,
+          //   responseMessage,
+          //   client.id,
+          //   client.firstname + ' ' + client.lastname,
+          //   lastMessage,
+          //   true,
+          //   userId
+          // );
         }
       } 
       

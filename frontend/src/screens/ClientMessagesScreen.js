@@ -53,16 +53,12 @@ const ClientMessagesScreen = ({ route }) => {
   useEffect(() => {
     if (isFocused) {
       fetchMessagesAndSetup();
-      if (!isSuggestedResponseEdited) {
-        fetchSuggestedResponse();
-      }
+      fetchSuggestedResponse();
     } else {
-      // Stop polling when the screen is not focused
       if (polling) {
         clearInterval(polling);
         setPolling(null);
       }
-      // Save draft message when navigating away
       setDraftMessage(clientid, newMessage);
     }
 
@@ -70,10 +66,9 @@ const ClientMessagesScreen = ({ route }) => {
       if (polling) {
         clearInterval(polling);
       }
-      // Save draft message when component unmounts
       setDraftMessage(clientid, newMessage);
     };
-  }, [clientid, isFocused, initialSuggestedResponse, clientMessage, isSuggestedResponseEdited]);
+  }, [clientid, isFocused, initialSuggestedResponse, clientMessage]);
 
   const scrollToBottom = useCallback(() => {
     if (flatListRef.current) {
@@ -107,12 +102,13 @@ const ClientMessagesScreen = ({ route }) => {
       const data = await getMessagesByClientId(clientid);
       const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
       setMessages(prevMessages => {
-        if (JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages)) {
-          // Scroll to bottom when new messages are received
-          setTimeout(scrollToBottom, 100);
-          return sortedMessages;
+        const hasNewMessages = JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages);
+        if (hasNewMessages) {
+          requestAnimationFrame(() => {
+            scrollToBottom();
+          });
         }
-        return prevMessages;
+        return sortedMessages;
       });
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -239,6 +235,9 @@ const ClientMessagesScreen = ({ route }) => {
       console.log('Message sent successfully');
 
       await fetchMessages(clientid);
+      
+      // Fetch new suggested response immediately after sending
+      await fetchSuggestedResponse();
       
       setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
       
@@ -447,8 +446,16 @@ const ClientMessagesScreen = ({ route }) => {
             maxToRenderPerBatch={20}
             windowSize={21}
             removeClippedSubviews={false}
-            onContentSizeChange={scrollToBottom}
-            onLayout={scrollToBottom}
+            onContentSizeChange={() => {
+              requestAnimationFrame(() => {
+                scrollToBottom();
+              });
+            }}
+            onLayout={() => {
+              requestAnimationFrame(() => {
+                scrollToBottom();
+              });
+            }}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             style={styles.messageList}
@@ -456,6 +463,10 @@ const ClientMessagesScreen = ({ route }) => {
               styles.messageListContent,
               { paddingBottom: keyboardHeight + 16 }
             ]}
+            maintainVisibleContentPosition={{
+              minIndexForVisible: 0,
+              autoscrollToTopThreshold: 10
+            }}
           />
           {showScrollButton && (
             <TouchableOpacity style={styles.scrollButton} onPress={scrollToBottom}>
