@@ -232,9 +232,13 @@ const ChatDashboard = ({ navigation }) => {
           )}
         </View>
         {displayMessage && (
-          <Text style={[styles.messageText, message.hasSuggestedResponse && styles.suggestedResponseText]}>
+          <Text 
+            style={[styles.messageText, message.hasSuggestedResponse && styles.suggestedResponseText]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
             {message.hasSuggestedResponse ? "Suggested: " : ""}
-            {truncateMessage(displayMessage)}
+            {displayMessage}
           </Text>
         )}
       </TouchableOpacity>
