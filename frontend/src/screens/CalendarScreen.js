@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration, TextInput, RefreshControl } from 'react-native';
-import { getAppointmentsByDay, getClientById, createBlockedTime, deleteAppointment, rescheduleAppointment } from '../services/api';
+import { getAppointmentsByDay, getClientById, createBlockedTime, deleteAppointment, rescheduleAppointment, updateBlockedTime, deleteBlockedTime } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
@@ -9,6 +9,7 @@ import BlockTimeModal from '../components/BlockTimeModal';
 import ClientCardView from '../components/ClientCardView';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Calendar } from 'react-native-calendars';
+import EditBlockedTimeModal from '../components/EditBlockedTimeModal';
 
 const CalendarScreen = ({ navigation }) => {
   const route = useRoute();
@@ -353,10 +354,59 @@ const CalendarScreen = ({ navigation }) => {
     }
   };
 
+  const [selectedBlockedTime, setSelectedBlockedTime] = useState(null);
+
+  const handleBlockedTimePress = (appointment) => {
+    if (appointment.appointmenttype === 'BLOCKED_TIME') {
+      setSelectedBlockedTime({
+        id: appointment.id,
+        date: appointment.date,
+        startTime: appointment.startTime,
+        endTime: appointment.endTime,
+        reason: appointment.details || ''
+      });
+      setIsEditBlockTimeModalVisible(true);
+    } else {
+      setSelectedAppointment(appointment);
+      setCurrentAppointmentIndex(index);
+      setViewMode('card');
+    }
+  };
+
   const handleAppointmentPress = (appointment, index) => {
-    setSelectedAppointment(appointment);
-    setCurrentAppointmentIndex(index);
-    setViewMode('card');
+    handleBlockedTimePress(appointment);
+  };
+
+  const handleBlockTimeSubmit = async (blockedTimeData) => {
+    try {
+      if (selectedBlockedTime) {
+        // Update existing blocked time
+        await updateBlockedTime(selectedBlockedTime.id, blockedTimeData);
+        Alert.alert('Success', 'Blocked time updated successfully');
+      } else {
+        // Create new blocked time
+        await createBlockedTime(blockedTimeData);
+        Alert.alert('Success', 'Time blocked successfully');
+      }
+      setIsBlockTimeModalVisible(false);
+      fetchAppointments(); // Refresh the appointments list
+    } catch (error) {
+      Alert.alert('Error', 'Failed to block time');
+    }
+  };
+
+  const handleBlockTimeDelete = async () => {
+    try {
+      if (selectedBlockedTime) {
+        await deleteAppointment(selectedBlockedTime.id);
+        Alert.alert('Success', 'Blocked time deleted successfully');
+        setIsEditBlockTimeModalVisible(false);
+        fetchAppointments(); // Refresh the appointments list
+      }
+    } catch (error) {
+      console.error('Error deleting blocked time:', error);
+      Alert.alert('Error', 'Failed to delete blocked time');
+    }
   };
 
   // Add this function near the top of the component
@@ -534,17 +584,6 @@ const CalendarScreen = ({ navigation }) => {
     navigation.navigate('AddAppointment');
   };
 
-  const handleBlockTimeSubmit = async (blockedTimeData) => {
-    try {
-      await createBlockedTime(blockedTimeData);
-      Alert.alert('Success', 'Time blocked successfully');
-      setIsBlockTimeModalVisible(false);
-      fetchAppointments(); // Refresh the appointments list
-    } catch (error) {
-      Alert.alert('Error', 'Failed to block time');
-    }
-  };
-
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
 
   const handleCustomDateSelect = (day) => {
@@ -597,6 +636,9 @@ const CalendarScreen = ({ navigation }) => {
     await fetchAppointments();
     setRefreshing(false);
   }, [date]);
+
+  // Add a new state variable to track which modal to show
+  const [isEditBlockTimeModalVisible, setIsEditBlockTimeModalVisible] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -734,10 +776,20 @@ const CalendarScreen = ({ navigation }) => {
         </TouchableOpacity>
       </Modal>
 
+      {/* Modal for creating new blocked times */}
       <BlockTimeModal
         isVisible={isBlockTimeModalVisible}
         onClose={() => setIsBlockTimeModalVisible(false)}
         onSubmit={handleBlockTimeSubmit}
+      />
+
+      {/* Modal for editing existing blocked times */}
+      <EditBlockedTimeModal
+        isVisible={isEditBlockTimeModalVisible}
+        onClose={() => setIsEditBlockTimeModalVisible(false)}
+        onSubmit={handleBlockTimeSubmit}
+        onDelete={handleBlockTimeDelete}
+        blockedTime={selectedBlockedTime}
       />
     </View>
   );

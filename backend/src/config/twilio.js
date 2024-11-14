@@ -223,7 +223,7 @@ async function processDelayedResponse(phoneNumber, userId) {
         }
         else {
           // Save the suggested response
-          await saveSuggestedResponse(client.id, responseMessage);
+          await saveSuggestedResponse(client.id, responseMessage, userId);
           await sendNotificationToUser(
             client.firstname + ' ' + client.lastname,
             responseMessage,
@@ -287,7 +287,7 @@ async function sendNotificationToUser(title, body, clientId, clientName, clientM
 
     // If it's a suggested response, save it to the database
     if (isSuggestedResponse) {
-      await saveSuggestedResponse(clientId, body);
+      await saveSuggestedResponse(clientId, body, userId);
     }
   } catch (error) {
     console.error('Error sending push notifications:', error);

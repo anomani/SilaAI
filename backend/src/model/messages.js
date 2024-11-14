@@ -153,16 +153,16 @@ async function getAllMessagesGroupedByClient(user_id) {
   }
 }
 
-async function saveSuggestedResponse(clientId, response) {
+async function saveSuggestedResponse(clientId, response, user_id) {
   const db = dbUtils.getDB();
   const sql = `
-    INSERT INTO SuggestedResponses (clientId, response)
-    VALUES ($1, $2)
+    INSERT INTO SuggestedResponses (clientId, response, user_id)
+    VALUES ($1, $2, $3)
     ON CONFLICT (clientId) DO UPDATE
     SET response = EXCLUDED.response, updatedAt = CURRENT_TIMESTAMP
     RETURNING *
   `;
-  const values = [clientId, response];
+  const values = [clientId, response, user_id];
   try {
     const res = await db.query(sql, values);
     console.log(`Suggested response saved for clientId: ${clientId}`);
