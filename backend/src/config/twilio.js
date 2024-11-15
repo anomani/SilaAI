@@ -44,6 +44,7 @@ async function sendMessage(to, body, userId, initialMessage = true, manual = tru
   const customer = await getClientByPhoneNumber(to, userId);
   const localDate = new Date().toLocaleString();
   const adjustedDate = adjustDate(localDate);
+  console.log("adjustedDateOutgoing: ", adjustedDate)
   const user = await getUserById(userId);
   let clientId;
   if (customer.id != '') {
@@ -142,6 +143,7 @@ async function handleIncomingMessage(req, res) {
     try {
       // Set isAI to true for incoming messages
       console.log("user.id: ", user.id)
+      console.log("adjustedDateIncoming: ", adjustedDate)
       await saveMessage(Author, user.business_number, Body, adjustedDate, clientId, true, false, user.id);
     } catch (saveError) {
       if (saveError.code !== '23505') {

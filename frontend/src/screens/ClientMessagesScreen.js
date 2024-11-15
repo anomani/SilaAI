@@ -85,12 +85,14 @@ const ClientMessagesScreen = ({ route }) => {
       fetchClientDetails(clientid);
       setMessagesAsRead();
       
-      const pollInterval = setInterval(() => {
-        fetchMessages(clientid);
+      const pollInterval = setInterval(async () => {
+        await Promise.all([
+          fetchMessages(clientid),
+          fetchSuggestedResponse()
+        ]);
       }, 5000);
       setPolling(pollInterval);
 
-      // Scroll to bottom after a short delay to ensure rendering is complete
       setTimeout(scrollToBottom, 100);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -182,8 +184,17 @@ const ClientMessagesScreen = ({ route }) => {
   const fetchSuggestedResponse = async () => {
     try {
       const response = await getSuggestedResponse(clientid);
-      setCurrentSuggestedResponse(response || '');
-      setEditableSuggestedResponse(response || '');
+      if (response) {
+        setCurrentSuggestedResponse(response);
+        if (!newMessage.trim()) {
+          setEditableSuggestedResponse(response);
+        }
+      } else {
+        setCurrentSuggestedResponse('');
+        if (editableSuggestedResponse === currentSuggestedResponse) {
+          setEditableSuggestedResponse('');
+        }
+      }
     } catch (error) {
       console.error('Error fetching suggested response:', error);
     }
@@ -367,10 +378,8 @@ const ClientMessagesScreen = ({ route }) => {
   const handleInputChange = (text) => {
     setNewMessage(text);
     setDraftMessage(clientid, text);
-    if (text !== currentSuggestedResponse) {
-      setIsSuggestedResponseEdited(true);
-    }
     setEditableSuggestedResponse(text);
+    setIsSuggestedResponseEdited(text !== currentSuggestedResponse);
   };
 
   const handleContentSizeChange = (event) => {
