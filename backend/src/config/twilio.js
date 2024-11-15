@@ -45,6 +45,7 @@ async function main() {
   console.log("adjustedDate: ", adjustedDate)
 }
 main()
+
 async function sendMessage(to, body, userId, initialMessage = true, manual = true) {
   const to_formatted = formatPhoneNumber(to);
   const customer = await getClientByPhoneNumber(to, userId);
