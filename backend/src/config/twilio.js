@@ -38,7 +38,13 @@ function adjustDate(date) {
   adjustedDate.setHours(adjustedDate.getHours() - 4);
   return adjustedDate.toLocaleString();
 }
-
+async function main() {
+  const localDate = new Date().toLocaleString();
+  console.log("localDate: ", localDate)
+  const adjustedDate = adjustDate(localDate);
+  console.log("adjustedDate: ", adjustedDate)
+}
+main()
 async function sendMessage(to, body, userId, initialMessage = true, manual = true) {
   const to_formatted = formatPhoneNumber(to);
   const customer = await getClientByPhoneNumber(to, userId);
