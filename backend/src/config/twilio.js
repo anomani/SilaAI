@@ -35,7 +35,7 @@ function formatPhoneNumber(phoneNumber) {
 
 function adjustDate(date) {
   const adjustedDate = new Date(date);
-  adjustedDate.setHours(adjustedDate.getHours() - 4);
+  adjustedDate.setHours(adjustedDate.getHours() - 5);
   return adjustedDate.toLocaleString();
 }
 async function main() {
