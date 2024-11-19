@@ -18,7 +18,8 @@ const {
     getAppointmentTypeById,
     getAppointmentDetails,
     confirmAppointment,
-    getAppointmentTypesForUser
+    getAppointmentTypesForUser,
+    updateAppointmentTypeController
 } = require('../controllers/appointmentController');
 
 // Apply authenticateToken middleware to all routes that need it
@@ -45,6 +46,6 @@ router.get('/appointment-types/:appointmentTypeId', getAppointmentTypeById);
 router.get('/appointment-details/:appointmentTypeId', getAppointmentDetails);
 router.get('/appointment-types', getAppointmentTypesForUser);
 
-router.put('/types/:appointmentTypeId', authenticateToken, appointmentController.updateAppointmentTypeController);
+router.put('/types/:appointmentTypeId', authenticateToken, updateAppointmentTypeController);
 
 module.exports = router;
