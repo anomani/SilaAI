@@ -11,7 +11,8 @@ const { getClientByPhoneNumber, createClient, getClientById } = require('../mode
 const { 
   getAppointmentTypes, 
   getAddOns, 
-  getAppointmentTypeByIdFromDB
+  getAppointmentTypeByIdFromDB,
+  updateAppointmentType
 } = require('../model/appTypes');
 
 // Add this helper function at the top of the file or just before confirmAppointment
@@ -410,6 +411,24 @@ async function getAppointmentTypesForUser(req, res) {
   }
 }
 
+async function updateAppointmentTypeController(req, res) {
+  try {
+    const userId = req.user.id;
+    const { appointmentTypeId } = req.params;
+    const updates = req.body;
+
+    if (!updates.duration) {
+      return res.status(400).send('Missing required field: duration');
+    }
+
+    const updatedType = await updateAppointmentType(userId, parseInt(appointmentTypeId), updates);
+    res.status(200).json(updatedType);
+  } catch (error) {
+    console.error('Error updating appointment type:', error);
+    res.status(500).send(`Error updating appointment type: ${error.message}`);
+  }
+}
+
 module.exports = { 
   createNewAppointment, 
   getAppointmentsByDate, 
@@ -428,5 +447,6 @@ module.exports = {
   getAppointmentDetails,
   confirmAppointment,
   getAppointmentTypesForUser,
-  convertTo24HourFormat
+  convertTo24HourFormat,
+  updateAppointmentTypeController
 };

@@ -628,3 +628,27 @@ export const getCurrentUser = async () => {
     throw error;
   }
 };
+
+export const getAppointmentTypesList = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get('/appointment-types')
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching appointment types:', error);
+    throw error;
+  }
+};
+
+export const updateAppointmentType = async (appointmentTypeId, updates) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.put(`/appointment-types/${appointmentTypeId}`, updates)
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error updating appointment type:', error);
+    throw error;
+  }
+};

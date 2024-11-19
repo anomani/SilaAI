@@ -227,6 +227,28 @@ async function getAppointmentTypeAndAddOnNames(userId, appointmentTypeId, addOnI
   }
 }
 
+async function updateAppointmentType(userId, appointmentTypeId, updates) {
+  const db = dbUtils.getDB();
+  const sql = `
+    UPDATE AppointmentTypes 
+    SET duration = $1, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2 AND user_id = $3
+    RETURNING *
+  `;
+  const values = [updates.duration, appointmentTypeId, userId];
+  try {
+    const res = await db.query(sql, values);
+    if (res.rows.length === 0) {
+      throw new Error('Appointment type not found');
+    }
+    console.log(`Appointment type updated for user ${userId}`);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error updating appointment type:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   getAppointmentTypes,
   getAddOns,
@@ -237,5 +259,6 @@ module.exports = {
   getCompatibleAddOns,
   getAppointmentTypeByIdFromDB,
   getAppointmentTypeDetails,
-  getAppointmentTypeAndAddOnNames
+  getAppointmentTypeAndAddOnNames,
+  updateAppointmentType
 };

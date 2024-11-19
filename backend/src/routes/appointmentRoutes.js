@@ -45,4 +45,6 @@ router.get('/appointment-types/:appointmentTypeId', getAppointmentTypeById);
 router.get('/appointment-details/:appointmentTypeId', getAppointmentDetails);
 router.get('/appointment-types', getAppointmentTypesForUser);
 
+router.put('/types/:appointmentTypeId', authenticateToken, appointmentController.updateAppointmentTypeController);
+
 module.exports = router;
