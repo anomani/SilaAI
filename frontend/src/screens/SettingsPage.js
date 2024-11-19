@@ -4,6 +4,7 @@ import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser } from
 import { Ionicons } from '@expo/vector-icons'; // Make sure to import this
 import Footer from '../components/Footer'; // Import the Footer component
 import { useRoute } from '@react-navigation/native';
+import AppointmentTypeManager from '../components/AppointmentTypeManager';
 
 const SettingsPage = ({ navigation }) => { // Add navigation prop
   const [fillMyCalendar, setFillMyCalendar] = useState(false);
@@ -113,6 +114,11 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
                 ios_backgroundColor="#2c2c2e"
               />
             </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Service Management</Text>
+            <AppointmentTypeManager />
           </View>
         </ScrollView>
 
