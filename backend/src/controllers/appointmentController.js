@@ -414,6 +414,21 @@ async function getAppointmentTypesForUser(req, res) {
   }
 }
 
+async function getAppointmentTypesForUserNoAuth(req, res) {
+  try {
+    const userId = req.query.userId; // Get from query params
+
+    if (!userId) {
+      return res.status(400).send('Missing required field: userId');
+    }
+
+    const appointmentTypes = await getAppointmentTypes(userId);
+    res.status(200).json(appointmentTypes);
+  } catch (error) {
+    console.error('Error fetching appointment types:', error);
+    res.status(500).send(`Error fetching appointment types: ${error.message}`);
+  }
+}
 async function updateAppointmentTypeController(req, res) {
   try {
     const userId = req.user.id;
@@ -491,5 +506,6 @@ module.exports = {
   confirmAppointment,
   getAppointmentTypesForUser,
   convertTo24HourFormat,
-  updateAppointmentTypeController
+  updateAppointmentTypeController,
+  getAppointmentTypesForUserNoAuth
 };
