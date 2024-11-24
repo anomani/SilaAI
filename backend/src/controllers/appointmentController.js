@@ -396,7 +396,9 @@ async function confirmAppointment(req, res) {
 }
 
 async function getAppointmentTypesForUser(req, res) {
+  console.log(req)
   try {
+    console.log("getAppointmentTypesForUser")
     const userId = req.query.userId; // Get from query params
 
     if (!userId) {
@@ -404,6 +406,7 @@ async function getAppointmentTypesForUser(req, res) {
     }
 
     const appointmentTypes = await getAppointmentTypes(userId);
+    console.log("appointmentTypes", appointmentTypes)
     res.status(200).json(appointmentTypes);
   } catch (error) {
     console.error('Error fetching appointment types:', error);

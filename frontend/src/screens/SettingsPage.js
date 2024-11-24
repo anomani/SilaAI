@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Button, ScrollView, Linking } from 'react-native';
+import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Button, Linking } from 'react-native';
 import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser } from '../services/api';
 import { Ionicons } from '@expo/vector-icons'; // Make sure to import this
 import Footer from '../components/Footer'; // Import the Footer component
 import { useRoute } from '@react-navigation/native';
-import AppointmentTypeManager from '../components/AppointmentTypeManager';
 
 const SettingsPage = ({ navigation }) => { // Add navigation prop
   const [fillMyCalendar, setFillMyCalendar] = useState(false);
@@ -65,14 +64,14 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
   return (
     <View style={styles.container}>
       <View style={styles.contentContainer}>
-        <ScrollView style={styles.main}>
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.title}>Account</Text>
-          </View>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Account</Text>
+        </View>
 
+        <View style={styles.scrollContent}>
           {user && (
             <View style={styles.section}>
               <View style={styles.userInfo}>
@@ -118,9 +117,18 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Service Management</Text>
-            <AppointmentTypeManager />
+            <TouchableOpacity 
+              style={styles.navigationButton}
+              onPress={() => navigation.navigate('AppointmentTypes')}
+            >
+              <View style={styles.buttonContent}>
+                <Ionicons name="cut-outline" size={24} color="#81b0ff" />
+                <Text style={styles.buttonText}>Manage Appointment Types</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#81b0ff" />
+            </TouchableOpacity>
           </View>
-        </ScrollView>
+        </View>
 
         <TouchableOpacity 
           style={styles.logoutButton} 
@@ -142,9 +150,11 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    paddingHorizontal: 16,
   },
-  main: {
+  scrollContent: {
     flex: 1,
+    paddingVertical: 16,
   },
   header: {
     flexDirection: 'row',
@@ -165,6 +175,8 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
     padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#2c2c2e',
   },
   sectionTitle: {
     fontSize: 20,
@@ -214,21 +226,43 @@ const styles = StyleSheet.create({
     color: '#81b0ff',
     textDecorationLine: 'underline',
   },
+  navigationButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#3a3a3c',
+    borderRadius: 8,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#fff',
+  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2c2c2e',
     padding: 16,
+    marginBottom: 16,
+    backgroundColor: '#2c2c2e',
     borderRadius: 12,
-    marginHorizontal: 16,
-    marginBottom: 8,
   },
   logoutText: {
-    color: '#ff4444',
-    fontSize: 16,
-    fontWeight: '600',
     marginLeft: 8,
+    fontSize: 16,
+    color: '#ff4444',
+    fontWeight: '600',
+  },
+  error: {
+    color: '#ff4444',
+    textAlign: 'center',
+    marginTop: 20,
   },
 });
 

@@ -2,8 +2,8 @@ import axios from 'axios';
 import { getToken } from '../utils/auth';
 
 // Replace with your backend API URL
-// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -630,9 +630,10 @@ export const getCurrentUser = async () => {
 };
 
 export const getAppointmentTypesList = async () => {
+  console.log("getAppointmentTypesList")
   try {
     const response = await retryRequest(() => throttledRequest(() => 
-      api.get('/appointment-types')
+      api.get('/appointments/appointment-types')
     ));
     return response.data;
   } catch (error) {
@@ -644,7 +645,7 @@ export const getAppointmentTypesList = async () => {
 export const updateAppointmentType = async (appointmentTypeId, updates) => {
   try {
     const response = await retryRequest(() => throttledRequest(() => 
-      api.put(`/appointment-types/${appointmentTypeId}`, updates)
+      api.put(`/appointments/appointment-types/${appointmentTypeId}`, updates)
     ));
     return response.data;
   } catch (error) {
