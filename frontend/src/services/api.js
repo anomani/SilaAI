@@ -644,12 +644,67 @@ export const getAppointmentTypesList = async () => {
 
 export const updateAppointmentType = async (appointmentTypeId, updates) => {
   try {
+    console.log('Updating appointment type:', { appointmentTypeId, updates });
+    
+    // Ensure availability is properly formatted before sending
+    if (updates.availability) {
+      // Make sure each day's slots are in the correct format
+      Object.entries(updates.availability).forEach(([day, slots]) => {
+        if (!Array.isArray(slots)) {
+          throw new Error(`Invalid availability format for ${day}`);
+        }
+      });
+    }
+
     const response = await retryRequest(() => throttledRequest(() => 
       api.put(`/appointments/appointment-types/${appointmentTypeId}`, updates)
     ));
+    
+    console.log('Update response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error updating appointment type:', error);
+    throw error;
+  }
+};
+
+// Add a specific function for updating just availability
+export const updateAppointmentTypeAvailability = async (appointmentTypeId, availability) => {
+  try {
+    console.log('Updating availability:', { appointmentTypeId, availability });
+    
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.put(`/appointments/appointment-types/${appointmentTypeId}`, { availability })
+    ));
+    
+    console.log('Update availability response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating appointment type availability:', error);
+    throw error;
+  }
+};
+
+export const createAppointmentType = async (appointmentType) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.post('/appointments/appointment-types', appointmentType)
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error creating appointment type:', error);
+    throw error;
+  }
+};
+
+export const deleteAppointmentType = async (appointmentTypeId) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.delete(`/appointments/appointment-types/${appointmentTypeId}`)
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting appointment type:', error);
     throw error;
   }
 };

@@ -399,10 +399,10 @@ async function getAppointmentTypesForUser(req, res) {
   console.log(req)
   try {
     console.log("getAppointmentTypesForUser")
-    const userId = req.query.userId; // Get from query params
+    const userId = req.user.id; // Get from authenticated user
 
     if (!userId) {
-      return res.status(400).send('Missing required field: userId');
+      return res.status(400).send('User not authenticated');
     }
 
     const appointmentTypes = await getAppointmentTypes(userId);
@@ -419,12 +419,52 @@ async function updateAppointmentTypeController(req, res) {
     const userId = req.user.id;
     const { appointmentTypeId } = req.params;
     const updates = req.body;
+    console.log('Updating appointment type:', { appointmentTypeId, updates });
 
-    if (!updates.duration) {
-      return res.status(400).send('Missing required field: duration');
+    // Validate required fields based on what's being updated
+    if (updates.duration && (isNaN(updates.duration) || updates.duration <= 0)) {
+      return res.status(400).send('Invalid duration value');
+    }
+    if (updates.price && (isNaN(updates.price) || updates.price <= 0)) {
+      return res.status(400).send('Invalid price value');
+    }
+    if (updates.name && typeof updates.name !== 'string') {
+      return res.status(400).send('Invalid name value');
     }
 
+    // Handle availability updates - convert from array format to object format if needed
+    if (updates.availability) {
+      // If availability is an array of time slots per day, convert to expected format
+      const formattedAvailability = {};
+      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      
+      days.forEach(day => {
+        const daySlots = updates.availability[day];
+        if (Array.isArray(daySlots)) {
+          // Validate each time slot
+          daySlots.forEach(slot => {
+            if (typeof slot === 'string') {
+              const [start, end] = slot.split('-');
+              const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+              if (!timeRegex.test(start) || !timeRegex.test(end)) {
+                throw new Error(`Invalid time format for ${day}: ${slot}`);
+              }
+            }
+          });
+          formattedAvailability[day] = daySlots;
+        }
+      });
+
+      updates.availability = formattedAvailability;
+    }
+
+    console.log('Formatted updates:', updates);
+
     const updatedType = await updateAppointmentType(userId, parseInt(appointmentTypeId), updates);
+    if (!updatedType) {
+      return res.status(404).send('Appointment type not found');
+    }
+
     res.status(200).json(updatedType);
   } catch (error) {
     console.error('Error updating appointment type:', error);

@@ -229,19 +229,38 @@ async function getAppointmentTypeAndAddOnNames(userId, appointmentTypeId, addOnI
 
 async function updateAppointmentType(userId, appointmentTypeId, updates) {
   const db = dbUtils.getDB();
+  const validFields = ['name', 'duration', 'price', 'availability'];
+  const updateFields = Object.keys(updates).filter(key => validFields.includes(key));
+  
+  if (updateFields.length === 0) {
+    throw new Error('No valid fields to update');
+  }
+
+  const setClause = updateFields.map((field, index) => {
+    if (field === 'availability') {
+      return `${field} = $${index + 2}::jsonb`;
+    }
+    return `${field} = $${index + 2}`;
+  }).join(', ');
+
   const sql = `
     UPDATE AppointmentTypes 
-    SET duration = $1, updated_at = CURRENT_TIMESTAMP
-    WHERE id = $2 AND user_id = $3
+    SET ${setClause}
+    WHERE id = $1 AND user_id = $${updateFields.length + 2}
     RETURNING *
   `;
-  const values = [updates.duration, appointmentTypeId, userId];
+
+  const values = [
+    appointmentTypeId,
+    ...updateFields.map(field => updates[field]),
+    userId
+  ];
+
   try {
     const res = await db.query(sql, values);
     if (res.rows.length === 0) {
-      throw new Error('Appointment type not found');
+      throw new Error('Appointment type not found or unauthorized');
     }
-    console.log(`Appointment type updated for user ${userId}`);
     return res.rows[0];
   } catch (err) {
     console.error('Error updating appointment type:', err.message);

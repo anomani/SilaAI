@@ -23,6 +23,10 @@ const {
 } = require('../controllers/appointmentController');
 
 // Apply authenticateToken middleware to all routes that need it
+router.get('/appointments/appointment-types', authenticateToken, getAppointmentTypesForUser);
+router.put('/appointments/appointment-types/:appointmentTypeId', authenticateToken, updateAppointmentTypeController);
+
+
 router.get('/appointments/:date', authenticateToken, getAppointmentsByDate);
 router.post('/appointments', authenticateToken, createNewAppointment);
 router.get('/appointments/client/:clientId', authenticateToken, getAppointmentsByClientId);
@@ -34,9 +38,9 @@ router.put('/appointments/:appointmentId/payment', authenticateToken, updateAppo
 router.put('/appointments/:appointmentId/reschedule', authenticateToken, rescheduleAppointmentController);
 router.get('/metrics', authenticateToken, getAppointmentMetricsController);
 router.put('/appointments/:appointmentId', authenticateToken, updateAppointmentDetailsController);
-router.get('/appointments/appointment-types', authenticateToken, getAppointmentTypesForUser);
-router.put('/types/:appointmentTypeId', authenticateToken, updateAppointmentTypeController);
 
+
+//THESE DO NOT REQUIRE AUTHENTICATION
 router.post('/appointments/confirm', confirmAppointment);
 
 // Update the /availabilities route to use appointmentTypeId
