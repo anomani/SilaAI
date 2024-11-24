@@ -50,6 +50,7 @@ router.get('/availabilities', getAvailabilities);
 router.get('/compatible-addons', getCompatibleAddOnsController);
 router.get('/appointment-types/:appointmentTypeId', getAppointmentTypeById);
 router.get('/appointment-details/:appointmentTypeId', getAppointmentDetails);
+router.get('/appointment-types', getAppointmentTypesForUser);
 
 
 module.exports = router;
