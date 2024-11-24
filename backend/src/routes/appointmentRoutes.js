@@ -53,4 +53,5 @@ router.get('/appointment-details/:appointmentTypeId', getAppointmentDetails);
 router.get('/appointment-types', getAppointmentTypesForUser);
 
 
+
 module.exports = router;
