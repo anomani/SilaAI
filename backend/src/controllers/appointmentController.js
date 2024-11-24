@@ -287,7 +287,7 @@ async function getCompatibleAddOnsController(req, res) {
 }
 
 async function getAppointmentTypeById(req, res) {
-  console.log("getAppointmentTypeById", req)
+  console.log("getAppointmentTypeById")
   try {
     const userId = req.query.userId; // Get from query params
     const { appointmentTypeId } = req.params;
@@ -397,7 +397,6 @@ async function confirmAppointment(req, res) {
 }
 
 async function getAppointmentTypesForUser(req, res) {
-  console.log(req)
   try {
     console.log("getAppointmentTypesForUser")
     const userId = req.user.id; // Get from authenticated user
