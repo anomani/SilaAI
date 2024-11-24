@@ -34,6 +34,8 @@ router.put('/appointments/:appointmentId/payment', authenticateToken, updateAppo
 router.put('/appointments/:appointmentId/reschedule', authenticateToken, rescheduleAppointmentController);
 router.get('/metrics', authenticateToken, getAppointmentMetricsController);
 router.put('/appointments/:appointmentId', authenticateToken, updateAppointmentDetailsController);
+router.get('/appointments/appointment-types', authenticateToken, getAppointmentTypesForUser);
+router.put('/types/:appointmentTypeId', authenticateToken, updateAppointmentTypeController);
 
 router.post('/appointments/confirm', confirmAppointment);
 
@@ -44,8 +46,6 @@ router.get('/availabilities', getAvailabilities);
 router.get('/compatible-addons', getCompatibleAddOnsController);
 router.get('/appointment-types/:appointmentTypeId', getAppointmentTypeById);
 router.get('/appointment-details/:appointmentTypeId', getAppointmentDetails);
-router.get('/appointment-types', getAppointmentTypesForUser);
 
-router.put('/types/:appointmentTypeId', authenticateToken, updateAppointmentTypeController);
 
 module.exports = router;
