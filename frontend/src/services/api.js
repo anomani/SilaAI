@@ -673,8 +673,13 @@ export const updateAppointmentTypeAvailability = async (appointmentTypeId, avail
   try {
     console.log('Updating availability:', { appointmentTypeId, availability });
     
+    // Create the update object with only the availability field
+    const updateData = {
+      availability: availability
+    };
+
     const response = await retryRequest(() => throttledRequest(() => 
-      api.put(`/appointments/appointment-types/${appointmentTypeId}`, { availability })
+      api.put(`/appointments/appointment-types/${appointmentTypeId}`, updateData)
     ));
     
     console.log('Update availability response:', response.data);
