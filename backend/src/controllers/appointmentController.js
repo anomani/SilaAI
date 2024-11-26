@@ -434,52 +434,44 @@ async function updateAppointmentTypeController(req, res) {
     const userId = req.user.id;
     const { appointmentTypeId } = req.params;
     const updates = req.body;
-    console.log('Updating appointment type:', { appointmentTypeId, updates });
+    console.log('Received updates:', updates);
 
-    // Validate required fields based on what's being updated
-    if (updates.duration && (isNaN(updates.duration) || updates.duration <= 0)) {
-      return res.status(400).send('Invalid duration value');
-    }
-    if (updates.price && (isNaN(updates.price) || updates.price <= 0)) {
-      return res.status(400).send('Invalid price value');
-    }
-    if (updates.name && typeof updates.name !== 'string') {
-      return res.status(400).send('Invalid name value');
-    }
-
-    // Handle availability updates - convert from array format to object format if needed
+    // If we're updating availability, validate the format
     if (updates.availability) {
-      // If availability is an array of time slots per day, convert to expected format
-      const formattedAvailability = {};
-      const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+      const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       
-      days.forEach(day => {
-        const daySlots = updates.availability[day];
-        if (Array.isArray(daySlots)) {
-          // Validate each time slot
-          daySlots.forEach(slot => {
-            if (typeof slot === 'string') {
-              const [start, end] = slot.split('-');
-              const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-              if (!timeRegex.test(start) || !timeRegex.test(end)) {
-                throw new Error(`Invalid time format for ${day}: ${slot}`);
-              }
-            }
-          });
-          formattedAvailability[day] = daySlots;
+      // Validate the availability format
+      Object.entries(updates.availability).forEach(([day, slots]) => {
+        if (!validDays.includes(day)) {
+          throw new Error(`Invalid day: ${day}`);
         }
+        if (!Array.isArray(slots)) {
+          throw new Error(`Invalid slots format for ${day}`);
+        }
+        
+        // Validate time slots
+        slots.forEach(slot => {
+          const [start, end] = slot.split('-');
+          const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+          if (!timeRegex.test(start) || !timeRegex.test(end)) {
+            throw new Error(`Invalid time format in slot: ${slot}`);
+          }
+        });
       });
-
-      updates.availability = formattedAvailability;
     }
 
-    console.log('Formatted updates:', updates);
+    // Update the appointment type
+    const updatedType = await updateAppointmentType(
+      userId, 
+      parseInt(appointmentTypeId), 
+      updates
+    );
 
-    const updatedType = await updateAppointmentType(userId, parseInt(appointmentTypeId), updates);
     if (!updatedType) {
       return res.status(404).send('Appointment type not found');
     }
 
+    console.log('Updated appointment type:', updatedType);
     res.status(200).json(updatedType);
   } catch (error) {
     console.error('Error updating appointment type:', error);
