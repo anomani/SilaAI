@@ -3,6 +3,7 @@ require('dotenv').config({ path: '../../.env' });
 const { handleUserInput, createThread } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus, saveSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
 const { createClient, getClientByPhoneNumber, getClientAutoRespond } = require('../model/clients');
+const { updateAIResponseStatus } = require('../model/messageStatus');
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
@@ -206,13 +207,22 @@ async function processDelayedResponse(phoneNumber, userId) {
   try {
     pendingMessages.delete(phoneNumber);
     if (messages && messages.length > 0) {
-      const responseMessage = await handleUserInput(messages, phoneNumber, userId);
-      console.log(responseMessage)
-      
       const client = await getClientByPhoneNumber(phoneNumber, userId);
+      
+      // Set status to pending before AI processing
+      if (client && client.id) {
+        await updateAIResponseStatus(client.id, 'pending');
+      }
+
+      const responseMessage = await handleUserInput(messages, phoneNumber, userId);
+      console.log(responseMessage);
+      
       if (client.id != '') {
         await toggleLastMessageReadStatus(client.id);
         if (responseMessage === "user" || responseMessage === "User") {
+          // Update status to completed (no AI response needed)
+          await updateAIResponseStatus(client.id, 'completed');
+          
           await sendNotificationToUser(
             'New Message from ' + client.firstname,
             `${client.firstname} ${client.lastname}: "${lastMessage.substring(0, 50)}${lastMessage.length > 50 ? '...' : ''}"`,
@@ -235,19 +245,24 @@ async function processDelayedResponse(phoneNumber, userId) {
           //   true,
           //   userId
           // );
+          await updateAIResponseStatus(client.id, 'completed');
         }
-      } 
-      
-        else {
-          console.log("phoneNumber: ", phoneNumber)
-          console.log("responseMessage: ", responseMessage)
-          console.log("userId: ", userId)
-          await sendMessage(phoneNumber, responseMessage, userId, false, false);
-        }
+      } else {
+        console.log("phoneNumber: ", phoneNumber);
+        console.log("responseMessage: ", responseMessage);
+        console.log("userId: ", userId);
+        await sendMessage(phoneNumber, responseMessage, userId, false, false);
       }
+    }
   } catch (error) {
     console.error('Error processing delayed response:', error);
     const client = await getClientByPhoneNumber(phoneNumber, userId);
+    
+    // Set status to error if anything fails
+    if (client && client.id) {
+      await updateAIResponseStatus(client.id, 'error');
+    }
+    
     await sendNotificationToUser(
       'New Client Message',
       `${client.firstname} ${client.lastname}: ${lastMessage}`,

@@ -1,6 +1,7 @@
-const db = require('../config/db');
+const dbUtils = require('./dbUtils');
 
 async function updateAIResponseStatus(clientId, status) {
+  const db = dbUtils.getDB();
   const query = `
     INSERT INTO ai_response_status (client_id, status, created_at)
     VALUES ($1, $2, NOW())
@@ -11,14 +12,18 @@ async function updateAIResponseStatus(clientId, status) {
   `;
   
   try {
+    await db.query('BEGIN');
     await db.query(query, [clientId, status]);
+    await db.query('COMMIT');
   } catch (error) {
+    await db.query('ROLLBACK');
     console.error('Error updating AI response status:', error);
     throw error;
   }
 }
 
 async function getAIResponseStatus(clientId) {
+  const db = dbUtils.getDB();
   const query = `
     SELECT status, created_at, updated_at
     FROM ai_response_status 
@@ -33,8 +38,6 @@ async function getAIResponseStatus(clientId) {
     throw error;
   }
 }
-
-
 
 module.exports = {
   updateAIResponseStatus,
