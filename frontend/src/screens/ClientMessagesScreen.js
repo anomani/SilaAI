@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond, getSuggestedResponse, clearSuggestedResponse } from '../services/api';
+import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond, getSuggestedResponse, clearSuggestedResponse, getAIResponseStatus } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
@@ -50,6 +50,8 @@ const ClientMessagesScreen = ({ route }) => {
   const [editableSuggestedResponse, setEditableSuggestedResponse] = useState('');
   const [isSuggestedResponseEdited, setIsSuggestedResponseEdited] = useState(false);
   const [isWaitingForSuggestion, setIsWaitingForSuggestion] = useState(false);
+  const [aiStatus, setAiStatus] = useState(null);
+  const aiStatusPolling = useRef(null);
 
   useEffect(() => {
     if (isFocused) {
@@ -59,6 +61,7 @@ const ClientMessagesScreen = ({ route }) => {
         
         fetchMessagesAndSetup();
         fetchSuggestedResponse();
+        startPollingAIStatus();
       };
       
       initializeScreen();
@@ -67,6 +70,7 @@ const ClientMessagesScreen = ({ route }) => {
         clearInterval(polling);
         setPolling(null);
       }
+      stopPollingAIStatus();
       setDraftMessage(clientid, newMessage);
     }
 
@@ -74,6 +78,7 @@ const ClientMessagesScreen = ({ route }) => {
       if (polling) {
         clearInterval(polling);
       }
+      stopPollingAIStatus();
       setDraftMessage(clientid, newMessage);
     };
   }, [clientid, isFocused, initialSuggestedResponse, clientMessage]);
@@ -416,7 +421,8 @@ const ClientMessagesScreen = ({ route }) => {
         return <Ionicons name="alert-circle" size={14} color="#ff4444" />;
       }
       
-      if (message.sending) {
+      // Show AI status indicator for the latest message
+      if (isLatestMessage(message) && aiStatus === 'pending') {
         return <ActivityIndicator size="small" color="#9da6b8" />;
       }
       
@@ -427,6 +433,11 @@ const ClientMessagesScreen = ({ route }) => {
       return <Ionicons name="checkmark" size={14} color="#9da6b8" />;
     };
 
+    const isLatestMessage = (message) => {
+      const latestMessage = messages[messages.length - 1];
+      return latestMessage && message.date === latestMessage.date;
+    };
+
     return (
       <View 
         key={messageGroup.firstMessageDate}
@@ -434,7 +445,12 @@ const ClientMessagesScreen = ({ route }) => {
       >
         {!isAssistant && <Image source={avatar} style={styles.avatar} />}
         <View style={styles.messageContent}>
-          <Text style={styles.messageSender}>{senderName}</Text>
+          <Text style={styles.messageSender}>
+            {senderName}
+            {isAssistant && aiStatus === 'pending' && (
+              <Text style={styles.typingIndicator}> typing...</Text>
+            )}
+          </Text>
           {messageGroup.messages.map((message, index) => (
             <View style={styles.messageWrapper} key={message.id || `${message.date}-${message.fromtext}-${Math.random()}`}>
               {isAssistant && <View style={styles.deliveryIconContainer}>
@@ -467,7 +483,7 @@ const ClientMessagesScreen = ({ route }) => {
         {isAssistant && <Image source={avatar} style={styles.avatar} />}
       </View>
     );
-  }, [clientid, clientName]);
+  }, [messages, aiStatus]);
 
   const renderItem = useCallback(({ item }) => (
     <View key={item.date}>
@@ -529,6 +545,27 @@ const ClientMessagesScreen = ({ route }) => {
       console.error('Error clearing suggested response:', error);
     }
   }, [clientid]);
+
+  const startPollingAIStatus = useCallback(() => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const status = await getAIResponseStatus(clientid);
+        setAiStatus(status?.status || null);
+      } catch (error) {
+        console.error('Error polling AI status:', error);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    aiStatusPolling.current = pollInterval;
+
+    return () => clearInterval(pollInterval);
+  }, [clientid]);
+
+  const stopPollingAIStatus = useCallback(() => {
+    if (aiStatusPolling.current) {
+      clearInterval(aiStatusPolling.current);
+    }
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -855,6 +892,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 4,
     gap: 8,
+  },
+  typingIndicator: {
+    fontSize: 12,
+    color: '#9da6b8',
+    fontStyle: 'italic'
   },
 });
 

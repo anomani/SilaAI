@@ -713,3 +713,13 @@ export const deleteAppointmentType = async (appointmentTypeId) => {
     throw error;
   }
 };
+
+export const getAIResponseStatus = async (clientId) => {
+  try {
+    const response = await axios.get(`${API_URL}/messages/ai-status/${clientId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting AI response status:', error);
+    return null;
+  }
+};
