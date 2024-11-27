@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond, getSuggestedResponse, clearSuggestedResponse } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -49,11 +49,19 @@ const ClientMessagesScreen = ({ route }) => {
   const [currentSuggestedResponse, setCurrentSuggestedResponse] = useState(initialSuggestedResponse || '');
   const [editableSuggestedResponse, setEditableSuggestedResponse] = useState('');
   const [isSuggestedResponseEdited, setIsSuggestedResponseEdited] = useState(false);
+  const [isWaitingForSuggestion, setIsWaitingForSuggestion] = useState(false);
 
   useEffect(() => {
     if (isFocused) {
-      fetchMessagesAndSetup();
-      fetchSuggestedResponse();
+      const initializeScreen = async () => {
+        const data = await getMessagesByClientId(clientid);
+        const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        fetchMessagesAndSetup();
+        fetchSuggestedResponse();
+      };
+      
+      initializeScreen();
     } else {
       if (polling) {
         clearInterval(polling);
@@ -103,9 +111,20 @@ const ClientMessagesScreen = ({ route }) => {
     try {
       const data = await getMessagesByClientId(clientid);
       const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
       setMessages(prevMessages => {
         const hasNewMessages = JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages);
         if (hasNewMessages) {
+          const newestMessage = sortedMessages[sortedMessages.length - 1];
+          if (newestMessage && newestMessage.fromtext !== '+18446480598') {
+            setIsWaitingForSuggestion(true);
+          }
+          setLocalMessages(prev => prev.filter(localMsg => 
+            !sortedMessages.some(realMsg => 
+              realMsg.body === localMsg.body && 
+              realMsg.fromtext === localMsg.fromtext
+            )
+          ));
           requestAnimationFrame(() => {
             scrollToBottom();
           });
@@ -115,7 +134,7 @@ const ClientMessagesScreen = ({ route }) => {
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
-  }, [scrollToBottom]);
+  }, [scrollToBottom, currentSuggestedResponse]);
 
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
@@ -189,6 +208,7 @@ const ClientMessagesScreen = ({ route }) => {
         if (!newMessage.trim()) {
           setEditableSuggestedResponse(response);
         }
+        setIsWaitingForSuggestion(false);
       } else {
         setCurrentSuggestedResponse('');
         if (editableSuggestedResponse === currentSuggestedResponse) {
@@ -197,6 +217,7 @@ const ClientMessagesScreen = ({ route }) => {
       }
     } catch (error) {
       console.error('Error fetching suggested response:', error);
+      setIsWaitingForSuggestion(false);
     }
   };
 
@@ -220,8 +241,9 @@ const ClientMessagesScreen = ({ route }) => {
       const recipient = clientDetails.phonenumber;
       console.log('Recipient:', recipient);
 
-      const adjustedDate = new Date();
-      const adjustedDateString = adjustedDate.toLocaleString();
+      const now = new Date();
+      const adjustedDateString = `${(now.getMonth() + 1)}/${now.getDate()}/${now.getFullYear()}, ${now.toLocaleTimeString('en-US')}`;
+      console.log('Temp message date:', adjustedDateString);
       
       const isAI = messageToSend === currentSuggestedResponse;
 
@@ -232,12 +254,16 @@ const ClientMessagesScreen = ({ route }) => {
         totext: recipient,
         date: adjustedDateString,
         is_ai: isAI,
+        sending: true,
       };
+
+      console.log('Created temp message:', tempMessage);
 
       setLocalMessages(prev => [...prev, tempMessage]);
       setNewMessage('');
       setEditableSuggestedResponse('');
       setCurrentSuggestedResponse('');
+      setIsWaitingForSuggestion(false);
       scrollToBottom();
 
       console.log('Sending message via API'+ messageToSend);
@@ -245,18 +271,17 @@ const ClientMessagesScreen = ({ route }) => {
       
       console.log('Message sent successfully');
 
+      await new Promise(resolve => setTimeout(resolve, 500));
       await fetchMessages(clientid);
-      
-      // Fetch new suggested response immediately after sending
       await fetchSuggestedResponse();
       
       setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
       
-      // Clear the suggested response after sending
       await clearSuggestedResponse(clientid);
     } catch (error) {
       console.error('Error sending message:', error);
       setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
+      setIsWaitingForSuggestion(false);
     }
   };
 
@@ -278,25 +303,40 @@ const ClientMessagesScreen = ({ route }) => {
   };
 
   const formatTimestamp = (dateString) => {
-    const [datePart, timePart] = dateString.split(', ');
-    const [month, day, year] = datePart.split('/');
-    const [time, period] = timePart.split(' ');
-    const [hours, minutes] = time.split(':');
-
-    let adjustedHours = parseInt(hours, 10) ;
-    let adjustedPeriod = period;
-
-    if (adjustedHours < 0) {
-      adjustedHours += 12;
-      adjustedPeriod = period === 'AM' ? 'PM' : 'AM';
-    } else if (adjustedHours === 0) {
-      adjustedHours = 12;
-    } else if (adjustedHours > 12) {
-      adjustedHours -= 12;
-      adjustedPeriod = 'PM';
+    if (!dateString) {
+      console.log('Undefined dateString received:', dateString);
+      return '';
     }
 
-    return `${adjustedHours}:${minutes} ${adjustedPeriod}`;
+    try {
+      const [datePart, timePart] = dateString.split(', ');
+      if (!timePart) {
+        console.log('Invalid date format:', dateString);
+        return '';
+      }
+
+      // Handle time format "HH:MM:SS AM/PM"
+      const timeMatch = timePart.match(/(\d+):(\d+)(?::\d+)?\s*(AM|PM)?/i);
+      if (!timeMatch) {
+        console.log('Could not parse time:', timePart);
+        return '';
+      }
+
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = timeMatch[2];
+      let period = timeMatch[3] || '';
+
+      // Convert 24-hour format to 12-hour if needed
+      if (!period) {
+        period = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+      }
+
+      return `${hours}:${minutes} ${period}`;
+    } catch (error) {
+      console.error('Error formatting timestamp:', error, 'for dateString:', dateString);
+      return '';
+    }
   };
 
   const formatDate = (dateString) => {
@@ -306,16 +346,50 @@ const ClientMessagesScreen = ({ route }) => {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
   };
 
+  const isWithinFiveMinutes = (date1, date2) => {
+    const [d1Time, d1Period] = date1.split(', ')[1].split(' ');
+    const [d2Time, d2Period] = date2.split(', ')[1].split(' ');
+    
+    const getMinutes = (time, period) => {
+      let [hours, minutes] = time.split(':').map(Number);
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return hours * 60 + minutes;
+    };
+
+    const minutes1 = getMinutes(d1Time, d1Period);
+    const minutes2 = getMinutes(d2Time, d2Period);
+
+    const diffInMinutes = Math.abs(minutes1 - minutes2);
+    return diffInMinutes <= 5;
+  };
+
   const groupMessagesByDate = (messages) => {
     const grouped = {};
-    messages.forEach(message => {
+    messages.forEach((message, index) => {
       const date = message.date.split(', ')[0];
       if (!grouped[date]) {
         grouped[date] = [];
       }
-      grouped[date].push(message);
+
+      const prevMessage = messages[index - 1];
+      const shouldGroup = prevMessage && 
+        prevMessage.fromtext === message.fromtext && 
+        isWithinFiveMinutes(prevMessage.date, message.date);
+
+      if (shouldGroup) {
+        const lastGroup = grouped[date][grouped[date].length - 1];
+        lastGroup.messages.push(message);
+      } else {
+        grouped[date].push({
+          sender: message.fromtext,
+          messages: [message],
+          firstMessageDate: message.date
+        });
+      }
     });
-    return Object.entries(grouped).map(([date, messages]) => ({ date, messages }));
+
+    return Object.entries(grouped).map(([date, groups]) => ({ date, groups }));
   };
 
   const renderDateSeparator = (date) => (
@@ -326,42 +400,69 @@ const ClientMessagesScreen = ({ route }) => {
     </View>
   );
 
-  const renderMessage = useCallback((message) => {
-    const isAssistant = message.fromtext === '+18446480598';
+  const renderMessage = useCallback((messageGroup) => {
+    const isAssistant = messageGroup.sender === '+18446480598';
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
     let senderName = isAssistant ? 'Assistant' : clientName;
     
-    // If senderName is empty for a client message, use the client's phone number
     if (!isAssistant && senderName === ' ') {
-      senderName = message.fromtext;
+      senderName = messageGroup.sender;
     }
-    
-    const isAI = message.is_ai;
-    const messageKey = message.id || `${message.date}-${message.fromtext}-${Math.random()}`;
+
+    const getDeliveryIcon = (message) => {
+      if (!isAssistant) return null;
+      
+      if (message.error) {
+        return <Ionicons name="alert-circle" size={14} color="#ff4444" />;
+      }
+      
+      if (message.sending) {
+        return <ActivityIndicator size="small" color="#9da6b8" />;
+      }
+      
+      if (message.delivered) {
+        return <Ionicons name="checkmark-done" size={14} color="#9da6b8" />;
+      }
+      
+      return <Ionicons name="checkmark" size={14} color="#9da6b8" />;
+    };
 
     return (
       <View 
-        key={messageKey}
+        key={messageGroup.firstMessageDate}
         style={[styles.messageContainer, isAssistant ? styles.assistantMessage : styles.clientMessage]}
       >
         {!isAssistant && <Image source={avatar} style={styles.avatar} />}
         <View style={styles.messageContent}>
           <Text style={styles.messageSender}>{senderName}</Text>
-          <View style={[styles.messageBubble, isAssistant ? styles.assistantBubble : styles.clientBubble]}>
-            <Text style={[styles.messageText, isAssistant ? styles.assistantText : styles.clientText]}>
-              {message.body}
-            </Text>
-            <View style={styles.timestampContainer}>
-              <Text style={styles.timestamp}>
-                {formatTimestamp(message.date)}
-              </Text>
-              {isAssistant && (
-                <Text style={styles.aiIndicator}>
-                  {isAI ? 'AI' : 'Manual'}
+          {messageGroup.messages.map((message, index) => (
+            <View style={styles.messageWrapper} key={message.id || `${message.date}-${message.fromtext}-${Math.random()}`}>
+              {isAssistant && <View style={styles.deliveryIconContainer}>
+                {getDeliveryIcon(message)}
+              </View>}
+              <View 
+                style={[
+                  styles.messageBubble, 
+                  isAssistant ? styles.assistantBubble : styles.clientBubble,
+                  index > 0 && styles.groupedMessageBubble
+                ]}
+              >
+                <Text style={[styles.messageText, isAssistant ? styles.assistantText : styles.clientText]}>
+                  {message.body}
                 </Text>
-              )}
+                <View style={styles.timestampContainer}>
+                  <Text style={styles.timestamp}>
+                    {formatTimestamp(message.date)}
+                  </Text>
+                  {isAssistant && (
+                    <Text style={styles.aiIndicator}>
+                      {message.is_ai ? 'AI' : 'Manual'}
+                    </Text>
+                  )}
+                </View>
+              </View>
             </View>
-          </View>
+          ))}
         </View>
         {isAssistant && <Image source={avatar} style={styles.avatar} />}
       </View>
@@ -371,7 +472,7 @@ const ClientMessagesScreen = ({ route }) => {
   const renderItem = useCallback(({ item }) => (
     <View key={item.date}>
       {renderDateSeparator(item.date)}
-      {item.messages.map(message => renderMessage(message))}
+      {item.groups.map(group => renderMessage(group))}
     </View>
   ), [renderMessage]);
 
@@ -496,7 +597,7 @@ const ClientMessagesScreen = ({ route }) => {
               <TextInput
                 style={[styles.input, { height: Math.min(150, Math.max(60, inputHeight)) }]}
                 scrollEnabled={true}
-                placeholder="Write a message"
+                placeholder={isWaitingForSuggestion ? "AI is typing..." : "Write a message"}
                 placeholderTextColor="#9da6b8"
                 value={newMessage || editableSuggestedResponse}
                 onChangeText={handleInputChange}
@@ -504,7 +605,15 @@ const ClientMessagesScreen = ({ route }) => {
                 numberOfLines={4}
                 onContentSizeChange={handleContentSizeChange}
                 textAlignVertical="top"
+                editable={true}
               />
+              {isWaitingForSuggestion && !currentSuggestedResponse && (
+                <ActivityIndicator 
+                  style={styles.loadingIndicator} 
+                  color="#195de6" 
+                  size="small"
+                />
+              )}
               <TouchableOpacity 
                 style={styles.sendButton} 
                 onPress={() => {
@@ -617,9 +726,15 @@ const styles = StyleSheet.create({
   },
   timestampContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     marginTop: 4,
+    gap: 4,
+  },
+  timestampAndReceipt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   timestamp: {
     fontSize: 10,
@@ -715,6 +830,31 @@ const styles = StyleSheet.create({
     color: '#9da6b8',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  loadingIndicator: {
+    position: 'absolute',
+    right: 70,
+    bottom: 24,
+  },
+  groupedMessageBubble: {
+    marginTop: 4,
+  },
+  messageWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  deliveryIconContainer: {
+    width: 20,
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  timestampContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 8,
   },
 });
 
