@@ -49,7 +49,6 @@ const ClientMessagesScreen = ({ route }) => {
   const [currentSuggestedResponse, setCurrentSuggestedResponse] = useState(initialSuggestedResponse || '');
   const [editableSuggestedResponse, setEditableSuggestedResponse] = useState('');
   const [isSuggestedResponseEdited, setIsSuggestedResponseEdited] = useState(false);
-  const [isWaitingForSuggestion, setIsWaitingForSuggestion] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);
   const aiStatusPolling = useRef(null);
 
@@ -122,7 +121,7 @@ const ClientMessagesScreen = ({ route }) => {
         if (hasNewMessages) {
           const newestMessage = sortedMessages[sortedMessages.length - 1];
           if (newestMessage && newestMessage.fromtext !== '+18446480598') {
-            setIsWaitingForSuggestion(true);
+            startPollingAIStatus();
           }
           setLocalMessages(prev => prev.filter(localMsg => 
             !sortedMessages.some(realMsg => 
@@ -139,7 +138,7 @@ const ClientMessagesScreen = ({ route }) => {
     } catch (error) {
       console.error('Error fetching messages:', error);
     }
-  }, [scrollToBottom, currentSuggestedResponse]);
+  }, [scrollToBottom]);
 
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
@@ -213,7 +212,6 @@ const ClientMessagesScreen = ({ route }) => {
         if (!newMessage.trim()) {
           setEditableSuggestedResponse(response);
         }
-        setIsWaitingForSuggestion(false);
       } else {
         setCurrentSuggestedResponse('');
         if (editableSuggestedResponse === currentSuggestedResponse) {
@@ -222,7 +220,6 @@ const ClientMessagesScreen = ({ route }) => {
       }
     } catch (error) {
       console.error('Error fetching suggested response:', error);
-      setIsWaitingForSuggestion(false);
     }
   };
 
@@ -268,7 +265,6 @@ const ClientMessagesScreen = ({ route }) => {
       setNewMessage('');
       setEditableSuggestedResponse('');
       setCurrentSuggestedResponse('');
-      setIsWaitingForSuggestion(false);
       scrollToBottom();
 
       console.log('Sending message via API'+ messageToSend);
@@ -286,7 +282,6 @@ const ClientMessagesScreen = ({ route }) => {
     } catch (error) {
       console.error('Error sending message:', error);
       setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
-      setIsWaitingForSuggestion(false);
     }
   };
 
@@ -567,6 +562,13 @@ const ClientMessagesScreen = ({ route }) => {
     }
   }, []);
 
+  const renderInputPlaceholder = () => {
+    if (aiStatus === 'pending') {
+      return "AI is typing...";
+    }
+    return "Write a message";
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Header 
@@ -634,7 +636,7 @@ const ClientMessagesScreen = ({ route }) => {
               <TextInput
                 style={[styles.input, { height: Math.min(150, Math.max(60, inputHeight)) }]}
                 scrollEnabled={true}
-                placeholder={isWaitingForSuggestion ? "AI is typing..." : "Write a message"}
+                placeholder={renderInputPlaceholder()}
                 placeholderTextColor="#9da6b8"
                 value={newMessage || editableSuggestedResponse}
                 onChangeText={handleInputChange}
@@ -644,7 +646,7 @@ const ClientMessagesScreen = ({ route }) => {
                 textAlignVertical="top"
                 editable={true}
               />
-              {isWaitingForSuggestion && !currentSuggestedResponse && (
+              {aiStatus === 'pending' && !currentSuggestedResponse && (
                 <ActivityIndicator 
                   style={styles.loadingIndicator} 
                   color="#195de6" 

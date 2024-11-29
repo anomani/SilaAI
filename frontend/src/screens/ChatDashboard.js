@@ -182,20 +182,14 @@ const ChatDashboard = ({ navigation }) => {
       }
     }
     
-    const truncateMessage = (text, maxLength = 50) => {
-      if (!text) return '';
-      if (text.length <= maxLength) return text;
-      return text.slice(0, maxLength) + '...';
-    };
-
-    let displayMessage, displayDate;
+    let displayMessage, displayDate, clientMessage;
 
     if (message.hasSuggestedResponse) {
-      // Prioritize showing the suggested response
+      // Show both the client's message and the suggested response
       displayMessage = message.suggestedresponse;
-      displayDate = null; // Suggested responses don't have a date
+      clientMessage = message.body; // This will be the client's last message
+      displayDate = null;
     } else {
-      // If there's no suggested response, show the last message
       displayMessage = message.body;
       displayDate = message.date ? formatTimestamp(message.date) : null;
     }
@@ -231,6 +225,15 @@ const ChatDashboard = ({ navigation }) => {
             </View>
           )}
         </View>
+        {clientMessage && (
+          <Text 
+            style={styles.clientMessageText}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {senderName}: {clientMessage}
+          </Text>
+        )}
         {displayMessage && (
           <Text 
             style={[styles.messageText, message.hasSuggestedResponse && styles.suggestedResponseText]}
@@ -356,6 +359,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     paddingHorizontal: 16,
+    paddingTop: 4,
     paddingBottom: 8
   },
   unreadCountContainer: {
@@ -407,6 +411,12 @@ const styles = StyleSheet.create({
   suggestedResponseText: {
     fontStyle: 'italic',
     color: '#4CAF50', // Green color for suggested responses
+  },
+  clientMessageText: {
+    color: '#E0E0E0', // Changed to a lighter white/gray color
+    fontSize: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
   },
 });
 
