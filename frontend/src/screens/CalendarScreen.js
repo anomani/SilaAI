@@ -11,6 +11,8 @@ import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Calendar } from 'react-native-calendars';
 import EditBlockedTimeModal from '../components/EditBlockedTimeModal';
 
+
+
 const CalendarScreen = ({ navigation }) => {
   const route = useRoute();
   const [appointments, setAppointments] = useState([]);

@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
 dotenv.config({path : '../../.env'})
 const fs = require('fs');
-const os = require('os');
+const os = require('os');   
 const path = require('path')
 const moment = require('moment'); // Add moment library
 const {createAppointment} = require('../model/appointment')
@@ -62,16 +62,16 @@ async function getClients() {
             if (newHeight === previousHeight) break;
         }
         
-        const clientLinksCount = await page.$$eval("td.lastName.css-1b3r7q", links => links.length);
+        const clientLinksCount = await page.$$eval("td.lastName.css-16o23tj", links => links.length);
         console.log(clientLinksCount)
-        for (let i = 1214; i < clientLinksCount; i++) {
+        for (let i = 1651; i < clientLinksCount; i++) {
             console.log("Index: ", i)
             try {
                 
-                await page.waitForSelector("td.lastName.css-1b3r7q", { visible: true, timeout: SELECTOR_TIMEOUT });
+                await page.waitForSelector("td.lastName.css-16o23tj", { visible: true, timeout: SELECTOR_TIMEOUT });
                 // Click on the client link by index
                 await page.evaluate(index => {
-                    document.querySelectorAll("td.lastName.css-1b3r7q")[index].click();
+                    document.querySelectorAll("td.lastName.css-16o23tj")[index].click();
                 }, i);
 
                 await page.waitForSelector(".start-time", { timeout: SELECTOR_TIMEOUT });
@@ -94,7 +94,6 @@ async function getClients() {
                     // Convert date to YYYY-MM-DD
                     const dateOfAppointmentFormatted = moment(dateOfAppointment, "dddd, MMMM D, YYYY").format("YYYY-MM-DD");
                     await page.click("a[data-testid='docket-appointment-detail-link']");
-
                     let paymentPriceNumeric;
                     try {
                         await page.waitForSelector("span.payment-price[data-testid='payment-price-text']", { visible: true, timeout: SELECTOR_TIMEOUT });
@@ -117,10 +116,10 @@ async function getClients() {
                         paymentPrice: paymentPriceNumeric
                     });
                     
-                    const client = await getClientByPhoneNumber(clientNumber);
+                    const client = await getClientByPhoneNumber(clientNumber, 1);
 
                     if (client) {
-                        const appointment = await createAppointment(cleanedTypeOfAppointment, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "", paymentPriceNumeric);
+                        const appointment = await createAppointment(cleanedTypeOfAppointment, null, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "", paymentPriceNumeric,null, 0, null, null, 1);
                         console.log(`Appointment created: ${appointment.id}`);
                     }
                 }
