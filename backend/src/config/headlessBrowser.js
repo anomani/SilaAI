@@ -66,14 +66,14 @@ async function getClients() {
             if (newHeight === previousHeight) break;
         }
         
-        const clientLinksCount = await page.$$eval("td.lastName.css-1b3r7q", links => links.length);
+        const clientLinksCount = await page.$$eval("td.lastName.css-16o23tj", links => links.length);
         console.log(clientLinksCount)
         for (let i = 0; i < clientLinksCount; i++) {
             try {
-                await page.waitForSelector("td.lastName.css-1b3r7q", { visible: true });
+                await page.waitForSelector("td.lastName.css-16o23tj", { visible: true });
                 // Click on the client link by index
                 await page.evaluate(index => {
-                    document.querySelectorAll("td.lastName.css-1b3r7q")[index].click();
+                    document.querySelectorAll("td.lastName.css-16o23tj")[index].click();
                 }, i);
 
                 await page.waitForSelector(".start-time");
@@ -106,7 +106,7 @@ async function getClients() {
                 // //async function createAppointment(appointmentType, date, startTime, endTime, clientId, details)
                 // //17|1950|2024-06-24|09:15|09:45|Haircut and Beard|
                 if(client) {
-                    const appointment = await createAppointment(typeOfAppointment, null, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "", null, null, null, null, null, userId)
+                    // const appointment = await createAppointment(typeOfAppointment, null, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "", null, null, null, null, null, userId)
                 }
 
 
@@ -299,8 +299,9 @@ async function getClientsSquarespace() {
 }
 
 async function main() {
-    await getClientsSquarespace()
+    await getClients()
 }
 
 main()
+
 module.exports = {getClients, getCSV};
