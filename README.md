@@ -72,16 +72,3 @@ A comprehensive business management solution for barbershops, featuring AI-power
 - EAS Build system
 - Automated deployment pipelines
 
-## Getting Started
-
-### Prerequisites
-- Node.js (v14 or higher)
-- PostgreSQL database
-- Redis server
-- iOS/Android development environment
-- Expo CLI
-
-### Installation
-
-1. Clone the repository
-2. Install dependencies:

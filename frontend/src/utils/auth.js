@@ -1,4 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { jwtDecode } from "jwt-decode";
+
+export const isTokenExpired = (token) => {
+  try {
+    const decoded = jwtDecode(token);
+    const currentTime = Date.now() / 1000;
+    return decoded.exp < currentTime;
+  } catch (e) {
+    console.error('Failed to decode token:', e);
+    return true;
+  }
+};
 
 export const storeToken = async (token) => {
   try {
@@ -10,9 +22,15 @@ export const storeToken = async (token) => {
 
 export const getToken = async () => {
   try {
-    return await AsyncStorage.getItem('userToken');
+    const token = await AsyncStorage.getItem('userToken');
+    if (token && isTokenExpired(token)) {
+      await removeToken();
+      return null;
+    }
+    return token;
   } catch (e) {
-    console.error('Failed to get the token');
+    console.error('Failed to get the token:', e);
+    return null;
   }
 };
 

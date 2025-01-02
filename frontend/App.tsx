@@ -101,14 +101,18 @@ const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Check if the user is logged in
+    // Check if the user is logged in and token is valid
     const checkLoginStatus = async () => {
       const token = await getToken();
-      console.log('Current user token:', token);
+      // getToken will return null if token is expired
       setIsLoggedIn(!!token);
     };
 
+    // Check login status initially
     checkLoginStatus();
+
+    // Set up periodic token validation (every 5 minutes)
+    const tokenCheckInterval = setInterval(checkLoginStatus, 5 * 60 * 1000);
 
     registerForPushNotificationsAsync().then(token => {
       if (token) {
@@ -160,6 +164,7 @@ const AppContent: React.FC = () => {
       if (responseListener.current) {
         Notifications.removeNotificationSubscription(responseListener.current);
       }
+      clearInterval(tokenCheckInterval);
     };
   }, [navigation, isLoggedIn]);
 
