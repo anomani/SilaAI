@@ -264,20 +264,21 @@ async function getMostRecentMessagePerClient(user_id) {
   const db = dbUtils.getDB();
   const sql = `
     WITH RecentMessages AS (
-      SELECT DISTINCT ON (clientid)
-        *
+      SELECT 
+        id,
+        clientid,
+        fromText,
+        toText,
+        body,
+        date,
+        is_ai,
+        ROW_NUMBER() OVER (PARTITION BY clientid ORDER BY id DESC) as rn
       FROM Messages
-      WHERE user_id = $1
-      ORDER BY clientid, id DESC
-    ),
-    SuggestedResponses AS (
-      SELECT clientid, response
-      FROM SuggestedResponses
       WHERE user_id = $1
     )
     SELECT 
-      COALESCE(rm.id, -1) as id,
-      COALESCE(rm.clientid, sr.clientid) as clientid,
+      rm.id,
+      rm.clientid,
       rm.fromText,
       rm.toText,
       rm.body,
@@ -286,8 +287,9 @@ async function getMostRecentMessagePerClient(user_id) {
       CASE WHEN sr.response IS NOT NULL THEN true ELSE false END as hasSuggestedResponse,
       sr.response as suggestedResponse
     FROM RecentMessages rm
-    FULL OUTER JOIN SuggestedResponses sr ON rm.clientid = sr.clientid
-    ORDER BY COALESCE(rm.id, -1) DESC
+    LEFT JOIN SuggestedResponses sr ON rm.clientid = sr.clientid
+    WHERE rm.rn = 1
+    ORDER BY rm.id DESC
   `;
   try {
     const res = await db.query(sql, [user_id]);
