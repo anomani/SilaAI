@@ -598,16 +598,25 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
           </View>
         )}
 
-        <View style={styles.clientInfoContainer}>
-          <View style={styles.avatarAndMediaContainer}>
+        <View style={styles.topSection}>
+          <View style={styles.actionButtonsContainer}>
+            <TouchableOpacity style={styles.iconButton} onPress={handleCallPress}>
+              <Ionicons name="call" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={handleMessagePress}>
+              <Ionicons name="chatbubble" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={handleEditPress}>
+              <Ionicons name="create" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.profileSection}>
             <View style={styles.avatarContainer}>
               {clientMedia.length > 0 ? (
                 <TouchableOpacity onPress={() => handleMediaPress(0)}>
                   {clientMedia[0].media_type === 'image' ? (
-                    <Image 
-                      source={{ uri: clientMedia[0].media_url }} 
-                      style={styles.clientMedia} 
-                    />
+                    <Image source={{ uri: clientMedia[0].media_url }} style={styles.clientMedia} />
                   ) : (
                     <View style={styles.clientMedia}>
                       <Ionicons name="videocam" size={50} color="#007AFF" />
@@ -617,30 +626,11 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
               ) : (
                 <Image source={avatarImage} style={styles.clientMedia} />
               )}
+              <TouchableOpacity style={styles.addMediaButton} onPress={handleAddMediaPress}>
+                <Text style={styles.addMediaButtonText}>Add Media</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              style={styles.addMediaButton}
-              onPress={handleAddMediaPress}
-            >
-              <Text style={styles.addMediaButtonText}>Add Media</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.clientDetailsContainer}>
             <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
-            <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity style={styles.actionButton} onPress={handleCallPress}>
-                <Ionicons name="call" size={24} color="#fff" />
-                <Text style={styles.actionButtonText}>Call</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton} onPress={handleMessagePress}>
-                <Ionicons name="chatbubble" size={24} color="#fff" />
-                <Text style={styles.actionButtonText}>Message</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton} onPress={handleEditPress}>
-                <Ionicons name="create" size={24} color="#fff" />
-                <Text style={styles.actionButtonText}>Edit</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
 
@@ -811,20 +801,7 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
         onClose={() => setShowCamera(false)}
         onCapture={handleCameraCapture}
       />
-      
-      <View style={styles.cardNavigation}>
-        <TouchableOpacity onPress={handlePreviousAppointment} style={styles.navButton}>
-          <Text style={styles.navButtonText}>‹</Text>
-        </TouchableOpacity>
-        <View style={styles.appointmentCounterContainer}>
-          <Text style={styles.appointmentCounter}>
-            {currentIndex + 1} / {allAppointments.length}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={handleNextAppointment} style={styles.navButton}>
-          <Text style={styles.navButtonText}>›</Text>
-        </TouchableOpacity>
-      </View>
+    
 
       {showDatePicker && (
         <DateTimePicker
@@ -1325,11 +1302,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   clientMedia: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    alignSelf: 'center',
-    marginBottom: 10,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   captureButton: {
     position: 'absolute',
@@ -1388,10 +1363,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   clientMedia: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    marginBottom: 10,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   galleryButton: {
     flexDirection: 'row',
@@ -1406,25 +1380,84 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  actionButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    marginVertical: 10,
+  iconButton: {
+    backgroundColor: '#007AFF',
+    padding: 8,
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  actionButton: {
+  cardNavigation: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingHorizontal: 10,
+  },
+  navButton: {
+    padding: 10,
+  },
+  navButtonText: {
+    fontSize: 24,
+    color: '#007AFF',
+  },
+  appointmentCounterContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
   },
-  actionButtonText: {
-    color: '#fff',
-    marginLeft: 8,
+  appointmentCounter: {
     fontSize: 16,
-    fontWeight: 'bold',
+    color: '#fff',
+  },
+  clientInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    width: '100%',
+    marginTop: 40,
+  },
+  avatarAndMediaContainer: {
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    gap: 10,
+  },
+  clientDetailsContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  actionButtonsContainer: {
+    position: 'absolute',
+    left: 0,
+    top: -45,
+    flexDirection: 'row',
+    gap: 15,
+    zIndex: 1,
+  },
+  editableText: {
+    backgroundColor: '#3a3a3c',
+    color: '#fff',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+    fontSize: 16,
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  timeSeparator: {
+    color: '#fff',
+    fontSize: 16,
+    marginHorizontal: 5,
   },
   loadingContainer: {
     flex: 1,
@@ -1475,54 +1508,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  clientInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-    width: '100%',
-  },
-  avatarAndMediaContainer: {
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  avatarContainer: {
-    marginBottom: 10,
-  },
-  clientDetailsContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  clientMedia: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  cardClientName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    flex: 1,
-  },
-  actionButtonsContainer: {
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#007AFF',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    marginBottom: 8,
-  },
-  actionButtonText: {
-    color: '#fff',
-    marginLeft: 4,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
   addMediaButton: {
     backgroundColor: '#007AFF',
     padding: 8,
@@ -1534,46 +1519,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  editableText: {
-    backgroundColor: '#3a3a3c',
-    color: '#fff',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-    fontSize: 16,
-  },
-  timeContainer: {
-    flexDirection: 'row',
+  topSection: {
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 10,
+    marginTop: 40,
+    position: 'relative',
   },
-  timeSeparator: {
-    color: '#fff',
-    fontSize: 16,
-    marginHorizontal: 5,
-  },
-  cardNavigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  profileSection: {
     alignItems: 'center',
-    marginTop: 20,
-    paddingHorizontal: 10,
-  },
-  navButton: {
-    padding: 10,
-  },
-  navButtonText: {
-    fontSize: 24,
-    color: '#007AFF',
-  },
-  appointmentCounterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  appointmentCounter: {
-    fontSize: 16,
-    color: '#fff',
-  },
+    justifyContent: 'center',
+    width: '100%',
+    marginTop: 60,
+  }
 });
 
 export default ClientCardView;

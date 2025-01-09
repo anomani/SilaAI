@@ -14,6 +14,8 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const SELECTOR_TIMEOUT = 5000; 
 
+const SELECTOR_TIMEOUT_2 = 500;
+
 async function getClients() {
     const browserWSEndpoint = `wss://chrome-v2.browsercloud.io?token=${apiKey}`;
     let browser;
@@ -64,10 +66,9 @@ async function getClients() {
         
         const clientLinksCount = await page.$$eval("td.lastName.css-16o23tj", links => links.length);
         console.log(clientLinksCount)
-        for (let i = 1651; i < clientLinksCount; i++) {
+        for (let i = 1527; i < clientLinksCount; i++) {
             console.log("Index: ", i)
             try {
-                
                 await page.waitForSelector("td.lastName.css-16o23tj", { visible: true, timeout: SELECTOR_TIMEOUT });
                 // Click on the client link by index
                 await page.evaluate(index => {
@@ -79,9 +80,8 @@ async function getClients() {
                 const clientName = await page.$eval(".field-rendered.edit-client", el => el.innerText);
                 const clientNumber = await page.$eval("a.real-link[data-testid='added-client-phone']", el => el.innerText);
 
-                await page.waitForSelector(".appointment-item", { timeout: SELECTOR_TIMEOUT });
-                const appointments = await page.$$(".appointment-item");
-
+                await page.waitForSelector(".appointment-item:not(.is-canceled)", { timeout: SELECTOR_TIMEOUT_2 });
+                const appointments = await page.$$(".appointment-item:not(.is-canceled)");
                 for (const appointmentElement of appointments) {
                     const startTime = await appointmentElement.$eval(".start-time", el => el.innerText);
                     const endTime = await appointmentElement.$eval(".end-time", el => el.innerText);

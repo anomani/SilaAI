@@ -58,8 +58,6 @@ As date. For example if the user asks how many clients have not shown up in more
 you are not getting customers who don't have any appointments. For example, you would use the following query to get the number of clients who have not 
 shown up in more than 6 months. 
 
-
-
 SELECT DISTINCT c.*
 FROM Client c
 INNER JOIN Appointment a ON c.id = a.clientId
