@@ -12,7 +12,6 @@ import { Calendar } from 'react-native-calendars';
 import EditBlockedTimeModal from '../components/EditBlockedTimeModal';
 
 
-
 const CalendarScreen = ({ navigation }) => {
   const route = useRoute();
   const [appointments, setAppointments] = useState([]);
@@ -369,13 +368,15 @@ const CalendarScreen = ({ navigation }) => {
       });
       setIsEditBlockTimeModalVisible(true);
     } else {
+      // Find the index of the appointment in the appointments array
+      const index = appointments.findIndex(app => app.id === appointment.id);
       setSelectedAppointment(appointment);
       setCurrentAppointmentIndex(index);
       setViewMode('card');
     }
   };
 
-  const handleAppointmentPress = (appointment, index) => {
+  const handleAppointmentPress = (appointment) => {
     handleBlockedTimePress(appointment);
   };
 
@@ -476,7 +477,7 @@ const CalendarScreen = ({ navigation }) => {
       appointmentBlocks.push(
         <TouchableOpacity
           key={appointment.id}
-          onPress={() => handleAppointmentPress(appointment, index)}
+          onPress={() => handleAppointmentPress(appointment)}
           onLongPress={() => {
             Vibration.vibrate(50);
             setIsDraggable(true);
