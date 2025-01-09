@@ -176,6 +176,7 @@ Let's say that the user says "Book an appointment for John tomorrow at 9:00 PM f
 
 - Run a SQL query to get all the clients with the name John then clarify with the user which one they are looking for. 
 - Then run all steps as above
+- Make sure to always state the availability of the time slot before booking the appointment
 
 Anytime only the first name is mentioned then run a sql query to get all the clients with that first name and then clarify with the user which one they are looking for.
 Anytime for cancelling, scheduling, rescheduling or any other situations. 
