@@ -376,6 +376,7 @@ const tools = [
 ];
 
 async function createAssistant(date, userId) {
+  console.log("date", date);
   // Replace ${userId} with actual userId in the instructions
   const instructionsPath = path.join(__dirname, 'Prompts', 'dataInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf8');
@@ -427,9 +428,14 @@ async function createAssistant(date, userId) {
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions,
       name: "Client Data",
-      model: "gpt-4o-2024-11-20",
+      model: "gpt-4o",
       tools: tools,
       temperature: 1
+    });
+  } else {
+    // Update the assistant's instructions with the current date
+    await openai.beta.assistants.update(assistant.id, {
+      instructions: assistantInstructions
     });
   }
   return assistant;
@@ -465,6 +471,7 @@ async function createThread(userId, initialMessage = false) {
 async function handleUserInputData(userMessage, userId) {
   try {
     const date = getCurrentDate();
+    console.log("date", date);
     const assistant = await createAssistant(date, userId);
     const thread = await createThread(userId, false);
     
@@ -652,11 +659,11 @@ function getStoredQuery(id) {
   return queryStore[id];
 }
 
-// async function main() {
-//   const resp = await handleUserInputData("How much money have I made last year?", 1);
-//   console.log(resp);
-// }
+async function main() {
+  const resp = await handleUserInputData("When is my next availability for an adult cut?", 1);
+  console.log(resp);
+}
 
-// main();
+main();
 
 module.exports = { handleUserInputData, getStoredQuery };
