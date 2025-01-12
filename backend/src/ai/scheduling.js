@@ -420,7 +420,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
     const newAssistant = await openai.beta.assistants.create({
       instructions: fullInstructions,
       name: `Scheduling Assistant for ${fname} ${lname}`,
-      model: "gpt-4o-2024-11-20",
+      model: "gpt-4o-mini",
       tools: tools,
       temperature: 0
     });
