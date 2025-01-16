@@ -35,7 +35,7 @@ const ClientMessagesScreen = ({ route }) => {
   const [messages, setMessages] = useState([]);
   const { getDraftMessage, setDraftMessage } = useMessage();
   const [newMessage, setNewMessage] = useState('');
-  const [autoRespond, setAutoRespond] = useState(true);
+  // const [autoRespond, setAutoRespond] = useState(true);
   const navigation = useNavigation();
   const flatListRef = useRef(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -623,6 +623,7 @@ const ClientMessagesScreen = ({ route }) => {
             </TouchableOpacity>
           )}
           <View style={styles.bottomContainer}>
+            {/* Comment out the auto-respond container
             <View style={styles.autoRespondContainer}>
               <Text style={styles.autoRespondText}>Auto-respond</Text>
               <Switch
@@ -632,6 +633,7 @@ const ClientMessagesScreen = ({ route }) => {
                 thumbColor={autoRespond ? "#ffffff" : "#9da6b8"}
               />
             </View>
+            */}
             <View style={styles.inputContainer}>
               <TextInput
                 style={[styles.input, { height: Math.min(150, Math.max(60, inputHeight)) }]}
