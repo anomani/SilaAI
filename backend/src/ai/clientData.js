@@ -17,6 +17,15 @@ const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { getUserById } = require('../model/users');
 const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
+const { 
+  createAIChatThread, 
+  getAIChatThreadById, 
+  updateAIChatThreadLastMessage 
+} = require('../model/threads');
+const {
+  createMessage,
+  getThreadMessages
+} = require('../model/aiChatMessages');
 // Add this object to store queries
 const queryStore = {};
 const sessions = new Map();
@@ -468,12 +477,24 @@ async function createThread(userId, initialMessage = false) {
   }
 }
 
-async function handleUserInputData(userMessage, userId) {
+async function handleUserInputData(userMessage, userId, threadId = null) {
   try {
     const date = getCurrentDate();
     console.log("date", date);
     const assistant = await createAssistant(date, userId);
-    const thread = await createThread(userId, false);
+    
+    let thread;
+    if (threadId) {
+      // If threadId is provided, use existing AI chat thread
+      const existingThread = await getAIChatThreadById(threadId, userId);
+      if (!existingThread) {
+        throw new Error('Thread not found');
+      }
+      thread = await openai.beta.threads.retrieve(existingThread.thread_id);
+    } else {
+      // If no threadId, create/use SMS thread
+      thread = await createThread(userId, false);
+    }
     
     // Check if there's an active run
     const runs = await openai.beta.threads.runs.list(thread.id);
@@ -484,11 +505,12 @@ async function handleUserInputData(userMessage, userId) {
       await waitForRunCompletion(thread.id, activeRun.id);
     }
 
-    // Now it's safe to create a new message and start a new run
+    // Create a new message and start a new run
     const message = await openai.beta.threads.messages.create(thread.id, {
       role: "user",
       content: userMessage,
     });
+
     let run;
     try {
       run = await openai.beta.threads.runs.create(thread.id, {
@@ -508,6 +530,10 @@ async function handleUserInputData(userMessage, userId) {
         const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
         if (assistantMessage) {
+          // If this is an AI chat thread, update the last message timestamp
+          if (threadId) {
+            await updateAIChatThreadLastMessage(threadId, userId);
+          }
           return assistantMessage.content[0].text.value;
         }
       } else if (runStatus.status === "requires_action") {
@@ -636,7 +662,6 @@ async function handleUserInputData(userMessage, userId) {
   } catch (error) {
     console.error('Detailed error in handleUserInputData:', error);
     console.log('User message:', userMessage);
-    // Instead of throwing an error, we'll return a message asking the user to try again
     return "I apologize, but I encountered an error while processing your request. Could you please try rephrasing your question or providing more details?";
   }
 }
@@ -666,4 +691,8 @@ async function main() {
 
 main();
 
-module.exports = { handleUserInputData, getStoredQuery };
+module.exports = { 
+  handleUserInputData, 
+  getStoredQuery,
+  // Add any other exports
+};
