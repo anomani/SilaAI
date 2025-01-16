@@ -13,6 +13,7 @@ const ChatDashboard = ({ navigation }) => {
   const isFocused = useIsFocused();
   const prevDataRef = useRef(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [disabledButtons, setDisabledButtons] = useState(new Set());
 
   const handleBackPress = () => {
     navigation.goBack();
@@ -124,6 +125,9 @@ const ChatDashboard = ({ navigation }) => {
   }, [dashboardData, searchQuery, activeTab]);
 
   const handleAcceptSuggestedResponse = async (clientId, suggestedResponse) => {
+    // Immediately disable the button
+    setDisabledButtons(prev => new Set([...prev, clientId]));
+    
     try {
       console.log("Accepting suggested response for client:", clientId);
       console.log("Suggested response:", suggestedResponse);
@@ -205,13 +209,20 @@ const ChatDashboard = ({ navigation }) => {
           {message.hasSuggestedResponse && (
             <View style={styles.suggestedResponseActions}>
               <TouchableOpacity
-                style={styles.actionButton}
+                style={[styles.actionButton, disabledButtons.has(message.clientid) && styles.disabledButton]}
                 onPress={(event) => {
                   event.stopPropagation();
-                  handleAcceptSuggestedResponse(message.clientid, message.suggestedresponse);
+                  if (!disabledButtons.has(message.clientid)) {
+                    handleAcceptSuggestedResponse(message.clientid, message.suggestedresponse);
+                  }
                 }}
+                disabled={disabledButtons.has(message.clientid)}
               >
-                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                <Ionicons 
+                  name="checkmark-circle" 
+                  size={24} 
+                  color={disabledButtons.has(message.clientid) ? "#808080" : "#4CAF50"} 
+                />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionButton}
@@ -246,7 +257,7 @@ const ChatDashboard = ({ navigation }) => {
         )}
       </TouchableOpacity>
     );
-  }, [dashboardData, navigation]);
+  }, [dashboardData, navigation, disabledButtons]);
 
   const handleRefresh = () => {
     fetchDashboardData();
@@ -281,6 +292,13 @@ const ChatDashboard = ({ navigation }) => {
         keyExtractor={(item) => item.id === -1 ? `sr_${item.clientid}` : item.id.toString()}
         style={styles.flatList}
         extraData={dashboardData}
+        ListEmptyComponent={() => (
+          activeTab === 'pending' && (
+            <View style={styles.emptyStateContainer}>
+              <Text style={styles.emptyStateText}>No Pending Messages</Text>
+            </View>
+          )
+        )}
       />
       <Footer navigation={navigation} /> 
     </View>
@@ -417,6 +435,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: 16,
     paddingBottom: 4,
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 40,
+  },
+  emptyStateText: {
+    color: '#9da6b8',
+    fontSize: 16,
+    fontStyle: 'italic',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });
 
