@@ -175,26 +175,23 @@ async function searchForClients(query, user_id) {
         throw new Error("Query parameter is required");
     }
 
-    // Split the search query into words and create a pattern that matches any of them
-    const searchWords = String(query).toLowerCase().split(' ').filter(word => word.length > 0);
-    if (searchWords.length === 0) {
+    // Convert query to lowercase and trim whitespace
+    const searchQuery = String(query).toLowerCase().trim();
+    if (searchQuery.length === 0) {
         return [];
     }
 
-    // Create the SQL query with multiple conditions
     const sql = `
         SELECT * FROM Client
         WHERE (
-            ${searchWords.map((_, index) => 
-                `(LOWER(firstName) LIKE $${index + 1} OR LOWER(lastName) LIKE $${index + 1})`
-            ).join(' OR ')}
-        ) AND user_id = $${searchWords.length + 1}
+            LOWER(firstName || ' ' || lastName) LIKE $1
+        ) AND user_id = $2
         ORDER BY lastName, firstName
         LIMIT 50
     `;
 
-    // Create the values array with wildcards for each word
-    const values = [...searchWords.map(word => `%${word}%`), user_id];
+    // Create the value with wildcard
+    const values = [`%${searchQuery}%`, user_id];
 
     try {
         const res = await db.query(sql, values);
