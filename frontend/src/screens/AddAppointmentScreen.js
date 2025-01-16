@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView, TouchableWithoutFeedback } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
 import { addAppointment, searchClients } from '../services/api';
@@ -33,6 +33,8 @@ const AddAppointmentScreen = ({ navigation }) => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [showAppointmentTypePicker, setShowAppointmentTypePicker] = useState(false);
   const [showAddOnsPicker, setShowAddOnsPicker] = useState(false);
+  const [showClientSearch, setShowClientSearch] = useState(false);
+  const [inputLayout, setInputLayout] = useState({ y: 0, height: 0 });
 
   const handleInputChange = async (field, value) => {
     setAppointment({ ...appointment, [field]: value });
@@ -83,7 +85,9 @@ const AddAppointmentScreen = ({ navigation }) => {
       }
 
       const formatDate = (date) => {
-        return date.toISOString().split('T')[0];
+        const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+        const localDate = new Date(date.getTime() - tzOffset);
+        return localDate.toISOString().split('T')[0];
       };
 
       const formatTime = (date) => {
@@ -233,6 +237,10 @@ const AddAppointmentScreen = ({ navigation }) => {
     </View>
   );
 
+  const dismissSearch = useCallback(() => {
+    setShowClientSearch(false);
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {renderHeader()}
@@ -241,31 +249,57 @@ const AddAppointmentScreen = ({ navigation }) => {
         contentContainerStyle={styles.contentContainer}
         resetScrollToCoords={{ x: 0, y: 0 }}
         scrollEnabled={true}
+        nestedScrollEnabled={true}
+        keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.label}>Client Name</Text>
-        <Autocomplete
-          data={filteredClients}
-          defaultValue={appointment.clientName}
-          onChangeText={(value) => handleInputChange('clientName', value)}
-          flatListProps={{
-            keyExtractor: item => item.id,
-            renderItem: ({ item }) => (
-              <TouchableOpacity onPress={() => handleSelectClient(item)}>
-                <Text style={styles.itemText}>{item.firstname} {item.lastname}</Text>
-              </TouchableOpacity>
-            ),
-          }}
-          inputContainerStyle={[styles.inputContainer, { backgroundColor: '#2c2c2e', borderColor: '#444', borderWidth: 1, borderRadius: 8 }]}
-          placeholder="Client Name"
-          placeholderTextColor="#888"
-          renderTextInput={(props) => (
-            <TextInput
-              {...props}
-              style={[styles.input, { color: '#fff' }]}
-            />
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.input}
+            value={appointment.clientName}
+            onChangeText={(value) => {
+              handleInputChange('clientName', value);
+              setShowClientSearch(true);
+            }}
+            onFocus={() => setShowClientSearch(true)}
+            onLayout={(event) => {
+              const { y, height } = event.nativeEvent.layout;
+              setInputLayout({ y, height });
+            }}
+            placeholder="Search client name"
+            placeholderTextColor="#888"
+          />
+          {showClientSearch && (
+            <>
+              <TouchableOpacity 
+                style={styles.overlay} 
+                activeOpacity={1} 
+                onPress={dismissSearch}
+              />
+              <View style={styles.searchResults}>
+                <FlatList
+                  data={filteredClients}
+                  keyExtractor={item => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity 
+                      style={styles.suggestionItem}
+                      onPress={() => {
+                        handleSelectClient(item);
+                        dismissSearch();
+                      }}
+                    >
+                      <Text style={styles.suggestionText}>{item.firstname} {item.lastname}</Text>
+                    </TouchableOpacity>
+                  )}
+                  ListEmptyComponent={() => (
+                    <Text style={[styles.suggestionText, { padding: 12 }]}>No results found</Text>
+                  )}
+                  keyboardShouldPersistTaps="always"
+                />
+              </View>
+            </>
           )}
-          listStyle={styles.listStyle}
-        />
+        </View>
         <Text style={styles.label}>Date</Text>
         <TouchableOpacity onPress={() => setShowDatePicker(true)}>
           <Text style={[styles.input, styles.inputText]}>
@@ -455,16 +489,16 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-start',
+    paddingTop: 150,
   },
   modalContent: {
     backgroundColor: '#2c2c2e',
-    borderRadius: 10,
-    padding: 20,
-    width: '80%',
-    maxHeight: '80%',
+    marginHorizontal: 16,
+    borderRadius: 8,
+    maxHeight: '50%',
+    overflow: 'hidden',
   },
   pickerItem: {
     flexDirection: 'row',
@@ -506,6 +540,59 @@ const styles = StyleSheet.create({
   checkmark: {
     color: '#fff',
     fontSize: 16,
+  },
+  suggestionList: {
+    backgroundColor: '#2c2c2e',
+    borderWidth: 1,
+    borderColor: '#444',
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  suggestionText: {
+    color: '#fff',
+    fontSize: 16,
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+  },
+  suggestionItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+  },
+  searchContainer: {
+    position: 'relative',
+    zIndex: 9999,
+    elevation: 9999, // for Android
+  },
+  overlay: {
+    position: 'absolute',
+    top: -1000,
+    left: -1000,
+    right: -1000,
+    bottom: -1000,
+    backgroundColor: 'transparent',
+    zIndex: 9998,
+  },
+  searchResults: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '100%',
+    backgroundColor: '#2c2c2e',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+    maxHeight: 600,
+    zIndex: 9999,
+    elevation: 9999, // for Android
+    shadowColor: '#000', // for iOS
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
 });
 
