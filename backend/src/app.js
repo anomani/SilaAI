@@ -9,6 +9,7 @@ const clientRoutes = require('./routes/clientRoutes');
 const tokenRoutes = require('./routes/tokenRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
 const aiPromptRoutes = require('./routes/aiPromptRoutes');
+const aiChatRoutes = require('./routes/aiChatRoutes');
 const noteRoutes = require('./routes/notesRoutes');
 const cronJobs = require('./config/cronJobs');  // Import the cron jobs
 const mediaRoutes = require('./routes/mediaRoutes');
@@ -41,6 +42,7 @@ app.use('/api', clientRoutes);
 app.use('/api', tokenRoutes);
 app.use('/webhook', webhookRoutes);
 app.use('/api/ai-prompt', aiPromptRoutes);
+app.use('/api/ai-chat', aiChatRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/settings', settingsRoutes);
