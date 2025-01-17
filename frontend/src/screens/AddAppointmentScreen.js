@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView, TouchableWithoutFeedback, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
 import { addAppointment, searchClients } from '../services/api';
@@ -45,21 +45,30 @@ const AddAppointmentScreen = ({ navigation }) => {
   };
 
   const handleDateChange = (event, selectedDate) => {
-    const currentDate = selectedDate || appointment.date;
-    setShowDatePicker(false);
-    setAppointment({ ...appointment, date: currentDate });
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      setAppointment({ ...appointment, date: selectedDate });
+    }
   };
 
   const handleStartTimeChange = (event, selectedTime) => {
-    const currentTime = selectedTime || appointment.startTime;
-    setShowStartTimePicker(false);
-    setAppointment({ ...appointment, startTime: currentTime });
+    if (Platform.OS === 'android') {
+      setShowStartTimePicker(false);
+    }
+    if (selectedTime) {
+      setAppointment({ ...appointment, startTime: selectedTime });
+    }
   };
 
   const handleEndTimeChange = (event, selectedTime) => {
-    const currentTime = selectedTime || appointment.endTime;
-    setShowEndTimePicker(false);
-    setAppointment({ ...appointment, endTime: currentTime });
+    if (Platform.OS === 'android') {
+      setShowEndTimePicker(false);
+    }
+    if (selectedTime) {
+      setAppointment({ ...appointment, endTime: selectedTime });
+    }
   };
 
   const handleSelectClient = (item) => {
@@ -72,6 +81,7 @@ const AddAppointmentScreen = ({ navigation }) => {
     }
     setFilteredClients([]);
   };
+
   const handleClientAdded = (clientId, clientData) => {
     setSelectedClientId(clientId);
     setSelectedClient(clientData);

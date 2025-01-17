@@ -670,7 +670,6 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
           </>
         ) : (
           <>
-            <Text style={styles.cardDate}>{appointment.date}</Text>
             <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
             <Text style={styles.cardType}>{appointment.appointmenttype}</Text>
             <Text style={styles.cardPrice}>${appointment.price}</Text>

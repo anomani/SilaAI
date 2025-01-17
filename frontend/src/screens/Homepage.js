@@ -11,7 +11,7 @@ const Homepage = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Uzi</Text>
+        <Text style={styles.headerTitle}>SilaAI</Text>
       </View>
       <View style={styles.main}>
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ChatDashboard')}>
@@ -37,18 +37,18 @@ const Homepage = ({ navigation }) => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Chat')}>
           <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>Uzi AI</Text>
-            <Text style={styles.menuSubtitle}>Chat with AI to assist with your client outreach</Text>
+            <Text style={styles.menuTitle}>SilaAI</Text>
+            <Text style={styles.menuSubtitle}>Chat with AI to assist with your day to day operations</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Metrics')}>
+        {/* <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Metrics')}>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Metrics</Text>
             <Text style={styles.menuSubtitle}>View message and appointment analytics</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('DailyAppointments')}>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Daily Appointments</Text>
@@ -63,13 +63,13 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+        {/* <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Logout</Text>
             <Text style={styles.menuSubtitle}>Sign out of your account</Text>
           </View>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
       <Footer navigation={navigation} />
     </View>
