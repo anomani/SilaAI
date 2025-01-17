@@ -400,7 +400,7 @@ const ChatScreen = () => {
           )}
           <View style={styles.inputContainer}>
             <TextInput
-              style={[styles.input, { height: Math.max(40, inputHeight) }]}
+              style={[styles.input, { flexGrow: 1 }]}
               value={message}
               onChangeText={setMessage}
               placeholder="Type a message"
@@ -520,7 +520,7 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
     padding: 10,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.05)',
@@ -533,7 +533,8 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     color: '#fff',
     fontSize: 16,
-    maxHeight: 120,
+    minHeight: 40,
+    maxHeight: 200,
   },
   sendButton: {
     marginLeft: 10,
