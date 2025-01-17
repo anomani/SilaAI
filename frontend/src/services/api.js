@@ -725,3 +725,13 @@ export const getAIResponseStatus = async (clientId) => {
     return null;
   }
 };
+
+export const createNewThread = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.post('/chat/new-thread')));
+    return response.data;
+  } catch (error) {
+    console.error('Error creating new thread:', error);
+    throw error;
+  }
+};

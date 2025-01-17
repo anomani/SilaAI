@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, SafeAreaView, StatusBar, Keyboard } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { handleUserInput, transcribeAudio } from '../services/api';
+import { handleUserInput, transcribeAudio, createNewThread } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../components/ChatContext';
 import { Audio } from 'expo-av';
@@ -343,6 +343,16 @@ const ChatScreen = () => {
     }
   };
 
+  const handleNewChat = async () => {
+    try {
+      await createNewThread();
+      setMessages([]);
+      setShowIntro(true);
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView 
@@ -361,6 +371,9 @@ const ChatScreen = () => {
             <View style={styles.headerTitleContainer}>
               <Text style={styles.headerTitle}>UZI AI</Text>
             </View>
+            <TouchableOpacity onPress={handleNewChat} style={styles.newChatButton}>
+              <Ionicons name="add-circle-outline" size={24} color="#fff" />
+            </TouchableOpacity>
           </View>
           <View style={styles.chatListContainer}>
             {showIntro && messages.length === 0 ? (
@@ -585,6 +598,11 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: '#fff',
     borderRadius: 1.5,
+  },
+  newChatButton: {
+    position: 'absolute',
+    right: 15,
+    zIndex: 1,
   },
 });
 

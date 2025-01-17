@@ -14,6 +14,7 @@ const { getMostRecentMessagePerClientController } = require('../controllers/chat
 const { getSuggestedResponseCountController } = require('../controllers/chatController');
 const { transcribeAudioController } = require('../controllers/chatController');
 const { authenticateToken } = require('../middleware/authMiddleware');
+const { handleUserInput, getStoredQuery } = require('../ai/clientData');
 // Configure multer for handling file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -48,5 +49,17 @@ router.get('/suggested-response-count', authenticateToken, getSuggestedResponseC
 
 // Add the new route for audio transcription
 router.post('/transcribe-audio', upload.single('audio'), transcribeAudioController);
+
+// Create a new thread
+router.post('/new-thread', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const thread = await handleUserInput('', userId, true); // Pass true for initialMessage
+    res.json({ success: true, thread });
+  } catch (error) {
+    console.error('Error creating new thread:', error);
+    res.status(500).json({ error: 'Failed to create new thread' });
+  }
+});
 
 module.exports = router;

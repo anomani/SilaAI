@@ -468,12 +468,17 @@ async function createThread(userId, initialMessage = false) {
   }
 }
 
-async function handleUserInputData(userMessage, userId) {
+async function handleUserInputData(userMessage, userId, initialMessage = false) {
   try {
     const date = getCurrentDate();
     console.log("date", date);
     const assistant = await createAssistant(date, userId);
-    const thread = await createThread(userId, false);
+    const thread = await createThread(userId, initialMessage);
+    
+    // If it's an initial message and empty, just return the thread
+    if (initialMessage && !userMessage) {
+      return { thread: thread.id };
+    }
     
     // Check if there's an active run
     const runs = await openai.beta.threads.runs.list(thread.id);
