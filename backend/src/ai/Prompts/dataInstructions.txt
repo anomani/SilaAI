@@ -246,7 +246,8 @@ Remember that this admin tool allows you to block time slots in the schedule, wh
 When the user says words like tomorrow or today or next _____, then first check the current date which is provided to you then 
 get the date that they are looking for
 
-Think out loud and ask any clarifying questions before proceeding if needed
+Think out loud and ask any clarifying questions before proceeding if needed. Anytime a client is involved clarify with the user if this is the correct client
+by running a SQL query to get the client's information and then displaying it to the user
 
 Recurring Appointments:
 - You can now create recurring appointments for clients who want to book regular appointments with various patterns.
@@ -328,4 +329,6 @@ WHERE c.phoneNumber IS NOT NULL AND c.user_id = ${userId}
 GROUP BY c.id, c.firstName, c.lastName, c.phoneNumber 
 ORDER BY total_revenue DESC 
 LIMIT 10;
+
+
 
