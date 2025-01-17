@@ -381,8 +381,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
     types.forEach(type => {
       const price = typeof type.price === 'number' ? `CA$${type.price.toFixed(2)}` : type.price;
       appointmentTypesString += `  ${type.name} (${type.duration} minutes @ ${price})\n`;
-    });
-    
+    });    
     // Add availability information for the group
     if (types[0].availability) {
       appointmentTypesString += '  Availability:\n';
@@ -763,8 +762,17 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
 
     let assistant;
     const currentDate = new Date(getCurrentDate());
-    const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
-    console.log("currentDate", currentDate)
+    const dayOfWeek = currentDate.toLocaleString('en-US', { weekday: 'long' });
+    const formattedDate = currentDate.toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+    });
+    const dateTimeString = `${dayOfWeek}, ${formattedDate}`;
+    console.log("Current date and time:", dateTimeString);
     let fname, lname, email;
 
     if (!client.firstname && !client.lastname) {
@@ -799,7 +807,7 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
-      additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate + "and the day of the week is"+ day,
+      additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + dateTimeString,
     });
 
     const MAX_RETRIES = 3;
@@ -874,7 +882,17 @@ async function handleUserInputInternal(userMessages, phoneNumber, userId) {
     }
     let assistant;
     const currentDate = new Date(getCurrentDate());
-    const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
+    const dayOfWeek = currentDate.toLocaleString('en-US', { weekday: 'long' });
+    const formattedDate = currentDate.toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+    });
+    const dateTimeString = `${dayOfWeek}, ${formattedDate}`;
+    console.log("Current date and time:", dateTimeString);
     let fname, lname, email;
 
     if (!client.firstname && !client.lastname) {
@@ -907,7 +925,7 @@ async function handleUserInputInternal(userMessages, phoneNumber, userId) {
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
-      additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + currentDate + "and the day of the week is"+ day,
+      additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + dateTimeString,
     });
 
     const MAX_RETRIES = 3;
@@ -1084,6 +1102,5 @@ async function shouldAIRespond(userMessages, thread) {
     return false; // Default to human attention if there's an error
   }
 }
-
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal, handleToolCalls, handleToolCallsInternal};
