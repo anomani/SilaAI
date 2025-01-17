@@ -420,8 +420,15 @@ const ChatScreen = () => {
                 <Ionicons name="mic" size={24} color="#fff" />
               )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleSend()} style={styles.sendButton}>
-              <Ionicons name="send" size={24} color="#fff" />
+            <TouchableOpacity 
+              onPress={() => handleSend()} 
+              style={[
+                styles.sendButton,
+                !message.trim() && styles.sendButtonDisabled
+              ]}
+              disabled={!message.trim()}
+            >
+              <Ionicons name="send" size={24} color={message.trim() ? '#fff' : '#666'} />
             </TouchableOpacity>
           </View>
         </View>
@@ -533,6 +540,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     borderRadius: 50,
     padding: 10,
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#333',
   },
   introContainer: {
     flex: 1,
