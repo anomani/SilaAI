@@ -764,6 +764,7 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
     let assistant;
     const currentDate = new Date(getCurrentDate());
     const day = currentDate.toLocaleString('en-US', { weekday: 'long' });
+    console.log("currentDate", currentDate)
     let fname, lname, email;
 
     if (!client.firstname && !client.lastname) {
