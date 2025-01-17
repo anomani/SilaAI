@@ -442,17 +442,34 @@ async function createAssistant(date, userId) {
 }
 
 async function createThread(userId, initialMessage = false) {
-  const user = await getUserById(userId);
   try {
+    // Add validation for userId
+    if (!userId) {
+      throw new Error('userId is required');
+    }
+
+    const user = await getUserById(userId);
+    
+    // Add validation for user
+    if (!user) {
+      throw new Error(`No user found with ID: ${userId}`);
+    }
+
+    if (!user.business_number) {
+      throw new Error(`User ${userId} has no business number`);
+    }
+
     let thread;
     
     // Check if a thread already exists for this phone number
     const existingThread = await getThreadByPhoneNumber(user.business_number, user.id);
 
     if (existingThread && !initialMessage) {
+      console.log("thread exists");
       // Thread exists, retrieve it from OpenAI
       thread = await openai.beta.threads.retrieve(existingThread.thread_id);
     } else {
+      console.log("creating new thread");
       // Create a new thread
       thread = await openai.beta.threads.create();
       
@@ -463,186 +480,195 @@ async function createThread(userId, initialMessage = false) {
     sessions.set(user.business_number, thread);
     return thread;
   } catch (error) {
-    console.error(`Error in createThread for ${user.business_number}:`, error);
+    console.error(`Error in createThread for userId ${userId}:`, error);
     throw error;
   }
 }
 
 async function handleUserInputData(userMessage, userId, initialMessage = false) {
   try {
+    // Add validation for userId
+    if (!userId) {
+      return "Error: User ID is required";
+    }
+
     const date = getCurrentDate();
     console.log("date", date);
     const assistant = await createAssistant(date, userId);
-    const thread = await createThread(userId, initialMessage);
     
-    // If it's an initial message and empty, just return the thread
-    if (initialMessage && !userMessage) {
-      return { thread: thread.id };
-    }
-    
-    // Check if there's an active run
-    const runs = await openai.beta.threads.runs.list(thread.id);
-    const activeRun = runs.data.find(run => ['in_progress', 'queued'].includes(run.status));
-
-    if (activeRun) {
-      // If there's an active run, wait for it to complete
-      await waitForRunCompletion(thread.id, activeRun.id);
-    }
-
-    // Now it's safe to create a new message and start a new run
-    const message = await openai.beta.threads.messages.create(thread.id, {
-      role: "user",
-      content: userMessage,
-    });
-    let run;
     try {
-      run = await openai.beta.threads.runs.create(thread.id, {
-        assistant_id: assistant.id
+      const thread = await createThread(userId, initialMessage);
+      // If it's an initial message and empty, just return the thread
+      if (initialMessage && !userMessage) {
+        return { thread: thread.id };
+      }
+      
+      // Check if there's an active run
+      const runs = await openai.beta.threads.runs.list(thread.id);
+      const activeRun = runs.data.find(run => ['in_progress', 'queued'].includes(run.status));
+
+      if (activeRun) {
+        // If there's an active run, wait for it to complete
+        await waitForRunCompletion(thread.id, activeRun.id);
+      }
+
+      // Now it's safe to create a new message and start a new run
+      const message = await openai.beta.threads.messages.create(thread.id, {
+        role: "user",
+        content: userMessage,
       });
-    } catch (error) {
-      console.error('Error creating run:', error);
-      throw new Error('Error creating run: ' + error.message);
-    }
+      let run;
+      try {
+        run = await openai.beta.threads.runs.create(thread.id, {
+          assistant_id: assistant.id
+        });
+      } catch (error) {
+        console.error('Error creating run:', error);
+        throw new Error('Error creating run: ' + error.message);
+      }
 
-    while (true) {
-      await delay(1000);
-      const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+      while (true) {
+        await delay(1000);
+        const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
 
-      if (runStatus.status === "completed") {
-        const messages = await openai.beta.threads.messages.list(thread.id);
-        const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
+        if (runStatus.status === "completed") {
+          const messages = await openai.beta.threads.messages.list(thread.id);
+          const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
-        if (assistantMessage) {
-          return assistantMessage.content[0].text.value;
-        }
-      } else if (runStatus.status === "requires_action") {
-        const requiredActions = runStatus.required_action.submit_tool_outputs;
-
-        const toolOutputs = [];
-
-        for (const action of requiredActions.tool_calls) {
-          const funcName = action.function.name;
-          let args;
-          try {
-            args = JSON.parse(action.function.arguments);
-          } catch (parseError) {
-            console.error('Error parsing function arguments:', parseError);
-            continue; // Skip this tool call and move to the next one
+          if (assistantMessage) {
+            return assistantMessage.content[0].text.value;
           }
+        } else if (runStatus.status === "requires_action") {
+          const requiredActions = runStatus.required_action.submit_tool_outputs;
 
-          let output;
-          try {
-            if (funcName === "getInfo") {
-              console.log("getInfo", args.query);
-              // Pass userId to getInfo function
-              output = await getInfo(args.query);
-            } else if (funcName === "sendMessages") {
-              console.log("sendMessages", args.phoneNumbers, args.message);
-              // output = await sendMessages(args.phoneNumbers, args.message);
-              output = "Message sent to all the clients";
-            } else if (funcName === "createCustomList") {
-              console.log("createCustomList", args.name, args.query);
-              const queryId = uuidv4();
-              queryStore[queryId] = args.query;
-              output = queryId;
-            } else if (funcName === "getMuslimClients") {
-              console.log("getMuslimClients");
-              const list = await getMuslimClients();
-              const queryId = uuidv4();
-              queryStore[queryId] = list;
-              const listLink = `/custom-list?id=${queryId}`;
-              console.log(listLink);
-              output = queryId;
-            } else if (funcName === "bookAppointmentAdmin") {
-              output = await bookAppointmentAdmin(
-                args.clientId,
-                args.date,
-                args.startTime,
-                args.appointmentType,
-                args.addOns || [],
-                userId
-              );
-            } else if (funcName === "getClientByName") {
-              const result = await getClientByName(args.firstName, args.lastName, userId);
-              if (result === undefined || result === null) {
-                output = "No client found with the given name. Check the name and you can try again";
-              } else {
-                output = result;
-              }
-            } else if (funcName === "getAvailability") {
-              output = await getAvailability(args.day, args.appointmentType, args.addOns, userId);
-            } else if (funcName === "cancelAppointmentById") {
-              output = await cancelAppointmentById(args.clientId, args.date, userId);
-            } else if (funcName === "blockTime") {
-              output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason, userId);
-            } else if (funcName === "findRecurringAvailability") {
-              output = await findRecurringAvailability(
-                args.initialDate,
-                args.appointmentType,
-                args.addOns || [],
-                args.group,
-                args.recurrenceRule,
-                userId,
-                args.clientId,
-              );
-            } else if (funcName === "createRecurringAppointmentsAdmin") {
-              output = await createRecurringAppointmentsAdmin(
-                args.clientId,
-                args.initialDate,
-                args.startTime,
-                args.appointmentType,
-                args.addOns || [],
-                args.group,
-                args.recurrenceRule,
-                userId
-              );
-            } else {
-              throw new Error(`Unknown function: ${funcName}`);
-            }
+          const toolOutputs = [];
 
-            if (output === undefined || output === null) {
-              console.warn(`Empty output for function ${funcName}. Skipping this tool call.`);
+          for (const action of requiredActions.tool_calls) {
+            const funcName = action.function.name;
+            let args;
+            try {
+              args = JSON.parse(action.function.arguments);
+            } catch (parseError) {
+              console.error('Error parsing function arguments:', parseError);
               continue; // Skip this tool call and move to the next one
             }
 
-            toolOutputs.push({
-              tool_call_id: action.id,
-              output: JSON.stringify(output)
-            });
-          } catch (error) {
-            console.error(`Error executing function ${funcName}:`, error);
-            // Instead of throwing an error, we'll skip this tool call
-            continue;
-          }
-        }
+            let output;
+            try {
+              if (funcName === "getInfo") {
+                console.log("getInfo", args.query);
+                // Pass userId to getInfo function
+                output = await getInfo(args.query);
+              } else if (funcName === "sendMessages") {
+                console.log("sendMessages", args.phoneNumbers, args.message);
+                // output = await sendMessages(args.phoneNumbers, args.message);
+                output = "Message sent to all the clients";
+              } else if (funcName === "createCustomList") {
+                console.log("createCustomList", args.name, args.query);
+                const queryId = uuidv4();
+                queryStore[queryId] = args.query;
+                output = queryId;
+              } else if (funcName === "getMuslimClients") {
+                console.log("getMuslimClients");
+                const list = await getMuslimClients();
+                const queryId = uuidv4();
+                queryStore[queryId] = list;
+                const listLink = `/custom-list?id=${queryId}`;
+                console.log(listLink);
+                output = queryId;
+              } else if (funcName === "bookAppointmentAdmin") {
+                output = await bookAppointmentAdmin(
+                  args.clientId,
+                  args.date,
+                  args.startTime,
+                  args.appointmentType,
+                  args.addOns || [],
+                  userId
+                );
+              } else if (funcName === "getClientByName") {
+                const result = await getClientByName(args.firstName, args.lastName, userId);
+                if (result === undefined || result === null) {
+                  output = "No client found with the given name. Check the name and you can try again";
+                } else {
+                  output = result;
+                }
+              } else if (funcName === "getAvailability") {
+                output = await getAvailability(args.day, args.appointmentType, args.addOns, userId);
+              } else if (funcName === "cancelAppointmentById") {
+                output = await cancelAppointmentById(args.clientId, args.date, userId);
+              } else if (funcName === "blockTime") {
+                output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason, userId);
+              } else if (funcName === "findRecurringAvailability") {
+                output = await findRecurringAvailability(
+                  args.initialDate,
+                  args.appointmentType,
+                  args.addOns || [],
+                  args.group,
+                  args.recurrenceRule,
+                  userId,
+                  args.clientId,
+                );
+              } else if (funcName === "createRecurringAppointmentsAdmin") {
+                output = await createRecurringAppointmentsAdmin(
+                  args.clientId,
+                  args.initialDate,
+                  args.startTime,
+                  args.appointmentType,
+                  args.addOns || [],
+                  args.group,
+                  args.recurrenceRule,
+                  userId
+                );
+              } else {
+                throw new Error(`Unknown function: ${funcName}`);
+              }
 
-        if (toolOutputs.length > 0) {
-          await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
-            tool_outputs: toolOutputs
-          });
+              if (output === undefined || output === null) {
+                console.warn(`Empty output for function ${funcName}. Skipping this tool call.`);
+                continue; // Skip this tool call and move to the next one
+              }
+
+              toolOutputs.push({
+                tool_call_id: action.id,
+                output: JSON.stringify(output)
+              });
+            } catch (error) {
+              console.error(`Error executing function ${funcName}:`, error);
+              // Instead of throwing an error, we'll skip this tool call
+              continue;
+            }
+          }
+
+          if (toolOutputs.length > 0) {
+            await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+              tool_outputs: toolOutputs
+            });
+          } else {
+            // If all tool calls failed, we'll cancel the run and ask the AI to rephrase the question
+            await openai.beta.threads.runs.cancel(thread.id, run.id);
+            const message = await openai.beta.threads.messages.create(thread.id, {
+              role: "user",
+              content: "I'm sorry, but I couldn't process that request. Could you please rephrase your question or provide more details?",
+            });
+            run = await openai.beta.threads.runs.create(thread.id, {
+              assistant_id: assistant.id
+            });
+          }
+        } else if (runStatus.status === "failed") {
+          console.error('Run failed:', runStatus.last_error);
+          throw new Error('Run failed: ' + runStatus.last_error.message);
         } else {
-          // If all tool calls failed, we'll cancel the run and ask the AI to rephrase the question
-          await openai.beta.threads.runs.cancel(thread.id, run.id);
-          const message = await openai.beta.threads.messages.create(thread.id, {
-            role: "user",
-            content: "I'm sorry, but I couldn't process that request. Could you please rephrase your question or provide more details?",
-          });
-          run = await openai.beta.threads.runs.create(thread.id, {
-            assistant_id: assistant.id
-          });
+          await delay(1000);
         }
-      } else if (runStatus.status === "failed") {
-        console.error('Run failed:', runStatus.last_error);
-        throw new Error('Run failed: ' + runStatus.last_error.message);
-      } else {
-        await delay(1000);
       }
+    } catch (error) {
+      console.error('Error creating thread:', error);
+      return "I apologize, but I couldn't create a conversation thread. Please ensure your account is properly set up with a business number.";
     }
   } catch (error) {
     console.error('Detailed error in handleUserInputData:', error);
     console.log('User message:', userMessage);
-    // Instead of throwing an error, we'll return a message asking the user to try again
-    return "I apologize, but I encountered an error while processing your request. Could you please try rephrasing your question or providing more details?";
+    return "I apologize, but I encountered an error while processing your request. Please ensure your account is properly set up and try again.";
   }
 }
 

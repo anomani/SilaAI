@@ -51,9 +51,10 @@ router.get('/suggested-response-count', authenticateToken, getSuggestedResponseC
 router.post('/transcribe-audio', upload.single('audio'), transcribeAudioController);
 
 // Create a new thread
-router.post('/new-thread', async (req, res) => {
+router.post('/new-thread', authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.user.id; // Get userId from the authenticated user
+    console.log("userId", userId);
     const thread = await handleUserInputData('', userId, true); // Pass true for initialMessage
     res.json({ success: true, thread });
   } catch (error) {
