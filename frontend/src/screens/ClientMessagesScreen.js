@@ -189,8 +189,8 @@ const ClientMessagesScreen = ({ route }) => {
     try {
       const clientData = await getClientById(clientId);
       setClientDetails(clientData);
-      const autoRespondStatus = await getClientAutoRespond(clientId);
-      setAutoRespond(autoRespondStatus);
+      // const autoRespondStatus = await getClientAutoRespond(clientId);
+      // setAutoRespond(autoRespondStatus);
     } catch (error) {
       console.error('Error fetching client details:', error);
     }
@@ -623,30 +623,18 @@ const ClientMessagesScreen = ({ route }) => {
             </TouchableOpacity>
           )}
           <View style={styles.bottomContainer}>
-            {/* Comment out the auto-respond container
-            <View style={styles.autoRespondContainer}>
-              <Text style={styles.autoRespondText}>Auto-respond</Text>
-              <Switch
-                value={autoRespond}
-                onValueChange={handleAutoRespondToggle}
-                trackColor={{ false: "#292e38", true: "#195de6" }}
-                thumbColor={autoRespond ? "#ffffff" : "#9da6b8"}
-              />
-            </View>
-            */}
             <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { height: Math.min(150, Math.max(60, inputHeight)) }]}
-                scrollEnabled={true}
-                placeholder={renderInputPlaceholder()}
-                placeholderTextColor="#9da6b8"
+                style={[styles.input, { flexGrow: 1 }]}
                 value={newMessage || editableSuggestedResponse}
                 onChangeText={handleInputChange}
-                multiline={true}
-                numberOfLines={4}
+                placeholder={renderInputPlaceholder()}
+                placeholderTextColor="#9da6b8"
+                multiline
                 onContentSizeChange={handleContentSizeChange}
                 textAlignVertical="top"
                 editable={true}
+                maxHeight={200}
               />
               {aiStatus === 'pending' && !currentSuggestedResponse && (
                 <ActivityIndicator 
@@ -656,14 +644,18 @@ const ClientMessagesScreen = ({ route }) => {
                 />
               )}
               <TouchableOpacity 
-                style={styles.sendButton} 
-                onPress={() => {
-                  console.log('Send button pressed');
-                  handleSendMessage();
-                }}
+                style={[
+                  styles.sendButton,
+                  (!clientDetails || (newMessage.trim() === '' && currentSuggestedResponse.trim() === '')) && styles.sendButtonDisabled
+                ]} 
+                onPress={() => handleSendMessage()}
                 disabled={!clientDetails || (newMessage.trim() === '' && currentSuggestedResponse.trim() === '')}
               >
-                <Icon name="send" size={20} color={(clientDetails && (newMessage.trim() !== '' || currentSuggestedResponse.trim() !== '')) ? "#195de6" : "#9da6b8"} />
+                <Ionicons 
+                  name="send" 
+                  size={24} 
+                  color={(clientDetails && (newMessage.trim() !== '' || currentSuggestedResponse.trim() !== '')) ? '#fff' : '#666'} 
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -770,7 +762,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     alignItems: 'center',
     marginTop: 4,
-    gap: 4,
+    gap: 8,
   },
   timestampAndReceipt: {
     flexDirection: 'row',
@@ -805,31 +797,30 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: 12,
-    position: 'relative',
+    alignItems: 'flex-start',
+    padding: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(18, 18, 20, 0.9)',
   },
   input: {
     flex: 1,
-    backgroundColor: '#292e38',
-    color: 'white',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+    borderRadius: 25,
+    color: '#fff',
     fontSize: 16,
-    marginRight: 8,
-    marginTop: 6,
-    maxHeight: 300,
-    minHeight: 100,
-    paddingRight: 40,
+    minHeight: 40,
+    maxHeight: 200,
   },
   sendButton: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#292e38',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginLeft: 10,
+    backgroundColor: '#007AFF',
+    borderRadius: 50,
+    padding: 10,
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#333',
   },
   scrollButton: {
     position: 'absolute',
@@ -889,13 +880,6 @@ const styles = StyleSheet.create({
     width: 20,
     alignItems: 'center',
     marginRight: 4,
-  },
-  timestampContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    marginTop: 4,
-    gap: 8,
   },
   typingIndicator: {
     fontSize: 12,
