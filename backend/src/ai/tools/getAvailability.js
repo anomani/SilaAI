@@ -175,7 +175,7 @@ function calculateTotalDuration(appointmentTypeInfo, addOnArray, allAddOns) {
 
 function getCurrentDate() {
     const now = new Date();
-    now.setHours(now.getHours() - 4);
+    now.setHours(now.getHours() - 5);
     const dateTimeString = now.toLocaleString();
     return dateTimeString;
 }
