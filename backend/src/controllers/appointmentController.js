@@ -91,7 +91,7 @@ async function delAppointment(req, res) {
         const appointmentId = req.params.appointmentId;
         const user = await getUserById(userId);
         const appointment = await getAppointmentById(appointmentId);
-        const acuityId = appointment.acuityId;
+        const acuityId = appointment.acuityid;
         console.log("acuityId", acuityId)
         console.log("user", user)
         console.log("appointment", appointment)
