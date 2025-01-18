@@ -164,12 +164,18 @@ async function getAvailabilityCron(day, appointmentType, addOnArray, userId, cli
     }
 }
 
-function calculateTotalDuration(appointmentTypeInfo, addOnArray, allAddOns) {
+function calculateTotalDuration(appointmentTypeInfo, addOns) {
     const appointmentDuration = appointmentTypeInfo.duration;
-    const addOnsDuration = addOnArray.reduce((total, addOnName) => {
-        const addOn = allAddOns.find(a => a.name === addOnName);
-        return total + (addOn ? addOn.duration : 0);
-    }, 0);
+    const addOnsDuration = addOns.reduce((total, addOn) => total + addOn.duration, 0);
+    return appointmentDuration + addOnsDuration;
+}
+
+function calculateTotalDurationWithAddOns(appointmentTypeInfo, selectedAddOns) {
+    console.log("Selected Add-ons:", selectedAddOns);
+    const appointmentDuration = appointmentTypeInfo.duration;
+    console.log("Appointment Duration:", appointmentDuration);
+    const addOnsDuration = selectedAddOns.reduce((total, addOn) => total + addOn.duration, 0);
+    console.log("Add-ons Duration:", addOnsDuration);
     return appointmentDuration + addOnsDuration;
 }
 
@@ -266,20 +272,12 @@ async function getTimeSlots(userId, day, appointmentTypeId, addOnIds) {
     return timeSlots;
 }
 
-function calculateTotalDuration(appointmentTypeInfo, selectedAddOns) {
-    console.log("Selected Add-ons:", selectedAddOns);
-    const appointmentDuration = appointmentTypeInfo.duration;
-    console.log("Appointment Duration:", appointmentDuration);
-    const addOnsDuration = selectedAddOns.reduce((total, addOn) => total + addOn.duration, 0);
-    console.log("Add-ons Duration:", addOnsDuration);
-    return appointmentDuration + addOnsDuration;
-}
-
 // Don't forget to export the new function
 module.exports = {
   getAvailability,
   getCurrentDate,
   findNextAvailableSlots,
   getAvailabilityCron,
-  getTimeSlots
+  getTimeSlots,
+  calculateTotalDurationWithAddOns
 };

@@ -1,13 +1,13 @@
 const cron = require('node-cron');
-const { checkUnpaidAppointments, checkEndingAppointments } = require('./jobs/appointmentNotifications');
+const { checkUnpaidAppointments, checkEndingAppointments, sendNextDayAppointmentReminders } = require('./jobs/appointmentNotifications');
 const { checkWaitlistRequests } = require('./jobs/waitlistChecks');
 const { fillMyCalendar } = require('../ai/fillMyCalendar');
-const { getFillMyCalendarStatus } = require('../model/settings');
-const { getAllUsers } = require('../model/users'); // Add this line
+const { getFillMyCalendarStatus, getNextDayRemindersStatus } = require('../model/settings');
+const { getAllUsers } = require('../model/users');
 
 async function initializeCronJobs() {
-    // Cron job for unpaid appointments notification, runs daily at 8:00 PM
-    cron.schedule('0 20 * * *', async () => {
+    // Cron job for unpaid appointments notification, runs daily at 12:00 AM (Midnight)
+    cron.schedule('0 0 * * *', async () => {
         const users = await getAllUsers();
         for (const user of users) {
             await checkUnpaidAppointments(user.id);
@@ -47,6 +47,25 @@ async function initializeCronJobs() {
             }
         } catch (error) {
             console.error('Error in fillMyCalendar cron job:', error);
+        }
+    });
+
+    // Updated cron job for next day appointment reminders
+    cron.schedule('0 13 * * *', async () => {
+        try {
+            const users = await getAllUsers();
+            for (const user of users) {
+                const remindersEnabled = await getNextDayRemindersStatus(user.id);
+                
+                if (remindersEnabled) {
+                    await sendNextDayAppointmentReminders(user.id);
+                    console.log(`Next day reminders sent for user ${user.id} at:`, new Date().toISOString());
+                } else {
+                    console.log(`Next day reminders are disabled for user ${user.id}. Skipping at:`, new Date().toISOString());
+                }
+            }
+        } catch (error) {
+            console.error('Error in next day appointment reminders cron job:', error);
         }
     });
 }

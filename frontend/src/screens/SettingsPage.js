@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Button, Linking } from 'react-native';
-import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser } from '../services/api';
+import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser, getNextDayRemindersStatus, setNextDayRemindersStatus } from '../services/api';
 import { Ionicons } from '@expo/vector-icons'; // Make sure to import this
 import Footer from '../components/Footer'; // Import the Footer component
 import { useRoute } from '@react-navigation/native';
 
 const SettingsPage = ({ navigation }) => { // Add navigation prop
   const [fillMyCalendar, setFillMyCalendar] = useState(false);
+  const [nextDayReminders, setNextDayReminders] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
@@ -16,11 +17,13 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [calendarStatus, userData] = await Promise.all([
+        const [calendarStatus, remindersStatus, userData] = await Promise.all([
           getFillMyCalendarStatus(),
+          getNextDayRemindersStatus(),
           getCurrentUser()
         ]);
         setFillMyCalendar(calendarStatus.status);
+        setNextDayReminders(remindersStatus.status);
         setUser(userData);
       } catch (err) {
         setError('Failed to fetch data');
@@ -37,6 +40,19 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
       setLoading(true);
       await setFillMyCalendarStatus(!fillMyCalendar);
       setFillMyCalendar(!fillMyCalendar);
+    } catch (err) {
+      setError('Failed to update status');
+      Alert.alert('Error', 'Failed to update status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleReminders = async () => {
+    try {
+      setLoading(true);
+      await setNextDayRemindersStatus(!nextDayReminders);
+      setNextDayReminders(!nextDayReminders);
     } catch (err) {
       setError('Failed to update status');
       Alert.alert('Error', 'Failed to update status');
@@ -110,6 +126,19 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
                 onValueChange={handleToggle}
                 trackColor={{ false: '#2c2c2e', true: '#81b0ff' }}
                 thumbColor={fillMyCalendar ? '#ffffff' : '#767577'}
+                ios_backgroundColor="#2c2c2e"
+              />
+            </View>
+            <View style={styles.setting}>
+              <View style={styles.settingLeft}>
+                <Ionicons name="notifications-outline" size={24} color="#81b0ff" />
+                <Text style={styles.label}>Next Day Reminders</Text>
+              </View>
+              <Switch
+                value={nextDayReminders}
+                onValueChange={handleToggleReminders}
+                trackColor={{ false: '#2c2c2e', true: '#81b0ff' }}
+                thumbColor={nextDayReminders ? '#ffffff' : '#767577'}
                 ios_backgroundColor="#2c2c2e"
               />
             </View>
