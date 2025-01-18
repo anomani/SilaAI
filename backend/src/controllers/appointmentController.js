@@ -15,7 +15,7 @@ const {
   getAppointmentTypeByIdFromDB,
   updateAppointmentType
 } = require('../model/appTypes');
-
+const axios = require('axios');
 // Add this helper function at the top of the file or just before confirmAppointment
 function convertTo24HourFormat(time12h) {
   const [time, modifier] = time12h.split(' ');
@@ -500,6 +500,8 @@ async function updateAppointmentTypeController(req, res) {
     res.status(500).send(`Error updating appointment type: ${error.message}`);
   }
 }
+
+
 
 module.exports = { 
   createNewAppointment, 
