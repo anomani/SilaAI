@@ -51,7 +51,7 @@ async function initializeCronJobs() {
     });
 
     // Updated cron job for next day appointment reminders
-    cron.schedule('0 13 * * *', async () => {
+    cron.schedule('35 21 * * *', async () => {
         try {
             const users = await getAllUsers();
             for (const user of users) {
