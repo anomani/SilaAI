@@ -92,6 +92,9 @@ async function delAppointment(req, res) {
         const user = await getUserById(userId);
         const appointment = await getAppointmentById(appointmentId);
         const acuityId = appointment.acuityId;
+        console.log("acuityId", acuityId)
+        console.log("user", user)
+        console.log("appointment", appointment)
         // const result = await deleteAppointment(appointmentId);
         const response = await axios.put(
           `https://acuityscheduling.com/api/v1/appointments/${acuityId}/cancel`,
