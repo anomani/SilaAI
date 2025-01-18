@@ -13,6 +13,8 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
   const [user, setUser] = useState(null);
   const route = useRoute();
   const { handleLogout } = route.params;
+  const [fillMyCalendarLoading, setFillMyCalendarLoading] = useState(false);
+  const [nextDayRemindersLoading, setNextDayRemindersLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -37,27 +39,27 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
 
   const handleToggle = async () => {
     try {
-      setLoading(true);
+      setFillMyCalendarLoading(true);
       await setFillMyCalendarStatus(!fillMyCalendar);
       setFillMyCalendar(!fillMyCalendar);
     } catch (err) {
       setError('Failed to update status');
       Alert.alert('Error', 'Failed to update status');
     } finally {
-      setLoading(false);
+      setFillMyCalendarLoading(false);
     }
   };
 
   const handleToggleReminders = async () => {
     try {
-      setLoading(true);
+      setNextDayRemindersLoading(true);
       await setNextDayRemindersStatus(!nextDayReminders);
       setNextDayReminders(!nextDayReminders);
     } catch (err) {
       setError('Failed to update status');
       Alert.alert('Error', 'Failed to update status');
     } finally {
-      setLoading(false);
+      setNextDayRemindersLoading(false);
     }
   };
 
@@ -127,6 +129,7 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
                 trackColor={{ false: '#2c2c2e', true: '#81b0ff' }}
                 thumbColor={fillMyCalendar ? '#ffffff' : '#767577'}
                 ios_backgroundColor="#2c2c2e"
+                disabled={fillMyCalendarLoading}
               />
             </View>
             <View style={styles.setting}>
@@ -140,6 +143,7 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
                 trackColor={{ false: '#2c2c2e', true: '#81b0ff' }}
                 thumbColor={nextDayReminders ? '#ffffff' : '#767577'}
                 ios_backgroundColor="#2c2c2e"
+                disabled={nextDayRemindersLoading}
               />
             </View>
           </View>

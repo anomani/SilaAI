@@ -79,13 +79,13 @@ async function sendNextDayAppointmentReminders(userId) {
                 const formattedTime = convertTo12Hour(appointment.starttime);
                 const message = `Hi ${client.firstname}! This is a reminder that you have an appointment tomorrow at ${formattedTime}. Would you like to make any changes or reschedule? Feel free to let me know if you need to make any adjustments.`;
                 console.log("message: ", message)
-                // await sendMessage(
-                //     client.phonenumber,
-                //     message,
-                //     userId,
-                //     true,  // initialMessage
-                //     true   // manual
-                // );
+                await sendMessage(
+                    client.phonenumber,
+                    message,
+                    userId,
+                    true,  // initialMessage
+                    true   // manual
+                );
             }
         }
         
