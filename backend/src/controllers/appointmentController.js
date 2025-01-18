@@ -1,13 +1,14 @@
 const { getAppointmentsByDay, getAllAppointmentsByClientId, deleteAppointment, getClientAppointmentsAroundCurrent, updateAppointmentPayment, rescheduleAppointment } = require('../model/appointment');
 const { createAppointment, createBlockedTime } = require('../model/appointment');
 const { bookAppointmentWithAcuity } = require('../ai/tools/bookAppointment');
-const { getAppointmentMetrics } = require('../model/appointment');
+const { getAppointmentMetrics, getAppointmentById } = require('../model/appointment');
 const { updateAppointmentDetails } = require('../model/appointment');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { getTimeSlots } = require('../ai/tools/getAvailability');
 const { getCompatibleAddOns } = require('../model/appTypes');
 const { getAppointmentTypeDetails, getAppointmentTypeAndAddOnNames } = require('../model/appTypes');
 const { getClientByPhoneNumber, createClient, getClientById } = require('../model/clients');
+const { getUserById } = require('../model/users');
 const { 
   getAppointmentTypes, 
   getAddOns, 
@@ -86,9 +87,27 @@ async function getAppointmentsByClientId(req, res) {
 
 async function delAppointment(req, res) {
     try {
+        const userId = req.user.id;
         const appointmentId = req.params.appointmentId;
-        const result = await deleteAppointment(appointmentId);
-        res.status(200).json(result);
+        const user = await getUserById(userId);
+        const appointment = await getAppointmentById(appointmentId);
+        const acuityId = appointment.acuityId;
+        // const result = await deleteAppointment(appointmentId);
+        const response = await axios.put(
+          `https://acuityscheduling.com/api/v1/appointments/${acuityId}/cancel`,
+          {},
+          {
+              auth: {
+                  username: user.acuity_user_id,
+                  password: user.acuity_api_key
+              },
+              params: {
+                  admin: true,
+                  noEmail: true
+              }
+          }
+      );
+        res.status(200).json(response);
     } catch (error) {
         res.status(500).send(`Error deleting appointment: ${error.message}`);
     }

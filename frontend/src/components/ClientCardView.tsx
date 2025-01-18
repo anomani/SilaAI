@@ -18,7 +18,7 @@ import {
   Linking,
   ActivityIndicator // Add this import
 } from 'react-native';
-import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientMedia, uploadClientMedia, deleteClientMedia, updateAppointmentDetails } from '../services/api';
+import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientMedia, uploadClientMedia, deleteClientMedia, updateAppointmentDetails, deleteAppointment } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import avatarImage from '../../assets/avatar.png';
 import twilioAvatar from '../../assets/icon.png';
@@ -548,6 +548,32 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
     }
   };
 
+  const handleDeletePress = async () => {
+    Alert.alert(
+      "Cancel Appointment",
+      "Are you sure you want to cancel this appointment?",
+      [
+        {
+          text: "No",
+          style: "cancel"
+        },
+        {
+          text: "Yes",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAppointment(appointment.id);
+              onDelete(); // This will trigger fetchAppointments in CalendarScreen
+            } catch (error) {
+              console.error('Error deleting appointment:', error);
+              Alert.alert('Error', 'Failed to delete appointment. Please try again.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   console.log('ClientCardView rendered. showGallery:', showGallery);
 
   if (isLoading) {
@@ -610,6 +636,12 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconButton} onPress={handleEditPress}>
               <Ionicons name="create" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.iconButton, styles.deleteButton]} 
+              onPress={handleDeletePress}
+            >
+              <Ionicons name="trash" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
 
@@ -1552,6 +1584,9 @@ const styles = StyleSheet.create({
   appServiceContainer: {
     flex: 1,
     marginHorizontal: 10,
+  },
+  deleteButton: {
+    backgroundColor: '#FF3B30',
   },
 });
 
