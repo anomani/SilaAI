@@ -95,7 +95,7 @@ async function delAppointment(req, res) {
         console.log("acuityId", acuityId)
         console.log("user", user)
         console.log("appointment", appointment)
-        // const result = await deleteAppointment(appointmentId);
+        const result = await deleteAppointment(appointmentId);
         const response = await axios.put(
           `https://acuityscheduling.com/api/v1/appointments/${acuityId}/cancel`,
           {},
@@ -110,6 +110,8 @@ async function delAppointment(req, res) {
               }
           }
       );
+        
+
         res.status(200).json(response);
     } catch (error) {
         res.status(500).send(`Error deleting appointment: ${error.message}`);
