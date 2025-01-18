@@ -735,3 +735,22 @@ export const createNewThread = async () => {
     throw error;
   }
 };
+
+export const getNextDayRemindersStatus = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.get('/settings/nextDayReminders')));
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching nextDayReminders status:', error);
+    throw error;
+  }
+};
+
+export const setNextDayRemindersStatus = async (status) => {
+  try {
+    await retryRequest(() => throttledRequest(() => api.post('/settings/nextDayReminders', { status })));
+  } catch (error) {
+    console.error('Error setting nextDayReminders status:', error);
+    throw error;
+  }
+};

@@ -50,6 +50,7 @@ interface Appointment {
   paymentmethod?: string;
   tipamount?: number;
   clientPhoneNumber?: string;
+  addons?: string[];
 }
 
 interface ClientCardViewProps {
@@ -487,6 +488,7 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
         endTime: editedAppointment.endTime,
         appointmentType: editedAppointment.appointmenttype,
         price: parseFloat(editedAppointment.price.toString()),
+        addons: editedAppointment.addons,
       };
       const updatedAppointment = await updateAppointmentDetails(
         appointment.id,
@@ -652,26 +654,34 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
               style={styles.editableText}
               value={editedAppointment.appointmenttype}
               onChangeText={(value) => handleInputChange('appointmenttype', value)}
+              placeholder="Service Type"
+              placeholderTextColor="#666"
+            />
+            <TextInput
+              style={styles.editableText}
+              value={editedAppointment.addons?.join(', ') || ''}
+              onChangeText={(value) => handleInputChange('addons', value.split(',').map(addon => addon.trim()))}
+              placeholder="Add-ons (comma separated)"
+              placeholderTextColor="#666"
             />
             <TextInput
               style={styles.editableText}
               value={editedAppointment.price.toString()}
               onChangeText={(value) => handleInputChange('price', value)}
               keyboardType="numeric"
+              placeholder="Price"
+              placeholderTextColor="#666"
             />
-            <View style={styles.editButtonsContainer}>
-              <TouchableOpacity style={styles.editButton} onPress={handleSaveEdit}>
-                <Text style={styles.editButtonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.editButton} onPress={handleCancelEdit}>
-                <Text style={styles.editButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
           </>
         ) : (
           <>
             <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
-            <Text style={styles.cardType}>{appointment.appointmenttype}</Text>
+            <Text style={styles.cardType}>
+              {appointment.appointmenttype}
+              {appointment.addons && appointment.addons.length > 0 && (
+                appointment.addons.map(addon => ` + ${addon.trim()}`).join('')
+              )}
+            </Text>
             <Text style={styles.cardPrice}>${appointment.price}</Text>
           </>
         )}
@@ -724,12 +734,11 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
                 app.id === appointment.id ? styles.currentAppointment : null
               ]}>
                 <Text style={styles.appDate}>{formatAppointmentDate(app.date)}</Text>
-                <Text 
-                  style={styles.appType} 
-                  numberOfLines={1} 
-                  ellipsizeMode="tail"
-                >
-                  {app.appointmenttype || 'No Type'}
+                <Text style={styles.appType}>
+                  {app.appointmenttype}
+                  {app.addons && app.addons.length > 0 && (
+                    app.addons.map(addon => ` + ${addon.trim()}`).join('')
+                  )}
                 </Text>
                 <Text style={styles.appPrice}>${app.price}</Text>
               </View>
@@ -867,10 +876,9 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   cardType: {
-    fontSize: 16,
-    color: '#aaa',
-    marginBottom: 5,
-    maxWidth: '100%',
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '500',
   },
   cardPrice: {
     fontSize: 20,
@@ -966,8 +974,8 @@ const styles = StyleSheet.create({
     width: '30%',
   },
   appType: {
-    color: '#aaa',
-    fontSize: 14,
+    fontSize: 16,
+    color: '#fff',
     flex: 1,
     marginHorizontal: 5,
   },
@@ -1529,7 +1537,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     marginTop: 60,
-  }
+  },
+  serviceContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  cardAddons: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '300',
+  },
+  appServiceContainer: {
+    flex: 1,
+    marginHorizontal: 10,
+  },
 });
 
 export default ClientCardView;

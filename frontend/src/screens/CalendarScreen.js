@@ -474,6 +474,25 @@ const CalendarScreen = ({ navigation }) => {
       const width = 350; // Fixed width for all appointments
       const left = column * 210; // 210 to add some space between appointments
 
+      // Create formatted service text that includes add-ons
+      const getFormattedServiceText = (appointment) => {
+        if (appointment.appointmenttype === 'BLOCKED_TIME') {
+          return appointment.details || 'No Details';
+        }
+        
+        let serviceText = appointment.appointmenttype || 'No Type';
+        if (appointment.addons && appointment.addons.length > 0) {
+          // Split addons string if it's not already an array
+          const addonArray = Array.isArray(appointment.addons) 
+            ? appointment.addons 
+            : appointment.addons.split(',');
+          
+          // Add each addon to the service text
+          serviceText += addonArray.map(addon => ` + ${addon.trim()}`).join('');
+        }
+        return serviceText;
+      };
+
       appointmentBlocks.push(
         <TouchableOpacity
           key={appointment.id}
@@ -525,8 +544,8 @@ const CalendarScreen = ({ navigation }) => {
                   <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
                     {isBlockedTime ? 'Blocked Time' : (appointment.clientName || 'No Name')}
                   </Text>
-                  <Text style={styles.appointmentType} numberOfLines={1} ellipsizeMode="tail">
-                    {isBlockedTime ? (appointment.details || 'No Details') : (appointment.appointmenttype || 'No Type')}
+                  <Text style={styles.appointmentType} numberOfLines={2} ellipsizeMode="tail">
+                    {getFormattedServiceText(appointment)}
                   </Text>
                 </View>
                 <Text style={styles.appointmentTime}>
@@ -1067,6 +1086,8 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     textAlign: 'right',
+    flex: 1,  // Allow text to take up available space
+    marginLeft: 4,  // Add some spacing from the name
   },
   appointmentTime: {
     color: 'white',
