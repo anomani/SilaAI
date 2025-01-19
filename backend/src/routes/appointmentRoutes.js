@@ -26,7 +26,7 @@ const {
 // Apply authenticateToken middleware to all routes that need it
 router.get('/appointments/appointment-types', authenticateToken, getAppointmentTypesForUser);
 router.put('/appointments/appointment-types/:appointmentTypeId', authenticateToken, updateAppointmentTypeController);
-router.get('/compatible-addons', getCompatibleAddOnsController);
+router.get('/compatible-addons', authenticateToken, getCompatibleAddOnsController);
 
 
 router.get('/appointments/:date', authenticateToken, getAppointmentsByDate);
