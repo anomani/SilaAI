@@ -49,15 +49,31 @@ async function handleScheduledAppointment(appointmentDetails, userId) {
     const client = await getOrCreateClient(appointmentDetails, userId);
     const { date, startTime, endTime } = parseAppointmentDateTime(appointmentDetails);
     let appointmentType = appointmentDetails.type;
-    const appointmentParts = appointmentType.split('+').map(part => part.trim());
-    const parsedAppointmentType = appointmentParts[0];
-    // Update appointmentType and addOnArray
-    appointmentType = parsedAppointmentType;
-    // Update addOnArray with the rest of appointmentParts
-    const addOnArray = [];
-    if (appointmentParts.length > 1) {
-        addOnArray.push(...appointmentParts.slice(1));
+    let addOnArray = [];
+
+    // Check if appointment contains "Lineup + Taper"
+    if (appointmentType.includes('Lineup + Taper')) {
+        // Split the string at "Lineup + Taper"
+        const parts = appointmentType.split('Lineup + Taper');
+        appointmentType = 'Lineup + Taper';
+        
+        // If there are additional services (will be in parts[1])
+        if (parts[1]) {
+            // Remove leading/trailing + signs and spaces, then split remaining services
+            const additionalServices = parts[1].replace(/^\s*\+\s*|\s*\+\s*$/g, '');
+            if (additionalServices) {
+                addOnArray = additionalServices.split('+').map(service => service.trim());
+            }
+        }
+    } else {
+        // Original logic for other appointment types
+        const appointmentParts = appointmentType.split('+').map(part => part.trim());
+        appointmentType = appointmentParts[0];
+        if (appointmentParts.length > 1) {
+            addOnArray.push(...appointmentParts.slice(1));
+        }
     }
+
     await createAppointment(
         appointmentType,
         appointmentDetails.id,
