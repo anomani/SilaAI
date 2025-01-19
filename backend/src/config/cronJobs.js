@@ -48,7 +48,7 @@ async function initializeCronJobs() {
     });
 
     // Updated cron job for next day appointment reminders - runs at 09:00 EST (14:00 UTC)
-    cron.schedule('32 23 * * *', async () => {
+    cron.schedule('35 23 * * *', async () => {
         try {
             const users = await getAllUsers();
             for (const user of users) {
