@@ -249,12 +249,24 @@ const AddAppointmentScreen = ({ navigation }) => {
     </Modal>
   );
 
-  const handleAddOnToggle = (addOn) => {
+  const handleAddOnToggle = (addOnId) => {
     setAppointment(prevState => {
-      const updatedAddOns = prevState.addOns.includes(addOn)
-        ? prevState.addOns.filter(item => item !== addOn)
-        : [...prevState.addOns, addOn];
-      return { ...prevState, addOns: updatedAddOns };
+      const updatedAddOns = prevState.addOns.includes(addOnId)
+        ? prevState.addOns.filter(item => item !== addOnId)
+        : [...prevState.addOns, addOnId];
+      
+      // Recalculate total price including add-ons
+      const basePrice = parseFloat(prevState.price) || 0;
+      const addOnsPrice = updatedAddOns.reduce((total, id) => {
+        const addon = addOnsList.find(a => a.id === id);
+        return total + (addon ? parseFloat(addon.price) : 0);
+      }, 0);
+
+      return { 
+        ...prevState, 
+        addOns: updatedAddOns,
+        price: (basePrice + addOnsPrice).toFixed(2)
+      };
     });
   };
 
@@ -454,7 +466,13 @@ const AddAppointmentScreen = ({ navigation }) => {
           onPress={() => setShowAddOnsPicker(true)}
         >
           <Text style={[styles.inputText, { color: '#fff' }]}>
-            {appointment.addOns.length > 0 ? appointment.addOns.join(', ') : 'Select Add-ons'}
+            {appointment.addOns.length > 0 
+              ? appointment.addOns
+                  .map(id => addOnsList.find(addon => addon.id === id)?.name)
+                  .filter(Boolean)
+                  .join(', ')
+              : 'Select Add-ons'
+            }
           </Text>
         </TouchableOpacity>
         {renderAddOnsPicker()}

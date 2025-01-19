@@ -30,7 +30,7 @@ router.get('/compatible-addons', authenticateToken, getCompatibleAddOnsControlle
 
 
 router.get('/:date', authenticateToken, getAppointmentsByDate);
-router.post('/', authenticateToken, createNewAppointment);
+router.post('/newAppointment', authenticateToken, createNewAppointment);
 router.get('/client/:clientId', authenticateToken, getAppointmentsByClientId);
 router.delete('/:appointmentId', authenticateToken, delAppointment);
 router.post('/acuity', authenticateToken, bookAppointmentWithAcuityController);
