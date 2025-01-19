@@ -48,7 +48,7 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/messages', messageRoutes);
 
 // Initialize cron jobs
-// cronJobs.initializeCronJobs();
+cronJobs.initializeCronJobs();
 
 // app.get('/api/protected-route', authenticateToken, (req, res) => {
 //   res.json({ message: 'You have access to this protected route' });
