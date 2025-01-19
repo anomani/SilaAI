@@ -79,27 +79,23 @@ const AddAppointmentScreen = ({ navigation }) => {
       if (selectedType) {
         const newEndTime = calculateEndTime(appointment.startTime, selectedType.id);
         
-        // Clear any previously selected add-ons when changing appointment type
         setAppointment(prev => ({
           ...prev,
           [field]: value,
           price: selectedType.price.toString(),
           endTime: newEndTime,
-          addOns: [] // Reset add-ons when appointment type changes
+          addOns: []
         }));
 
-        // Fetch compatible add-ons for the selected appointment type
         try {
           const addOnsResponse = await getAddOns(selectedType.id);
           const formattedAddOns = addOnsResponse.map(addon => ({
             id: addon.id,
             name: addon.name,
             price: addon.price,
-            duration: addon.duration,
-            compatibleTypes: addon.compatible_appointment_types || []
+            duration: addon.duration
           }));
           setAddOnsList(formattedAddOns);
-          // Automatically show the add-ons picker with compatible add-ons
           setShowAddOnsPicker(true);
         } catch (error) {
           console.error('Error fetching add-ons:', error);
@@ -253,14 +249,6 @@ const AddAppointmentScreen = ({ navigation }) => {
     </Modal>
   );
 
-  const addOns = [
-    "Beard Grooming",
-    "Beard Grooming for Lineup + Taper",
-    "Colour Enhancement",
-    "Hot Towel + Black Mask Treatment for Clogged Pores",
-    "Wax - Hair Removal"
-  ];
-
   const handleAddOnToggle = (addOn) => {
     setAppointment(prevState => {
       const updatedAddOns = prevState.addOns.includes(addOn)
@@ -271,12 +259,6 @@ const AddAppointmentScreen = ({ navigation }) => {
   };
 
   const renderAddOnsPicker = () => {
-    // Filter add-ons to show only those compatible with the selected appointment type
-    const compatibleAddOns = addOnsList.filter(addon => 
-      addon.compatibleTypes.includes(appointment.appointmentType)
-    );
-
-    // Calculate total price including selected add-ons
     const basePrice = parseFloat(appointment.price) || 0;
     const addOnsPrice = appointment.addOns.reduce((total, addonId) => {
       const addon = addOnsList.find(a => a.id === addonId);
@@ -295,7 +277,7 @@ const AddAppointmentScreen = ({ navigation }) => {
               Total Price: ${(basePrice + addOnsPrice).toFixed(2)}
             </Text>
             <FlatList
-              data={compatibleAddOns}
+              data={addOnsList}
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -304,7 +286,7 @@ const AddAppointmentScreen = ({ navigation }) => {
                 >
                   <View style={styles.pickerItemContent}>
                     <Text style={styles.pickerItemText}>{item.name}</Text>
-                    <Text style={styles.pickerItemPrice}>${item.price}</Text>
+                    <Text style={styles.pickerItemPrice}>${parseFloat(item.price).toFixed(2)}</Text>
                   </View>
                   <Checkbox
                     checked={appointment.addOns.includes(item.id)}
@@ -314,7 +296,7 @@ const AddAppointmentScreen = ({ navigation }) => {
               )}
               ListEmptyComponent={() => (
                 <Text style={[styles.pickerItemText, { textAlign: 'center', padding: 20 }]}>
-                  No compatible add-ons available for this service
+                  No add-ons available for this service
                 </Text>
               )}
             />
