@@ -39,11 +39,11 @@ async function rescheduleAppointmentWithAcuity(appointmentId, newDate, newStartT
         throw error;
     }
 }
-async function main() {
-    const response = await rescheduleAppointmentByPhoneAndDate("+12038324011", "2025-01-20", "2025-01-20", "12:00", 1);
-    console.log("response", response)
-}
-main();
+// async function main() {
+//     const response = await rescheduleAppointmentByPhoneAndDate("+12038324011", "2025-01-20", "2025-01-20", "12:00", 1);
+//     console.log("response", response)
+// }
+// main();
 
 async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, newDate, newStartTime, userId) {
     try {
