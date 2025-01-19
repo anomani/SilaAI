@@ -36,7 +36,6 @@ app.get("/", (req, res) => res.send("Uzi Barber App"));
 
 app.use('/api/followup', followupRoutes);
 app.use('/api/chat', chatRoutes);  
-app.use('/api', appointmentRoutes);
 app.use('/api', clientRoutes);
 app.use('/api', tokenRoutes);
 app.use('/webhook', webhookRoutes);
