@@ -563,11 +563,11 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
           onPress: async () => {
             try {
               await deleteAppointment(appointment.id);
-              onDelete(); // This will trigger fetchAppointments in CalendarScreen
             } catch (error) {
               console.error('Error deleting appointment:', error);
-              Alert.alert('Error', 'Failed to delete appointment. Please try again.');
             }
+            // Call onDelete to refresh regardless of success or failure
+            onDelete();
           }
         }
       ]
