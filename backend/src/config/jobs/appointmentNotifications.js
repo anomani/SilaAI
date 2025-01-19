@@ -3,6 +3,7 @@ const { sendNotificationToUser } = require('./notifications');
 const { getUserById } = require('../../model/users');
 const { sendMessage } = require('../twilio');
 const { getClientById } = require('../../model/clients');
+const { getMessagesByClientId } = require('../../model/messages');
 
 // Helper function to convert 24-hour time to AM/PM format
 function convertTo12Hour(time24) {
@@ -77,7 +78,17 @@ async function sendNextDayAppointmentReminders(userId) {
             if (client && client.phonenumber) {
                 // Convert the time to 12-hour format
                 const formattedTime = convertTo12Hour(appointment.starttime);
-                const message = `Hi ${client.firstname}! This is a reminder that you have an appointment tomorrow at ${formattedTime}. Would you like to make any changes or reschedule? Feel free to let me know if you need to make any adjustments.`;
+                
+                // Check if there's any message history
+                const messageHistory = await getMessagesByClientId(client.id);
+                
+                let message;
+                if (!messageHistory || messageHistory.length === 0) {
+                    message = `Hey ${client.firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at ${formattedTime}?`;
+                } else {
+                    message = `Hey ${client.firstname}, just wanted to confirm if you're good for your appointment tomorrow at ${formattedTime}?`;
+                }
+                
                 console.log("message: ", message)
                 await sendMessage(
                     client.phonenumber,

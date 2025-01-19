@@ -40,9 +40,6 @@ async function initializeCronJobs() {
                 
                 if (fillMyCalendarEnabled) {
                     await fillMyCalendar(user.id);
-                    console.log(`fillMyCalendar completed for user ${user.id} at:`, new Date().toISOString());
-                } else {
-                    console.log(`fillMyCalendar is disabled for user ${user.id}. Skipping at:`, new Date().toISOString());
                 }
             }
         } catch (error) {
@@ -50,8 +47,8 @@ async function initializeCronJobs() {
         }
     });
 
-    // Updated cron job for next day appointment reminders - runs at 6:23 PM EST (23:23 UTC)
-    cron.schedule('25 23 * * *', async () => {
+    // Updated cron job for next day appointment reminders - runs at 09:00 EST (14:00 UTC)
+    cron.schedule('32 23 * * *', async () => {
         try {
             const users = await getAllUsers();
             for (const user of users) {
