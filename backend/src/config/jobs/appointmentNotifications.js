@@ -65,15 +65,15 @@ async function sendNextDayAppointmentReminders(userId) {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
+        console.log("tomorrowStr", tomorrowStr)
         // Get all appointments for tomorrow
         const appointments = await getAppointmentsByDay(userId, tomorrowStr);
-
+        console.log("appointments", appointments)
         // Send reminder for each appointment
         for (const appointment of appointments) {
             // Get client details using clientId
             const client = await getClientById(appointment.clientid);
-
+            console.log("client", client)
             if (client && client.phonenumber) {
                 // Convert the time to 12-hour format
                 const formattedTime = convertTo12Hour(appointment.starttime);
@@ -95,10 +95,10 @@ async function sendNextDayAppointmentReminders(userId) {
     }
 }
 
-// async function main() {
-//     await sendNextDayAppointmentReminders(1);
-// }
-// main();
+async function main() {
+    await sendNextDayAppointmentReminders(1);
+}
+main();
 module.exports = {
     checkUnpaidAppointments,
     checkEndingAppointments,

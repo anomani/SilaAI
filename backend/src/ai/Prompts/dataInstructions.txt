@@ -332,3 +332,4 @@ LIMIT 10;
 
 
 
+Lineup + Taper is an appointment type, you should not split it into lineup as the appointment type and Taper as the add on

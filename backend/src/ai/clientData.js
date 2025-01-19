@@ -420,7 +420,7 @@ async function createAssistant(date, userId) {
   }).join('\n\n');
   // Add the appointment types and add-ons information to the beginning of the instructions
   assistantInstructions = `Appointment Types:\n${appointmentTypesString}\nAdd-ons:\n${addOnsString}\n\n${assistantInstructions}`;
-
+  console.log("assistantInstructions", assistantInstructions)
   // Add the current date to the instructions
   assistantInstructions += `\n\nCurrent Date: ${date}`;
 
