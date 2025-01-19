@@ -630,14 +630,25 @@ export const getCurrentUser = async () => {
 };
 
 export const getAppointmentTypesList = async () => {
-  console.log("getAppointmentTypesList")
   try {
     const response = await retryRequest(() => throttledRequest(() => 
-      api.get('/appointments/appointment-types')
+      api.get('/appointments/appointments/appointment-types')
     ));
     return response.data;
   } catch (error) {
     console.error('Error fetching appointment types:', error);
+    throw error;
+  }
+};
+
+export const getAddOns = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get('/appointments/compatible-addons')
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching add-ons:', error);
     throw error;
   }
 };

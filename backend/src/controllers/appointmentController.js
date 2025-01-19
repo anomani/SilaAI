@@ -295,14 +295,16 @@ async function getNextFiveAvailableDays(userId, startDate, appointmentTypeId, ad
 
 async function getCompatibleAddOnsController(req, res) {
   try {
+    console.log("getCompatibleAddOnsController")
     const userId = req.query.userId; // Get from query params
     const { appointmentTypeId } = req.query;
-
+    console.log("appointmentTypeId", appointmentTypeId)
     if (!userId || !appointmentTypeId) {
       return res.status(400).send('Missing required fields: userId and appointmentTypeId');
     }
 
     const compatibleAddOns = await getCompatibleAddOns(userId, parseInt(appointmentTypeId));
+    console.log("compatibleAddOns", compatibleAddOns)
     res.status(200).json(compatibleAddOns);
   } catch (error) {
     console.error('Error fetching compatible add-ons:', error);
