@@ -38,7 +38,7 @@ function convertTo24HourFormat(time12h) {
 async function createNewAppointment(req, res) {
   try {
     const userId = req.user.id; // Get the user ID from the authenticated request
-    const { appointmentType, date, startTime, endTime, details, price, paid, tipAmount, paymentMethod, addOns, clientId } = req.body;
+    const { appointmentType, date, startTime, endTime, details, price, paid, clientId } = req.body;
     console.log(req.body)
     if (!appointmentType || !date || !startTime || !endTime || !price) {
       return res.status(400).send('Missing required fields');
