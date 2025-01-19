@@ -39,6 +39,11 @@ async function rescheduleAppointmentWithAcuity(appointmentId, newDate, newStartT
         throw error;
     }
 }
+async function main() {
+    const response = await rescheduleAppointmentByPhoneAndDate("+12038324011", "2025-01-20", "2025-01-20", "12:00", 1);
+    console.log("response", response)
+}
+main();
 
 async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, newDate, newStartTime, userId) {
     try {
@@ -59,17 +64,9 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
 
         let appointmentType = appointment.appointmenttype;
         // Parse appointment type and add-ons
-        const appointmentParts = appointmentType.split('+').map(part => part.trim());
-        const parsedAppointmentType = appointmentParts[0];
-        // Update appointmentType and addOnArray
-        appointmentType = parsedAppointmentType;
         console.log(appointmentType)
-
-        // Update addOnArray with the rest of appointmentParts
-        const addOnArray = [];
-        if (appointmentParts.length > 1) {
-            addOnArray.push(...appointmentParts.slice(1));
-        }
+        const addOnArray = appointment.addons;
+        console.log("addOnArray", addOnArray)
 
         const appointmentTypeInfo = appointmentTypes[appointmentType];
         if (!appointmentTypeInfo) {
@@ -119,18 +116,14 @@ async function rescheduleAppointmentByPhoneAndDateInternal(phoneNumber, currentD
         }
 
         let appointmentType = appointment.appointmenttype;
-        const appointmentParts = appointmentType.split('+').map(part => part.trim());
-        const parsedAppointmentType = appointmentParts[0];
-        appointmentType = parsedAppointmentType;
-        console.log(appointmentType)
 
-        const addOnArray = appointmentParts.length > 1 ? appointmentParts.slice(1) : [];
+        console.log(appointmentType)
 
         const appointmentTypeInfo = appointmentTypes[appointmentType];
         if (!appointmentTypeInfo) {
             throw new Error(`Invalid appointment type: ${appointmentType}`);
         }
-
+        const addOnArray = appointment.addons;
         const addOnInfo = addOnArray.map(addon => addOns[addon]);
         const totalDuration = appointmentTypeInfo.duration + addOnInfo.reduce((sum, addon) => sum + addon.duration, 0);
 
@@ -151,5 +144,6 @@ async function rescheduleAppointmentByPhoneAndDateInternal(phoneNumber, currentD
         return "Unable to reschedule the appointment";
     }
 }
+
 
 module.exports = {rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal};
