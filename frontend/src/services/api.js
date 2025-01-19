@@ -92,7 +92,7 @@ export const getAppointmentsByDay = async (date) => {
 
 export const addAppointment = async (appointment) => {
   try {
-    await retryRequest(() => throttledRequest(() => api.post('/appointments', appointment)));
+    await retryRequest(() => throttledRequest(() => api.post('/appointments/newAppointment', appointment)));
   } catch (error) {
     console.log(appointment)
     console.error('Error adding appointment:', error);
