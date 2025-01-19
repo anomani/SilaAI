@@ -41,10 +41,9 @@ const AddAppointmentScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchAppointmentData = async () => {
       try {
-        const [typesResponse, addOnsResponse] = await Promise.all([
-          getAppointmentTypesList(),
-          getAddOns()
-        ]);
+        // Only fetch appointment types initially
+        const typesResponse = await getAppointmentTypesList();
+        
         // Format appointment types from the response
         const formattedTypes = typesResponse.map(type => ({
           id: type.id,
@@ -54,19 +53,10 @@ const AddAppointmentScreen = ({ navigation }) => {
           availability: type.availability || {}
         }));
         
-        // Format add-ons from the response
-        const formattedAddOns = addOnsResponse.map(addon => ({
-          id: addon.id,
-          name: addon.name,
-          price: addon.price,
-          duration: addon.duration,
-          compatibleTypes: addon.compatible_appointment_types || []
-        }));
         setAppointmentTypes(formattedTypes);
-        setAddOnsList(formattedAddOns);
       } catch (error) {
         console.error('Error fetching appointment data:', error);
-        Alert.alert('Error', 'Failed to load appointment types and add-ons');
+        Alert.alert('Error', 'Failed to load appointment types');
       }
     };
     
@@ -88,12 +78,33 @@ const AddAppointmentScreen = ({ navigation }) => {
       const selectedType = appointmentTypes.find(type => type.id === value);
       if (selectedType) {
         const newEndTime = calculateEndTime(appointment.startTime, selectedType.id);
+        
+        // Clear any previously selected add-ons when changing appointment type
         setAppointment(prev => ({
           ...prev,
           [field]: value,
           price: selectedType.price.toString(),
-          endTime: newEndTime
+          endTime: newEndTime,
+          addOns: [] // Reset add-ons when appointment type changes
         }));
+
+        // Fetch compatible add-ons for the selected appointment type
+        try {
+          const addOnsResponse = await getAddOns(selectedType.id);
+          const formattedAddOns = addOnsResponse.map(addon => ({
+            id: addon.id,
+            name: addon.name,
+            price: addon.price,
+            duration: addon.duration,
+            compatibleTypes: addon.compatible_appointment_types || []
+          }));
+          setAddOnsList(formattedAddOns);
+          // Automatically show the add-ons picker with compatible add-ons
+          setShowAddOnsPicker(true);
+        } catch (error) {
+          console.error('Error fetching add-ons:', error);
+          Alert.alert('Error', 'Failed to load compatible add-ons');
+        }
       }
     } else if (field === 'startTime') {
       const newEndTime = calculateEndTime(value, appointment.appointmentType);
@@ -262,9 +273,15 @@ const AddAppointmentScreen = ({ navigation }) => {
   const renderAddOnsPicker = () => {
     // Filter add-ons to show only those compatible with the selected appointment type
     const compatibleAddOns = addOnsList.filter(addon => 
-      !appointment.appointmentType || // Show all if no appointment type selected
       addon.compatibleTypes.includes(appointment.appointmentType)
     );
+
+    // Calculate total price including selected add-ons
+    const basePrice = parseFloat(appointment.price) || 0;
+    const addOnsPrice = appointment.addOns.reduce((total, addonId) => {
+      const addon = addOnsList.find(a => a.id === addonId);
+      return total + (addon ? parseFloat(addon.price) : 0);
+    }, 0);
 
     return (
       <Modal
@@ -274,6 +291,9 @@ const AddAppointmentScreen = ({ navigation }) => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
+            <Text style={[styles.pickerItemText, styles.totalPrice]}>
+              Total Price: ${(basePrice + addOnsPrice).toFixed(2)}
+            </Text>
             <FlatList
               data={compatibleAddOns}
               keyExtractor={(item) => item.id.toString()}
@@ -282,7 +302,10 @@ const AddAppointmentScreen = ({ navigation }) => {
                   style={styles.pickerItem}
                   onPress={() => handleAddOnToggle(item.id)}
                 >
-                  <Text style={styles.pickerItemText}>{item.name} (${item.price})</Text>
+                  <View style={styles.pickerItemContent}>
+                    <Text style={styles.pickerItemText}>{item.name}</Text>
+                    <Text style={styles.pickerItemPrice}>${item.price}</Text>
+                  </View>
                   <Checkbox
                     checked={appointment.addOns.includes(item.id)}
                     onPress={() => handleAddOnToggle(item.id)}
@@ -291,9 +314,7 @@ const AddAppointmentScreen = ({ navigation }) => {
               )}
               ListEmptyComponent={() => (
                 <Text style={[styles.pickerItemText, { textAlign: 'center', padding: 20 }]}>
-                  {appointment.appointmentType 
-                    ? 'No compatible add-ons available'
-                    : 'Please select an appointment type first'}
+                  No compatible add-ons available for this service
                 </Text>
               )}
             />
@@ -301,7 +322,7 @@ const AddAppointmentScreen = ({ navigation }) => {
               style={styles.closeButton}
               onPress={() => setShowAddOnsPicker(false)}
             >
-              <Text style={styles.closeButtonText}>Close</Text>
+              <Text style={styles.closeButtonText}>Done</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -556,8 +577,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#2c2c2e',
     marginHorizontal: 16,
     borderRadius: 8,
-    maxHeight: '50%',
+    maxHeight: '70%',
     overflow: 'hidden',
+    padding: 16,
   },
   pickerItem: {
     flexDirection: 'row',
@@ -567,22 +589,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#444',
   },
+  pickerItemContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginRight: 10,
+  },
   pickerItemText: {
     color: '#fff',
     fontSize: 16,
-    flex: 1,
-    marginRight: 10,
+  },
+  pickerItemPrice: {
+    color: '#8e8e93',
+    fontSize: 16,
+  },
+  totalPrice: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+    marginBottom: 10,
   },
   closeButton: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: '#444',
-    borderRadius: 5,
+    marginTop: 10,
+    padding: 15,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
     alignItems: 'center',
   },
   closeButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: 'bold',
   },
   checkbox: {
     width: 24,
