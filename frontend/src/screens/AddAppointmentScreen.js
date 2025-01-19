@@ -134,9 +134,7 @@ const AddAppointmentScreen = ({ navigation }) => {
   };
 
   const handleDateChange = (event, selectedDate) => {
-    if (Platform.OS === 'android') {
-      setShowDatePicker(false);
-    }
+    setShowDatePicker(false);
     if (selectedDate) {
       setAppointment({ ...appointment, date: selectedDate });
     }
@@ -187,12 +185,32 @@ const AddAppointmentScreen = ({ navigation }) => {
 
   const handleAddAppointment = async () => {
     try {
+      // Validate required fields
+      const missingFields = [];
+      
       if (!selectedClient) {
-        throw new Error('No client selected');
+        missingFields.push('Client Name');
       }
 
       if (!appointment.appointmentType) {
-        throw new Error('No appointment type selected');
+        missingFields.push('Appointment Type');
+      }
+
+      if (!appointment.date) {
+        missingFields.push('Date');
+      }
+
+      if (!appointment.startTime) {
+        missingFields.push('Start Time');
+      }
+
+      if (missingFields.length > 0) {
+        Alert.alert(
+          'Required Fields Missing',
+          `Please fill in the following required fields:\n${missingFields.join('\n')}`,
+          [{ text: 'OK' }]
+        );
+        return;
       }
 
       const formatDate = (date) => {
@@ -445,9 +463,19 @@ const AddAppointmentScreen = ({ navigation }) => {
                         dismissSearch();
                       }}
                     >
-                      <Text style={styles.suggestionText}>
-                        {item.firstname} {item.lastname}
-                      </Text>
+                      <View style={styles.suggestionContent}>
+                        <Text style={styles.suggestionText}>
+                          {item.firstname} {item.lastname}
+                        </Text>
+                        {item.id !== 'new' && item.phonenumber && (
+                          <Text style={styles.phoneText}>
+                            {item.phonenumber
+                              .replace(/^\+1|^1/, '')  // Remove +1 or 1 prefix
+                              .replace(/\D/g, '')      // Remove any non-digits
+                              .replace(/(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')}
+                          </Text>
+                        )}
+                      </View>
                     </TouchableOpacity>
                   )}
                   ListEmptyComponent={() => (
@@ -726,12 +754,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 4,
   },
+  suggestionContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   suggestionText: {
     color: '#fff',
     fontSize: 16,
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#444',
+    flex: 1,
+  },
+  phoneText: {
+    color: '#888',
+    fontSize: 14,
+    marginLeft: 8,
   },
   suggestionItem: {
     padding: 12,

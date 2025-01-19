@@ -28,7 +28,8 @@ const ClientListScreen = () => {
   );
 
   const filteredClients = clients.filter(client =>
-    `${client.firstname} ${client.lastname}`.toLowerCase().includes(search.toLowerCase())
+    `${client.firstname} ${client.lastname}`.toLowerCase().includes(search.toLowerCase()) ||
+    (client.phonenumber && client.phonenumber.includes(search))
   );
 
   const renderItem = ({ item }) => (
