@@ -295,19 +295,28 @@ async function getNextFiveAvailableDays(userId, startDate, appointmentTypeId, ad
 
 async function getCompatibleAddOnsController(req, res) {
   try {
-    console.log("getCompatibleAddOnsController")
-    const userId = req.query.userId; // Get from query params
+    console.log("=== Starting getCompatibleAddOnsController ===");
+    console.log("Query params:", req.query);
+    
+    const userId = req.user.id; // Get from authenticated user
+    console.log("User ID:", userId);
+    
     const { appointmentTypeId } = req.query;
-    console.log("appointmentTypeId", appointmentTypeId)
+    console.log("Appointment Type ID:", appointmentTypeId);
+
     if (!userId || !appointmentTypeId) {
+      console.log("Missing required fields - userId:", userId, "appointmentTypeId:", appointmentTypeId);
       return res.status(400).send('Missing required fields: userId and appointmentTypeId');
     }
 
+    console.log("Calling getCompatibleAddOns with:", { userId, appointmentTypeId });
     const compatibleAddOns = await getCompatibleAddOns(userId, parseInt(appointmentTypeId));
-    console.log("compatibleAddOns", compatibleAddOns)
+    console.log("Compatible add-ons result:", compatibleAddOns);
+
     res.status(200).json(compatibleAddOns);
   } catch (error) {
-    console.error('Error fetching compatible add-ons:', error);
+    console.error('Detailed error in getCompatibleAddOnsController:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).send(`Error fetching compatible add-ons: ${error.message}`);
   }
 }

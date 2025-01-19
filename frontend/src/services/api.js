@@ -643,14 +643,20 @@ export const getAppointmentTypesList = async () => {
 
 export const getAddOns = async (appointmentTypeId) => {
   try {
+    console.log('Fetching add-ons for appointment type:', appointmentTypeId);
+    
     const response = await retryRequest(() => throttledRequest(() => 
       api.get('/appointments/compatible-addons', {
         params: { appointmentTypeId }
       })
     ));
+    
+    console.log('Add-ons response:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error fetching add-ons:', error);
+    console.error('Detailed error fetching add-ons:', error);
+    console.error('Error response:', error.response?.data);
+    console.error('Error status:', error.response?.status);
     throw error;
   }
 };
