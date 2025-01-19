@@ -37,17 +37,73 @@ function convertTo24HourFormat(time12h) {
 
 async function createNewAppointment(req, res) {
   try {
-    const userId = req.user.id; // Get the user ID from the authenticated request
-    const { appointmentType, date, startTime, endTime, details, price, paid, clientId } = req.body;
-    console.log(req.body)
-    if (!appointmentType || !date || !startTime || !endTime || !price) {
+    const userId = req.user.id;
+    const { 
+      appointmentTypeId, 
+      date, 
+      startTime, 
+      endTime, 
+      price, 
+      paid, 
+      clientId,
+      addOnIds,
+      tipAmount,
+      paymentMethod 
+    } = req.body;
+
+    console.log('Creating appointment with:', {
+      userId,
+      appointmentTypeId,
+      date,
+      startTime,
+      endTime,
+      clientId,
+      price,
+      addOnIds
+    });
+
+    if (!appointmentTypeId || !date || !startTime || !endTime || !price) {
       return res.status(400).send('Missing required fields');
     }
 
-    const result = await createAppointment(appointmentType, null, date, startTime, endTime, clientId, details, price, paid, tipAmount, paymentMethod, addOns, userId);
+    // Get appointment type and add-on names using the existing function
+    const { appointmentTypeName, addOnNames } = await getAppointmentTypeAndAddOnNames(
+      userId,
+      parseInt(appointmentTypeId),
+      addOnIds || []
+    );
 
+    console.log('Retrieved names:', { appointmentTypeName, addOnNames });
+
+    // Create details string combining appointment type and add-ons
+    const details = addOnNames.length > 0 
+      ? `${appointmentTypeName} with add-ons: ${addOnNames.join(', ')}`
+      : appointmentTypeName;
+
+    console.log('Creating appointment with details:', details);
+
+    const result = await createAppointment(
+      appointmentTypeName,
+      null, // acuityId
+      date,
+      startTime,
+      endTime,
+      clientId,
+      details,
+      parseFloat(price), // Ensure price is a number
+      paid === true, // Ensure boolean
+      tipAmount || 0, // Default to 0 if null
+      paymentMethod || '', // Default to empty string if null
+      addOnNames, // Store the add-on names array
+      userId
+    );
+
+    console.log('Appointment created successfully:', result);
     res.status(201).json(result);
   } catch (error) {
+    console.error('Detailed error in createNewAppointment:', error);
+    console.error('Error stack:', error.stack);
+    
     if (error.message.includes('Invalid or expired token')) {
       res.status(401).send('Unauthorized: Invalid or expired token');
     } else if (error.message.includes('validation failed')) {
