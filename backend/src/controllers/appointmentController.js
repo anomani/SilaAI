@@ -152,9 +152,10 @@ async function delAppointment(req, res) {
         console.log("user", user)
         console.log("appointment", appointment)
         const result = await deleteAppointment(appointmentId);
-        const response = await axios.put(
-          `https://acuityscheduling.com/api/v1/appointments/${acuityId}/cancel`,
-          {},
+        if (acuityId) {
+            const response = await axios.put(
+              `https://acuityscheduling.com/api/v1/appointments/${acuityId}/cancel`,
+              {},
           {
               auth: {
                   username: user.acuity_user_id,
@@ -166,7 +167,7 @@ async function delAppointment(req, res) {
               }
           }
       );
-        
+        }
 
         res.status(200).json(response);
     } catch (error) {
