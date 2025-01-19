@@ -109,10 +109,6 @@ async function handleCanceledAppointment(appointmentDetails, userId) {
     console.log("Start Time:", startTime);
     const appointmentToDelete = await findAppointmentByClientAndTime(client.id, date, startTime);
 
-    if (!appointmentToDelete) {
-        throw new Error('Appointment not found in our database');
-    }
-
     await deleteAppointment(appointmentToDelete.id);
     console.log("Appointment deleted successfully:", appointmentToDelete);
 }

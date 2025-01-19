@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView, TouchableWithoutFeedback, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
@@ -37,6 +37,11 @@ const AddAppointmentScreen = ({ navigation }) => {
   const [showAddOnsPicker, setShowAddOnsPicker] = useState(false);
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [inputLayout, setInputLayout] = useState({ y: 0, height: 0 });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Add debounce function to prevent too many API calls
+  const debounceTimeout = useRef(null);
 
   useEffect(() => {
     const fetchAppointmentData = async () => {
@@ -63,11 +68,21 @@ const AddAppointmentScreen = ({ navigation }) => {
     fetchAppointmentData();
   }, []);
 
-  const calculateEndTime = (startTime, appointmentTypeId) => {
+  const calculateEndTime = (startTime, appointmentTypeId, addOns = []) => {
     const selectedType = appointmentTypes.find(type => type.id === appointmentTypeId);
-    if (selectedType && selectedType.duration) {
+    if (selectedType) {
       const endTime = new Date(startTime);
-      endTime.setMinutes(endTime.getMinutes() + selectedType.duration);
+      let totalDuration = selectedType.duration || 0;
+
+      // Add duration of selected add-ons
+      addOns.forEach(addOnId => {
+        const addon = addOnsList.find(a => a.id === addOnId);
+        if (addon && addon.duration) {
+          totalDuration += addon.duration;
+        }
+      });
+
+      endTime.setMinutes(endTime.getMinutes() + totalDuration);
       return endTime;
     }
     return startTime;
@@ -77,14 +92,14 @@ const AddAppointmentScreen = ({ navigation }) => {
     if (field === 'appointmentType') {
       const selectedType = appointmentTypes.find(type => type.id === value);
       if (selectedType) {
-        const newEndTime = calculateEndTime(appointment.startTime, selectedType.id);
+        const newEndTime = calculateEndTime(appointment.startTime, selectedType.id, []);
         
         setAppointment(prev => ({
           ...prev,
           [field]: value,
           price: selectedType.price.toString(),
           endTime: newEndTime,
-          addOns: []
+          addOns: [] // Reset add-ons when changing appointment type
         }));
 
         try {
@@ -103,7 +118,7 @@ const AddAppointmentScreen = ({ navigation }) => {
         }
       }
     } else if (field === 'startTime') {
-      const newEndTime = calculateEndTime(value, appointment.appointmentType);
+      const newEndTime = calculateEndTime(value, appointment.appointmentType, appointment.addOns);
       setAppointment(prev => ({
         ...prev,
         startTime: value,
@@ -141,7 +156,15 @@ const AddAppointmentScreen = ({ navigation }) => {
       setShowEndTimePicker(false);
     }
     if (selectedTime) {
-      setAppointment({ ...appointment, endTime: selectedTime });
+      setAppointment(prev => ({ ...prev, endTime: selectedTime }));
+    }
+  };
+
+  const handlePriceChange = (value) => {
+    // Allow manual price updates while validating input
+    const numericValue = value.replace(/[^0-9.]/g, '');
+    if (numericValue === '' || !isNaN(parseFloat(numericValue))) {
+      setAppointment(prev => ({ ...prev, price: numericValue }));
     }
   };
 
@@ -255,28 +278,34 @@ const AddAppointmentScreen = ({ navigation }) => {
         ? prevState.addOns.filter(item => item !== addOnId)
         : [...prevState.addOns, addOnId];
       
-      // Recalculate total price including add-ons
-      const basePrice = parseFloat(prevState.price) || 0;
+      // Get the base price from the selected appointment type
+      const selectedType = appointmentTypes.find(type => type.id === prevState.appointmentType);
+      const basePrice = selectedType ? parseFloat(selectedType.price) : 0;
+      
+      // Calculate total add-ons price
       const addOnsPrice = updatedAddOns.reduce((total, id) => {
         const addon = addOnsList.find(a => a.id === id);
         return total + (addon ? parseFloat(addon.price) : 0);
       }, 0);
 
-      return { 
-        ...prevState, 
+      // Calculate new end time based on updated add-ons
+      const newEndTime = calculateEndTime(
+        prevState.startTime,
+        prevState.appointmentType,
+        updatedAddOns
+      );
+
+      // Set the new total price and end time
+      return {
+        ...prevState,
         addOns: updatedAddOns,
-        price: (basePrice + addOnsPrice).toFixed(2)
+        price: (basePrice + addOnsPrice).toFixed(2),
+        endTime: newEndTime
       };
     });
   };
 
   const renderAddOnsPicker = () => {
-    const basePrice = parseFloat(appointment.price) || 0;
-    const addOnsPrice = appointment.addOns.reduce((total, addonId) => {
-      const addon = addOnsList.find(a => a.id === addonId);
-      return total + (addon ? parseFloat(addon.price) : 0);
-    }, 0);
-
     return (
       <Modal
         visible={showAddOnsPicker}
@@ -285,9 +314,6 @@ const AddAppointmentScreen = ({ navigation }) => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text style={[styles.pickerItemText, styles.totalPrice]}>
-              Total Price: ${(basePrice + addOnsPrice).toFixed(2)}
-            </Text>
             <FlatList
               data={addOnsList}
               keyExtractor={(item) => item.id.toString()}
@@ -297,13 +323,17 @@ const AddAppointmentScreen = ({ navigation }) => {
                   onPress={() => handleAddOnToggle(item.id)}
                 >
                   <View style={styles.pickerItemContent}>
-                    <Text style={styles.pickerItemText}>{item.name}</Text>
-                    <Text style={styles.pickerItemPrice}>${parseFloat(item.price).toFixed(2)}</Text>
+                    <Text style={[styles.pickerItemText, styles.addOnName]} numberOfLines={2}>
+                      {item.name}
+                    </Text>
+                    <View style={styles.priceCheckboxContainer}>
+                      <Text style={styles.pickerItemPrice}>${parseFloat(item.price).toFixed(2)}</Text>
+                      <Checkbox
+                        checked={appointment.addOns.includes(item.id)}
+                        onPress={() => handleAddOnToggle(item.id)}
+                      />
+                    </View>
                   </View>
-                  <Checkbox
-                    checked={appointment.addOns.includes(item.id)}
-                    onPress={() => handleAddOnToggle(item.id)}
-                  />
                 </TouchableOpacity>
               )}
               ListEmptyComponent={() => (
@@ -333,6 +363,41 @@ const AddAppointmentScreen = ({ navigation }) => {
     </View>
   );
 
+  const handleClientSearch = useCallback(async (text) => {
+    setSearchQuery(text);
+    
+    // Clear any existing timeout
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    // Set a new timeout for the API call
+    debounceTimeout.current = setTimeout(async () => {
+      if (text.trim()) {
+        try {
+          setIsSearching(true);
+          const data = await searchClients(text);
+          setFilteredClients([{ id: 'new', firstname: 'New', lastname: 'Client' }, ...data]);
+        } catch (error) {
+          console.error('Error searching clients:', error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setFilteredClients([]);
+      }
+    }, 300); // 300ms delay before making the API call
+  }, []);
+
+  // Clean up the timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, []);
+
   const dismissSearch = useCallback(() => {
     setShowClientSearch(false);
   }, []);
@@ -352,18 +417,13 @@ const AddAppointmentScreen = ({ navigation }) => {
         <View style={styles.searchContainer}>
           <TextInput
             style={styles.input}
-            value={appointment.clientName}
-            onChangeText={(value) => {
-              handleInputChange('clientName', value);
-              setShowClientSearch(true);
-            }}
+            value={searchQuery}
+            onChangeText={handleClientSearch}
             onFocus={() => setShowClientSearch(true)}
-            onLayout={(event) => {
-              const { y, height } = event.nativeEvent.layout;
-              setInputLayout({ y, height });
-            }}
             placeholder="Search client name"
             placeholderTextColor="#888"
+            autoCorrect={false}
+            autoCapitalize="words"
           />
           {showClientSearch && (
             <>
@@ -375,20 +435,25 @@ const AddAppointmentScreen = ({ navigation }) => {
               <View style={styles.searchResults}>
                 <FlatList
                   data={filteredClients}
-                  keyExtractor={item => item.id}
+                  keyExtractor={item => item.id.toString()}
                   renderItem={({ item }) => (
                     <TouchableOpacity 
                       style={styles.suggestionItem}
                       onPress={() => {
+                        setSearchQuery(`${item.firstname} ${item.lastname}`);
                         handleSelectClient(item);
                         dismissSearch();
                       }}
                     >
-                      <Text style={styles.suggestionText}>{item.firstname} {item.lastname}</Text>
+                      <Text style={styles.suggestionText}>
+                        {item.firstname} {item.lastname}
+                      </Text>
                     </TouchableOpacity>
                   )}
                   ListEmptyComponent={() => (
-                    <Text style={[styles.suggestionText, { padding: 12 }]}>No results found</Text>
+                    <Text style={[styles.suggestionText, { padding: 12 }]}>
+                      {isSearching ? 'Searching...' : 'No results found'}
+                    </Text>
                   )}
                   keyboardShouldPersistTaps="always"
                 />
@@ -423,6 +488,22 @@ const AddAppointmentScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
         {renderAppointmentTypePicker()}
+        <Text style={styles.label}>Add-ons</Text>
+        <TouchableOpacity 
+          style={styles.input}
+          onPress={() => setShowAddOnsPicker(true)}
+        >
+          <Text style={[styles.inputText, { color: '#fff' }]}>
+            {appointment.addOns.length > 0 
+              ? appointment.addOns
+                  .map(id => addOnsList.find(addon => addon.id === id)?.name)
+                  .filter(Boolean)
+                  .join(', ')
+              : 'Select Add-ons'
+            }
+          </Text>
+        </TouchableOpacity>
+        {renderAddOnsPicker()}
         <Text style={styles.label}>Starts at</Text>
         <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
           <Text style={[styles.input, styles.inputText]}>
@@ -441,13 +522,31 @@ const AddAppointmentScreen = ({ navigation }) => {
           />
         )}
         <Text style={styles.label}>Ends at</Text>
-        <Text style={[styles.input, styles.inputText]}>
-          {appointment.endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+        <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
+          <Text style={[styles.input, styles.inputText]}>
+            {appointment.endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </TouchableOpacity>
+        {showEndTimePicker && (
+          <DateTimePicker
+            testID="endTimePicker"
+            value={appointment.endTime}
+            mode="time"
+            is24Hour={true}
+            display="default"
+            onChange={handleEndTimeChange}
+            themeVariant="dark"
+          />
+        )}
         <Text style={styles.label}>Price</Text>
-        <Text style={[styles.input, styles.inputText]}>
-          ${appointment.price}
-        </Text>
+        <TextInput
+          style={[styles.input, styles.inputText]}
+          value={appointment.price}
+          onChangeText={handlePriceChange}
+          keyboardType="decimal-pad"
+          placeholder="Enter price"
+          placeholderTextColor="#888"
+        />
         <Text style={styles.label}>Add details</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
@@ -460,22 +559,6 @@ const AddAppointmentScreen = ({ navigation }) => {
           blurOnSubmit={true}
           onSubmitEditing={() => Keyboard.dismiss()}
         />
-        <Text style={styles.label}>Add-ons</Text>
-        <TouchableOpacity 
-          style={styles.input}
-          onPress={() => setShowAddOnsPicker(true)}
-        >
-          <Text style={[styles.inputText, { color: '#fff' }]}>
-            {appointment.addOns.length > 0 
-              ? appointment.addOns
-                  .map(id => addOnsList.find(addon => addon.id === id)?.name)
-                  .filter(Boolean)
-                  .join(', ')
-              : 'Select Add-ons'
-            }
-          </Text>
-        </TouchableOpacity>
-        {renderAddOnsPicker()}
         <Button title="Add Appointment" onPress={handleAddAppointment} />
       </KeyboardAwareScrollView>
     </SafeAreaView>
@@ -582,37 +665,31 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   pickerItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#444',
   },
   pickerItemContent: {
-    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 10,
   },
-  pickerItemText: {
+  addOnName: {
+    flex: 1,
+    marginRight: 16,
     color: '#fff',
     fontSize: 16,
+  },
+  priceCheckboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 100,
+    justifyContent: 'flex-end',
   },
   pickerItemPrice: {
-    color: '#8e8e93',
-    fontSize: 16,
-  },
-  totalPrice: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#444',
-    marginBottom: 10,
+    fontSize: 16,
+    marginRight: 12,
   },
   closeButton: {
     marginTop: 10,
@@ -694,6 +771,11 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  pickerItemText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
 
