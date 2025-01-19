@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView, TouchableWithoutFeedback, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
-import { addAppointment, searchClients } from '../services/api';
+import { addAppointment, searchClients, getAppointmentTypesList, getAddOns } from '../services/api';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 const Checkbox = ({ checked, onPress }) => (
@@ -25,6 +25,8 @@ const AddAppointmentScreen = ({ navigation }) => {
     addOns: []
   });
   
+  const [appointmentTypes, setAppointmentTypes] = useState([]);
+  const [addOnsList, setAddOnsList] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
@@ -36,11 +38,76 @@ const AddAppointmentScreen = ({ navigation }) => {
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [inputLayout, setInputLayout] = useState({ y: 0, height: 0 });
 
+  useEffect(() => {
+    const fetchAppointmentData = async () => {
+      try {
+        const [typesResponse, addOnsResponse] = await Promise.all([
+          getAppointmentTypesList(),
+          getAddOns()
+        ]);
+        // Format appointment types from the response
+        const formattedTypes = typesResponse.map(type => ({
+          id: type.id,
+          name: type.name,
+          price: type.price,
+          duration: type.duration,
+          availability: type.availability || {}
+        }));
+        
+        // Format add-ons from the response
+        const formattedAddOns = addOnsResponse.map(addon => ({
+          id: addon.id,
+          name: addon.name,
+          price: addon.price,
+          duration: addon.duration,
+          compatibleTypes: addon.compatible_appointment_types || []
+        }));
+        setAppointmentTypes(formattedTypes);
+        setAddOnsList(formattedAddOns);
+      } catch (error) {
+        console.error('Error fetching appointment data:', error);
+        Alert.alert('Error', 'Failed to load appointment types and add-ons');
+      }
+    };
+    
+    fetchAppointmentData();
+  }, []);
+
+  const calculateEndTime = (startTime, appointmentTypeId) => {
+    const selectedType = appointmentTypes.find(type => type.id === appointmentTypeId);
+    if (selectedType && selectedType.duration) {
+      const endTime = new Date(startTime);
+      endTime.setMinutes(endTime.getMinutes() + selectedType.duration);
+      return endTime;
+    }
+    return startTime;
+  };
+
   const handleInputChange = async (field, value) => {
-    setAppointment({ ...appointment, [field]: value });
-    if (field === 'clientName') {
+    if (field === 'appointmentType') {
+      const selectedType = appointmentTypes.find(type => type.id === value);
+      if (selectedType) {
+        const newEndTime = calculateEndTime(appointment.startTime, selectedType.id);
+        setAppointment(prev => ({
+          ...prev,
+          [field]: value,
+          price: selectedType.price.toString(),
+          endTime: newEndTime
+        }));
+      }
+    } else if (field === 'startTime') {
+      const newEndTime = calculateEndTime(value, appointment.appointmentType);
+      setAppointment(prev => ({
+        ...prev,
+        startTime: value,
+        endTime: newEndTime
+      }));
+    } else if (field === 'clientName') {
       const data = await searchClients(value);
       setFilteredClients([{ id: 'new', firstname: 'New', lastname: 'Client' }, ...data]);
+      setAppointment(prev => ({ ...prev, [field]: value }));
+    } else {
+      setAppointment(prev => ({ ...prev, [field]: value }));
     }
   };
 
@@ -94,6 +161,10 @@ const AddAppointmentScreen = ({ navigation }) => {
         throw new Error('No client selected');
       }
 
+      if (!appointment.appointmentType) {
+        throw new Error('No appointment type selected');
+      }
+
       const formatDate = (date) => {
         const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
         const localDate = new Date(date.getTime() - tzOffset);
@@ -104,26 +175,31 @@ const AddAppointmentScreen = ({ navigation }) => {
         return date.toTimeString().split(' ')[0].slice(0, 5);
       };
 
+      const selectedAppointmentType = appointmentTypes.find(type => type.id === appointment.appointmentType);
+      if (!selectedAppointmentType) {
+        throw new Error('Invalid appointment type');
+      }
+
       const appointmentData = {
         date: formatDate(appointment.date),
         startTime: formatTime(appointment.startTime),
         endTime: formatTime(appointment.endTime),
         clientId: selectedClient.id,
-        appointmentType: appointment.appointmentType,
+        appointmentTypeId: selectedAppointmentType.id,
         details: appointment.details,
         price: parseFloat(appointment.price),
         paid: null,
         tipAmount: null,
         paymentMethod: null,
-        addOns: appointment.addOns
+        addOnIds: appointment.addOns
       };
-      await addAppointment(appointmentData);
 
+      await addAppointment(appointmentData);
       console.log('Appointment added successfully');
       navigation.goBack();
     } catch (error) {
       console.error('Error adding appointment:', error);
-      Alert.alert('Booking Error', 'Failed to add appointment. Please try again.');
+      Alert.alert('Booking Error', error.message || 'Failed to add appointment. Please try again.');
     }
   };
 
@@ -131,26 +207,6 @@ const AddAppointmentScreen = ({ navigation }) => {
     handleInputChange('appointmentType', itemValue);
     setShowAppointmentTypePicker(false);
   };
-
-  const appointmentTypes = [
-    { label: 'Adult Cut', value: 'Adult Cut' },
-    { label: 'High-School Cut', value: 'High-School Cut' },
-    { label: 'Kids Cut - (12 & Under)', value: 'Kids Cut - (12 & Under)' },
-    { label: 'Lineup + Taper', value: 'Lineup + Taper' },
-    { label: 'Beard Grooming Only', value: 'Beard Grooming Only' },
-    { label: 'Adult - (Full Service)', value: 'Adult - (Full Service)' },
-    { label: 'OFF DAY/EMERGENCY - (Full Service)', value: 'OFF DAY/EMERGENCY - (Full Service)' },
-    { label: 'Hair Cut', value: 'Hair Cut' },
-    { label: 'Hair Cut + Beard', value: 'Hair Cut + Beard' },
-    { label: 'Haircut + Beard', value: 'Haircut + Beard' },
-    { label: 'High-School - (Full Service)', value: 'High-School - (Full Service)' },
-    { label: 'Kids - (12 & Under)/Seniors', value: 'Kids - (12 & Under)/Seniors' },
-    { label: 'UziExpress Clean Up', value: 'UziExpress Clean Up' },
-    { label: 'Adult Haircut (18 & Up)', value: 'Adult Haircut (18 & Up)' },
-    { label: 'Adult Haircut + Beard (18 & Up)', value: 'Adult Haircut + Beard (18 & Up)' },
-    { label: 'Student Haircut (17 & Under)', value: 'Student Haircut (17 & Under)' },
-    { label: 'Student Haircut + Beard (17 & Under)', value: 'Student Haircut + Beard (17 & Under)' },
-  ];
 
   const renderAppointmentTypePicker = () => (
     <Modal
@@ -162,16 +218,16 @@ const AddAppointmentScreen = ({ navigation }) => {
         <View style={styles.modalContent}>
           <FlatList
             data={appointmentTypes}
-            keyExtractor={(item) => item.value}
+            keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.pickerItem}
                 onPress={() => {
-                  handleAppointmentTypeChange(item.value);
+                  handleInputChange('appointmentType', item.id);
                   setShowAppointmentTypePicker(false);
                 }}
               >
-                <Text style={styles.pickerItemText}>{item.label}</Text>
+                <Text style={styles.pickerItemText}>{item.name}</Text>
               </TouchableOpacity>
             )}
           />
@@ -203,40 +259,55 @@ const AddAppointmentScreen = ({ navigation }) => {
     });
   };
 
-  const renderAddOnsPicker = () => (
-    <Modal
-      visible={showAddOnsPicker}
-      transparent={true}
-      animationType="slide"
-    >
-      <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
-          <FlatList
-            data={addOns}
-            keyExtractor={(item) => item}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.pickerItem}
-                onPress={() => handleAddOnToggle(item)}
-              >
-                <Text style={styles.pickerItemText}>{item}</Text>
-                <Checkbox
-                  checked={appointment.addOns.includes(item)}
-                  onPress={() => handleAddOnToggle(item)}
-                />
-              </TouchableOpacity>
-            )}
-          />
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setShowAddOnsPicker(false)}
-          >
-            <Text style={styles.closeButtonText}>Close</Text>
-          </TouchableOpacity>
+  const renderAddOnsPicker = () => {
+    // Filter add-ons to show only those compatible with the selected appointment type
+    const compatibleAddOns = addOnsList.filter(addon => 
+      !appointment.appointmentType || // Show all if no appointment type selected
+      addon.compatibleTypes.includes(appointment.appointmentType)
+    );
+
+    return (
+      <Modal
+        visible={showAddOnsPicker}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <FlatList
+              data={compatibleAddOns}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.pickerItem}
+                  onPress={() => handleAddOnToggle(item.id)}
+                >
+                  <Text style={styles.pickerItemText}>{item.name} (${item.price})</Text>
+                  <Checkbox
+                    checked={appointment.addOns.includes(item.id)}
+                    onPress={() => handleAddOnToggle(item.id)}
+                  />
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={() => (
+                <Text style={[styles.pickerItemText, { textAlign: 'center', padding: 20 }]}>
+                  {appointment.appointmentType 
+                    ? 'No compatible add-ons available'
+                    : 'Please select an appointment type first'}
+                </Text>
+              )}
+            />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowAddOnsPicker(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Modal>
-  );
+      </Modal>
+    );
+  };
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -327,6 +398,16 @@ const AddAppointmentScreen = ({ navigation }) => {
             themeVariant="dark"
           />
         )}
+        <Text style={styles.label}>Appointment Type</Text>
+        <TouchableOpacity 
+          style={styles.input}
+          onPress={() => setShowAppointmentTypePicker(true)}
+        >
+          <Text style={[styles.inputText, { color: '#fff' }]}>
+            {appointmentTypes.find(type => type.id === appointment.appointmentType)?.name || 'Select Appointment Type'}
+          </Text>
+        </TouchableOpacity>
+        {renderAppointmentTypePicker()}
         <Text style={styles.label}>Starts at</Text>
         <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
           <Text style={[styles.input, styles.inputText]}>
@@ -345,32 +426,13 @@ const AddAppointmentScreen = ({ navigation }) => {
           />
         )}
         <Text style={styles.label}>Ends at</Text>
-        <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
-          <Text style={[styles.input, styles.inputText]}>
-            {appointment.endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </TouchableOpacity>
-        {showEndTimePicker && (
-          <DateTimePicker
-            testID="endTimePicker"
-            value={appointment.endTime}
-            mode="time"
-            is24Hour={true}
-            display="default"
-            onChange={handleEndTimeChange}
-            themeVariant="dark"
-          />
-        )}
-        <Text style={styles.label}>Appointment Type</Text>
-        <TouchableOpacity 
-          style={styles.input}
-          onPress={() => setShowAppointmentTypePicker(true)}
-        >
-          <Text style={[styles.inputText, { color: '#fff' }]}>
-            {appointmentTypes.find(type => type.value === appointment.appointmentType)?.label || 'Select Appointment Type'}
-          </Text>
-        </TouchableOpacity>
-        {renderAppointmentTypePicker()}
+        <Text style={[styles.input, styles.inputText]}>
+          {appointment.endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+        <Text style={styles.label}>Price</Text>
+        <Text style={[styles.input, styles.inputText]}>
+          ${appointment.price}
+        </Text>
         <Text style={styles.label}>Add details</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
@@ -383,18 +445,6 @@ const AddAppointmentScreen = ({ navigation }) => {
           blurOnSubmit={true}
           onSubmitEditing={() => Keyboard.dismiss()}
         />
-        <Text style={styles.label}>Price</Text>
-        <TextInput
-          style={styles.input}
-          value={appointment.price}
-          onChangeText={(value) => handleInputChange('price', value)}
-          placeholder="Price"
-          placeholderTextColor="#888"
-          keyboardType="numeric"
-          returnKeyType="done"
-          onSubmitEditing={() => Keyboard.dismiss()}
-        />
-
         <Text style={styles.label}>Add-ons</Text>
         <TouchableOpacity 
           style={styles.input}
@@ -405,7 +455,6 @@ const AddAppointmentScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
         {renderAddOnsPicker()}
-
         <Button title="Add Appointment" onPress={handleAddAppointment} />
       </KeyboardAwareScrollView>
     </SafeAreaView>

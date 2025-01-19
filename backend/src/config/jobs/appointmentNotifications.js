@@ -95,10 +95,10 @@ async function sendNextDayAppointmentReminders(userId) {
     }
 }
 
-async function main() {
-    await sendNextDayAppointmentReminders(1);
-}
-main();
+// async function main() {
+//     await sendNextDayAppointmentReminders(1);
+// }
+// main();
 module.exports = {
     checkUnpaidAppointments,
     checkEndingAppointments,
