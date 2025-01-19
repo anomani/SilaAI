@@ -641,10 +641,12 @@ export const getAppointmentTypesList = async () => {
   }
 };
 
-export const getAddOns = async () => {
+export const getAddOns = async (appointmentTypeId) => {
   try {
     const response = await retryRequest(() => throttledRequest(() => 
-      api.get('/appointments/compatible-addons')
+      api.get('/appointments/compatible-addons', {
+        params: { appointmentTypeId }
+      })
     ));
     return response.data;
   } catch (error) {
