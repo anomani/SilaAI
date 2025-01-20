@@ -63,13 +63,13 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
-        {/* <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Logout</Text>
             <Text style={styles.menuSubtitle}>Sign out of your account</Text>
           </View>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
-        </TouchableOpacity> */}
+        </TouchableOpacity>
       </View>
       <Footer navigation={navigation} />
     </View>
