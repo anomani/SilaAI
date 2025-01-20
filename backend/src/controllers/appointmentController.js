@@ -276,21 +276,43 @@ async function getAppointmentMetricsController(req, res) {
 async function updateAppointmentDetailsController(req, res) {
   try {
     const { appointmentId } = req.params;
-    const { date, startTime, endTime, appointmentType, price } = req.body;
+    const { 
+      date, 
+      startTime, 
+      endTime, 
+      appointmentTypeId,
+      price,
+      addOnIds = []
+    } = req.body;
 
     console.log('Updating appointment:', appointmentId);
     console.log('Update data:', req.body);
 
-    if (!date || !startTime || !endTime || !appointmentType || price === undefined) {
+    if (!date || !startTime || !endTime || !appointmentTypeId || price === undefined) {
       return res.status(400).send('Missing required fields');
     }
+
+    // Get the appointment type name and add-on names
+    const userId = req.user.id;
+    const { appointmentTypeName, addOnNames } = await getAppointmentTypeAndAddOnNames(
+      userId,
+      parseInt(appointmentTypeId),
+      addOnIds
+    );
+
+    // Create details string
+    const details = addOnNames.length > 0 
+      ? `${appointmentTypeName} with add-ons: ${addOnNames.join(', ')}`
+      : appointmentTypeName;
 
     const updatedAppointmentData = {
       date,
       startTime,
       endTime,
-      appointmentType,
+      appointmentType: appointmentTypeName,
+      details,
       price: parseFloat(price),
+      addOns: addOnNames
     };
 
     const updatedAppointment = await updateAppointmentDetails(

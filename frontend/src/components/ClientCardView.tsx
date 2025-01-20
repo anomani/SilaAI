@@ -35,6 +35,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 // Define your types
 type RootStackParamList = {
   ClientMessages: { clientid: string; clientName: string };
+  AddAppointment: { appointment: any };
 };
 
 interface Appointment {
@@ -476,8 +477,42 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
   };
 
   const handleEditPress = () => {
-    setIsEditMode(true);
-    setEditedAppointment(appointment);
+    // Convert time to 24-hour format
+    const formatTime = (timeStr: string) => {
+      const [time, period] = timeStr.split(' ');
+      const [hours, minutes] = time.split(':');
+      let hour = parseInt(hours);
+      
+      // Convert to 24-hour format
+      if (period === 'PM' && hour !== 12) {
+        hour += 12;
+      } else if (period === 'AM' && hour === 12) {
+        hour = 0;
+      }
+      
+      return `${hour.toString().padStart(2, '0')}:${minutes}`;
+    };
+
+    navigation.navigate('AddAppointment', { 
+      appointment: {
+        id: appointment.id,
+        clientId: appointment.clientid,
+        clientName: appointment.clientName,
+        date: appointment.date,
+        startTime: formatTime(appointment.startTime),
+        endTime: formatTime(appointment.endTime),
+        appointmentTypeId: appointment.appointmenttype,
+        appointmentType: appointment.appointmenttype,
+        details: appointment.details || '',
+        price: appointment.price,
+        paid: appointment.paid,
+        tipAmount: appointment.tipamount,
+        paymentMethod: appointment.paymentmethod,
+        addOnIds: appointment.addons || [],
+        clientPhoneNumber: appointment.clientPhoneNumber,
+        isEditing: true
+      }
+    });
   };
 
   const handleSaveEdit = async () => {
@@ -664,7 +699,21 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
                 <Text style={styles.addMediaButtonText}>Add Media</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
+            <TouchableOpacity 
+              style={styles.clientNameContainer}
+              onPress={() => navigation.navigate('ClientDetails', { 
+                client: {
+                  id: appointment.clientid,
+                  firstname: appointment.clientName.split(' ')[0],
+                  lastname: appointment.clientName.split(' ')[1] || '',
+                  phonenumber: appointment.clientPhoneNumber
+                }
+              })}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
+              <Ionicons name="information-circle-outline" size={16} color="#9da6b8" style={styles.infoIcon} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -1222,11 +1271,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#007AFF',
   },
-  paymentMethodText: {
-    color: '#fff',
-    fontSize: 18,
-    marginLeft: 8,
-  },
   tipInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1587,6 +1631,21 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     backgroundColor: '#FF3B30',
+  },
+  clientNameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    justifyContent: 'center',
+  },
+  infoIcon: {
+    opacity: 0.8,
+  },
+  cardClientName: {
+    fontSize: 24,
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 
