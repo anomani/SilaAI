@@ -86,7 +86,7 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
 }
 
 const AppContent: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const navigation = useNavigation();
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
@@ -104,15 +104,11 @@ const AppContent: React.FC = () => {
     // Check if the user is logged in and token is valid
     const checkLoginStatus = async () => {
       const token = await getToken();
-      // getToken will return null if token is expired
       setIsLoggedIn(!!token);
     };
 
     // Check login status initially
     checkLoginStatus();
-
-    // Set up periodic token validation (every 5 minutes)
-    const tokenCheckInterval = setInterval(checkLoginStatus, 5 * 60 * 1000);
 
     registerForPushNotificationsAsync().then(token => {
       if (token) {
@@ -164,14 +160,8 @@ const AppContent: React.FC = () => {
       if (responseListener.current) {
         Notifications.removeNotificationSubscription(responseListener.current);
       }
-      clearInterval(tokenCheckInterval);
     };
   }, [navigation, isLoggedIn]);
-
-  if (isLoggedIn === null) {
-    // You might want to show a loading screen here
-    return null;
-  }
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
