@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, TouchableOpacity, Platform, Keyboard, Modal, FlatList, SafeAreaView, TouchableWithoutFeedback, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Autocomplete from 'react-native-autocomplete-input';
-import { addAppointment, searchClients, getAppointmentTypesList, getAddOns } from '../services/api';
+import { addAppointment, searchClients, getAppointmentTypesList, getAddOns, updateAppointmentDetails } from '../services/api';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 const Checkbox = ({ checked, onPress }) => (
@@ -13,16 +13,58 @@ const Checkbox = ({ checked, onPress }) => (
   </TouchableOpacity>
 );
 
-const AddAppointmentScreen = ({ navigation }) => {
+const AddAppointmentScreen = ({ navigation, route }) => {
+  const isEditing = route.params?.appointment != null;
+  const [searchQuery, setSearchQuery] = useState(route.params?.appointment?.clientName || '');
+  const [selectedClientId, setSelectedClientId] = useState(route.params?.appointment?.clientId || null);
+  const [selectedClient, setSelectedClient] = useState(route.params?.appointment ? {
+    id: route.params.appointment.clientId,
+    firstname: route.params.appointment.clientName.split(' ')[0],
+    lastname: route.params.appointment.clientName.split(' ')[1] || '',
+    phonenumber: route.params.appointment.clientPhoneNumber
+  } : null);
+  
   const [appointment, setAppointment] = useState({
-    appointmentType: '',
-    clientName: '',
-    date: new Date(),
-    startTime: new Date(),
-    endTime: new Date(),
-    details: '',
-    price: '',
-    addOns: []
+    appointmentType: route.params?.appointment?.appointmentTypeId || '',
+    clientName: route.params?.appointment?.clientName || '',
+    date: (() => {
+      if (route.params?.selectedDate) {
+        return new Date(route.params.selectedDate);
+      }
+      if (route.params?.appointment?.date) {
+        // Add timezone offset to prevent date shift
+        const date = new Date(route.params.appointment.date);
+        return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+      }
+      return new Date();
+    })(),
+    startTime: (() => {
+      if (route.params?.appointment?.startTime) {
+        const [hours, minutes] = route.params.appointment.startTime.split(':');
+        const time = new Date();
+        time.setHours(parseInt(hours), parseInt(minutes), 0);
+        console.log('Setting start time:', hours, minutes, time.toLocaleTimeString());
+        return time;
+      }
+      const time = new Date();
+      time.setHours(9, 0, 0);
+      return time;
+    })(),
+    endTime: (() => {
+      if (route.params?.appointment?.endTime) {
+        const [hours, minutes] = route.params.appointment.endTime.split(':');
+        const time = new Date();
+        time.setHours(parseInt(hours), parseInt(minutes), 0);
+        console.log('Setting end time:', hours, minutes, time.toLocaleTimeString());
+        return time;
+      }
+      const time = new Date();
+      time.setHours(9, 0, 0);
+      return time;
+    })(),
+    details: route.params?.appointment?.details || '',
+    price: route.params?.appointment?.price?.toString() || '',
+    addOns: route.params?.appointment?.addOnIds || []
   });
   
   const [appointmentTypes, setAppointmentTypes] = useState([]);
@@ -31,13 +73,10 @@ const AddAppointmentScreen = ({ navigation }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState(null);
-  const [selectedClient, setSelectedClient] = useState(null);
   const [showAppointmentTypePicker, setShowAppointmentTypePicker] = useState(false);
   const [showAddOnsPicker, setShowAddOnsPicker] = useState(false);
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [inputLayout, setInputLayout] = useState({ y: 0, height: 0 });
-  const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
   // Add debounce function to prevent too many API calls
@@ -46,10 +85,8 @@ const AddAppointmentScreen = ({ navigation }) => {
   useEffect(() => {
     const fetchAppointmentData = async () => {
       try {
-        // Only fetch appointment types initially
+        // Fetch appointment types
         const typesResponse = await getAppointmentTypesList();
-        
-        // Format appointment types from the response
         const formattedTypes = typesResponse.map(type => ({
           id: type.id,
           name: type.name,
@@ -57,16 +94,39 @@ const AddAppointmentScreen = ({ navigation }) => {
           duration: type.duration,
           availability: type.availability || {}
         }));
-        
         setAppointmentTypes(formattedTypes);
+
+        // If editing, find the appointment type ID from the name
+        if (isEditing && route.params?.appointment?.appointmentType) {
+          const matchingType = formattedTypes.find(
+            type => type.name === route.params.appointment.appointmentType
+          );
+          if (matchingType) {
+            // Update the appointment with the correct type ID
+            setAppointment(prev => ({
+              ...prev,
+              appointmentType: matchingType.id
+            }));
+            
+            // Fetch add-ons for this appointment type
+            const addOnsResponse = await getAddOns(matchingType.id);
+            const formattedAddOns = addOnsResponse.map(addon => ({
+              id: addon.id,
+              name: addon.name,
+              price: addon.price,
+              duration: addon.duration
+            }));
+            setAddOnsList(formattedAddOns);
+          }
+        }
       } catch (error) {
         console.error('Error fetching appointment data:', error);
-        Alert.alert('Error', 'Failed to load appointment types');
+        Alert.alert('Error', 'Failed to load appointment data');
       }
     };
     
     fetchAppointmentData();
-  }, []);
+  }, [isEditing, route.params?.appointment]);
 
   const calculateEndTime = (startTime, appointmentTypeId, addOns = []) => {
     const selectedType = appointmentTypes.find(type => type.id === appointmentTypeId);
@@ -145,7 +205,13 @@ const AddAppointmentScreen = ({ navigation }) => {
       setShowStartTimePicker(false);
     }
     if (selectedTime) {
-      setAppointment({ ...appointment, startTime: selectedTime });
+      // Ensure we keep the 24-hour time
+      const newEndTime = calculateEndTime(selectedTime, appointment.appointmentType, appointment.addOns);
+      setAppointment(prev => ({
+        ...prev,
+        startTime: selectedTime,
+        endTime: newEndTime
+      }));
     }
   };
 
@@ -156,6 +222,15 @@ const AddAppointmentScreen = ({ navigation }) => {
     if (selectedTime) {
       setAppointment(prev => ({ ...prev, endTime: selectedTime }));
     }
+  };
+
+  // Helper function to format time in 12-hour format for display
+  const formatTimeDisplay = (date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true 
+    });
   };
 
   const handlePriceChange = (value) => {
@@ -181,6 +256,12 @@ const AddAppointmentScreen = ({ navigation }) => {
     setSelectedClientId(clientId);
     setSelectedClient(clientData);
     setAppointment({ ...appointment, clientName: `${clientData.firstname} ${clientData.lastname}` });
+  };
+
+  const formatTime = (date) => {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
   };
 
   const handleAddAppointment = async () => {
@@ -214,13 +295,10 @@ const AddAppointmentScreen = ({ navigation }) => {
       }
 
       const formatDate = (date) => {
-        const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
-        const localDate = new Date(date.getTime() - tzOffset);
+        // Remove timezone offset when formatting date for API
+        const tzOffset = date.getTimezoneOffset() * 60000;
+        const localDate = new Date(date.getTime() + tzOffset);
         return localDate.toISOString().split('T')[0];
-      };
-
-      const formatTime = (date) => {
-        return date.toTimeString().split(' ')[0].slice(0, 5);
       };
 
       const selectedAppointmentType = appointmentTypes.find(type => type.id === appointment.appointmentType);
@@ -236,18 +314,26 @@ const AddAppointmentScreen = ({ navigation }) => {
         appointmentTypeId: selectedAppointmentType.id,
         details: appointment.details,
         price: parseFloat(appointment.price),
-        paid: null,
-        tipAmount: null,
-        paymentMethod: null,
+        paid: route.params?.appointment?.paid || null,
+        tipAmount: route.params?.appointment?.tipAmount || null,
+        paymentMethod: route.params?.appointment?.paymentMethod || null,
         addOnIds: appointment.addOns
       };
 
-      await addAppointment(appointmentData);
-      console.log('Appointment added successfully');
+      console.log('Saving appointment with times:', appointmentData.startTime, appointmentData.endTime);
+
+      if (isEditing) {
+        await updateAppointmentDetails(route.params.appointment.id, appointmentData);
+        console.log('Appointment updated successfully');
+      } else {
+        await addAppointment(appointmentData);
+        console.log('Appointment added successfully');
+      }
+      
       navigation.goBack();
     } catch (error) {
-      console.error('Error adding appointment:', error);
-      Alert.alert('Booking Error', error.message || 'Failed to add appointment. Please try again.');
+      console.error('Error saving appointment:', error);
+      Alert.alert('Error', error.message || 'Failed to save appointment. Please try again.');
     }
   };
 
@@ -269,13 +355,21 @@ const AddAppointmentScreen = ({ navigation }) => {
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={styles.pickerItem}
+                style={[
+                  styles.pickerItem,
+                  appointment.appointmentType === item.id && styles.selectedPickerItem
+                ]}
                 onPress={() => {
                   handleInputChange('appointmentType', item.id);
                   setShowAppointmentTypePicker(false);
                 }}
               >
-                <Text style={styles.pickerItemText}>{item.name}</Text>
+                <Text style={[
+                  styles.pickerItemText,
+                  appointment.appointmentType === item.id && styles.selectedPickerItemText
+                ]}>
+                  {item.name}
+                </Text>
               </TouchableOpacity>
             )}
           />
@@ -377,7 +471,7 @@ const AddAppointmentScreen = ({ navigation }) => {
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Text style={styles.backButtonText}>← Back</Text>
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>Add Appointment</Text>
+      <Text style={styles.headerTitle}>{isEditing ? 'Edit Appointment' : 'Add Appointment'}</Text>
     </View>
   );
 
@@ -434,16 +528,17 @@ const AddAppointmentScreen = ({ navigation }) => {
         <Text style={styles.label}>Client Name</Text>
         <View style={styles.searchContainer}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, isEditing && styles.disabledInput]}
             value={searchQuery}
             onChangeText={handleClientSearch}
-            onFocus={() => setShowClientSearch(true)}
+            onFocus={() => !isEditing && setShowClientSearch(true)}
             placeholder="Search client name"
             placeholderTextColor="#888"
             autoCorrect={false}
             autoCapitalize="words"
+            editable={!isEditing}
           />
-          {showClientSearch && (
+          {showClientSearch && !isEditing && (
             <>
               <TouchableOpacity 
                 style={styles.overlay} 
@@ -470,8 +565,8 @@ const AddAppointmentScreen = ({ navigation }) => {
                         {item.id !== 'new' && item.phonenumber && (
                           <Text style={styles.phoneText}>
                             {item.phonenumber
-                              .replace(/^\+1|^1/, '')  // Remove +1 or 1 prefix
-                              .replace(/\D/g, '')      // Remove any non-digits
+                              .replace(/^\+1|^1/, '')
+                              .replace(/\D/g, '')
                               .replace(/(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3')}
                           </Text>
                         )}
@@ -487,6 +582,16 @@ const AddAppointmentScreen = ({ navigation }) => {
                 />
               </View>
             </>
+          )}
+          {isEditing && (
+            <View style={styles.clientPhoneContainer}>
+              <Text style={styles.clientPhoneText}>
+                {selectedClient?.phonenumber ? selectedClient.phonenumber
+                  .replace(/^\+1|^1/, '')
+                  .replace(/\D/g, '')
+                  .replace(/(\d{3})(\d{3})(\d{4})$/, '($1) $2-$3') : ''}
+              </Text>
+            </View>
           )}
         </View>
         <Text style={styles.label}>Date</Text>
@@ -535,7 +640,7 @@ const AddAppointmentScreen = ({ navigation }) => {
         <Text style={styles.label}>Starts at</Text>
         <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
           <Text style={[styles.input, styles.inputText]}>
-            {appointment.startTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            {formatTimeDisplay(appointment.startTime)}
           </Text>
         </TouchableOpacity>
         {showStartTimePicker && (
@@ -552,7 +657,7 @@ const AddAppointmentScreen = ({ navigation }) => {
         <Text style={styles.label}>Ends at</Text>
         <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
           <Text style={[styles.input, styles.inputText]}>
-            {appointment.endTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            {formatTimeDisplay(appointment.endTime)}
           </Text>
         </TouchableOpacity>
         {showEndTimePicker && (
@@ -587,7 +692,10 @@ const AddAppointmentScreen = ({ navigation }) => {
           blurOnSubmit={true}
           onSubmitEditing={() => Keyboard.dismiss()}
         />
-        <Button title="Add Appointment" onPress={handleAddAppointment} />
+        <Button 
+          title={isEditing ? "Update Appointment" : "Add Appointment"} 
+          onPress={handleAddAppointment} 
+        />
       </KeyboardAwareScrollView>
     </SafeAreaView>
   );
@@ -812,6 +920,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  disabledInput: {
+    backgroundColor: '#1c1c1e',
+    opacity: 0.7,
+  },
+  selectedPickerItem: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  selectedPickerItemText: {
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  clientPhoneContainer: {
+    marginTop: 4,
+  },
+  clientPhoneText: {
+    color: '#888',
+    fontSize: 14,
   },
 });
 

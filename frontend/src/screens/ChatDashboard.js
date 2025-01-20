@@ -135,6 +135,11 @@ const ChatDashboard = ({ navigation }) => {
       if (!suggestedResponse) {
         console.error("Suggested response is empty or undefined");
         Alert.alert('Error', 'No suggested response available.');
+        setDisabledButtons(prev => {
+          const next = new Set(prev);
+          next.delete(clientId);
+          return next;
+        });
         return;
       }
 
@@ -145,6 +150,11 @@ const ChatDashboard = ({ navigation }) => {
       if (!phoneNumber) {
         console.error("Client phone number is missing");
         Alert.alert('Error', 'Client phone number is missing.');
+        setDisabledButtons(prev => {
+          const next = new Set(prev);
+          next.delete(clientId);
+          return next;
+        });
         return;
       }
 
@@ -160,6 +170,13 @@ const ChatDashboard = ({ navigation }) => {
       console.error('Error accepting suggested response:', error);
       console.error('Error details:', error.response?.data);
       Alert.alert('Error', `Failed to accept suggested response. ${error.message}`);
+    } finally {
+      // Re-enable the button regardless of success or failure
+      setDisabledButtons(prev => {
+        const next = new Set(prev);
+        next.delete(clientId);
+        return next;
+      });
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond, getSuggestedResponse, clearSuggestedResponse, getAIResponseStatus } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -11,21 +11,38 @@ import * as Notifications from 'expo-notifications';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-const Header = ({ clientName, navigation, onClearSuggestedResponse, hasSuggestedResponse }) => {
+const Header = ({ clientName, navigation, onClearSuggestedResponse, hasSuggestedResponse, clientDetails }) => {
+  const handleNamePress = () => {
+    if (clientDetails) {
+      navigation.navigate('ClientDetails', { client: clientDetails });
+    }
+  };
+
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
         <Ionicons name="arrow-back" size={24} color="#fff" />
       </TouchableOpacity>
-      <Text style={styles.headerTitle}>{clientName}</Text>
-      {hasSuggestedResponse && (
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={onClearSuggestedResponse}
+      <View style={styles.headerCenter}>
+        <TouchableOpacity 
+          onPress={handleNamePress}
+          activeOpacity={0.7}
+          style={styles.headerTitleContainer}
         >
-          <Text style={styles.clearButtonText}>Clear response</Text>
+          <Text style={styles.headerTitle}>{clientName}</Text>
+          <Ionicons name="information-circle-outline" size={16} color="#9da6b8" style={styles.infoIcon} />
         </TouchableOpacity>
-      )}
+      </View>
+      <View style={styles.headerRight}>
+        {hasSuggestedResponse && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={onClearSuggestedResponse}
+          >
+            <Text style={styles.clearButtonText}>Clear response</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -261,10 +278,15 @@ const ClientMessagesScreen = ({ route }) => {
 
       console.log('Created temp message:', tempMessage);
 
+      // Clear all message-related states immediately
       setLocalMessages(prev => [...prev, tempMessage]);
       setNewMessage('');
       setEditableSuggestedResponse('');
       setCurrentSuggestedResponse('');
+      setIsSuggestedResponseEdited(false);
+      // Also clear the draft message
+      setDraftMessage(clientid, '');
+      
       scrollToBottom();
 
       console.log('Sending message via API'+ messageToSend);
@@ -403,53 +425,20 @@ const ClientMessagesScreen = ({ route }) => {
   const renderMessage = useCallback((messageGroup) => {
     const isAssistant = messageGroup.sender === '+18446480598';
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
-    let senderName = isAssistant ? 'Assistant' : clientName;
     
-    if (!isAssistant && senderName === ' ') {
-      senderName = messageGroup.sender;
-    }
-
-    const getDeliveryIcon = (message) => {
-      if (!isAssistant) return null;
-      
-      if (message.error) {
-        return <Ionicons name="alert-circle" size={14} color="#ff4444" />;
-      }
-      
-      // Show AI status indicator for the latest message
-      if (isLatestMessage(message) && aiStatus === 'pending') {
-        return <ActivityIndicator size="small" color="#9da6b8" />;
-      }
-      
-      if (message.delivered) {
-        return <Ionicons name="checkmark-done" size={14} color="#9da6b8" />;
-      }
-      
-      return <Ionicons name="checkmark" size={14} color="#9da6b8" />;
-    };
-
-    const isLatestMessage = (message) => {
-      const latestMessage = messages[messages.length - 1];
-      return latestMessage && message.date === latestMessage.date;
-    };
-
     return (
       <View 
         key={messageGroup.firstMessageDate}
         style={[styles.messageContainer, isAssistant ? styles.assistantMessage : styles.clientMessage]}
       >
         {!isAssistant && <Image source={avatar} style={styles.avatar} />}
-        <View style={styles.messageContent}>
-          <Text style={styles.messageSender}>
-            {senderName}
-            {isAssistant && aiStatus === 'pending' && (
-              <Text style={styles.typingIndicator}> typing...</Text>
-            )}
-          </Text>
+        <View style={[styles.messageContent, !isAssistant && styles.clientMessageContent]}>
           {messageGroup.messages.map((message, index) => (
             <View style={styles.messageWrapper} key={message.id || `${message.date}-${message.fromtext}-${Math.random()}`}>
               {isAssistant && <View style={styles.deliveryIconContainer}>
-                {getDeliveryIcon(message)}
+                {message.error && <Ionicons name="alert-circle" size={14} color="#ff4444" />}
+                {message.delivered && <Ionicons name="checkmark-done" size={14} color="#9da6b8" />}
+                {!message.delivered && <Ionicons name="checkmark" size={14} color="#9da6b8" />}
               </View>}
               <View 
                 style={[
@@ -576,6 +565,7 @@ const ClientMessagesScreen = ({ route }) => {
         navigation={navigation} 
         onClearSuggestedResponse={handleClearSuggestedResponse}
         hasSuggestedResponse={!!currentSuggestedResponse}
+        clientDetails={clientDetails}
       />
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -676,20 +666,33 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 16,
     backgroundColor: '#111318',
     borderBottomWidth: 1,
     borderBottomColor: '#292e38',
   },
-  backButton: {
-    marginRight: 16,
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   headerTitle: {
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-    flex: 1,
+  },
+  infoIcon: {
+    opacity: 0.8,
+  },
+  backButton: {
+    width: 40, // Fixed width to help with centering
+  },
+  headerRight: {
+    width: 40, // Fixed width to help with centering
   },
   clearButton: {
     padding: 8,
@@ -717,6 +720,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     alignItems: 'flex-end',
+    gap: 12,
   },
   assistantMessage: {
     justifyContent: 'flex-end',
@@ -724,18 +728,27 @@ const styles = StyleSheet.create({
   clientMessage: {
     justifyContent: 'flex-start',
   },
+  clientMessageContent: {
+    alignItems: 'flex-start', // Override alignment for client messages
+  },
+  clientMessageSender: {
+    alignSelf: 'flex-start', // Override alignment for client sender name
+  },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignSelf: 'flex-end',
   },
   messageContent: {
-    maxWidth: '70%',
+    maxWidth: '75%',
+    alignItems: 'flex-end', // Align content to the right for assistant messages
   },
   messageSender: {
     color: '#9da6b8',
     fontSize: 13,
     marginBottom: 4,
+    alignSelf: 'flex-end', // Align sender name to the right
   },
   messageBubble: {
     borderRadius: 12,
@@ -885,6 +898,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9da6b8',
     fontStyle: 'italic'
+  },
+  clickableText: {
+    color: '#007AFF',  // iOS blue color
+    textDecorationLine: 'underline',
   },
 });
 

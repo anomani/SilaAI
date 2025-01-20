@@ -603,7 +603,7 @@ const CalendarScreen = ({ navigation }) => {
 
   const handleCreateAppointment = () => {
     setIsDropdownVisible(false);
-    navigation.navigate('AddAppointment');
+    navigation.navigate('AddAppointment', { selectedDate: date });
   };
 
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
