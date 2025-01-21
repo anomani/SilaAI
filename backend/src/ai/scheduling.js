@@ -246,18 +246,6 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "getCurrentDate",
-      description: "Gets the current date and time",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
       name: "clearCustomPrompt",
       description: "Clears the custom prompt for the client. Use this where specified in the instructions. Some customers have specific prompt add ons for their conversations. Call this function after the assistant confirms the appointment",
       parameters: {
@@ -358,7 +346,7 @@ async function createThread(phoneNumber, initialMessage = false, userId) {
   }
 }
 
-async function createAssistant(fname, lname, phone, messages, appointment, day, client, upcomingAppointment, userId) {
+async function createAssistant(fname, lname, phone, messages, appointment, client, upcomingAppointment, userId) {
   const instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
     // Fetch appointment types and add-ons for the user
@@ -411,7 +399,6 @@ async function createAssistant(fname, lname, phone, messages, appointment, day, 
     .replace('${fname}', fname)
     .replace('${lname}', lname)
     .replace('${phone}', phone)
-    .replace('${day}', day)
     .replace('${upcomingAppointment}', upcomingAppointment);
 
 
@@ -552,9 +539,6 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
       case "getUpcomingAppointments":
         output = await getUpcomingAppointments(client.id, args.limit, userId);
         break;
-      case "getCurrentDate":
-        output = getCurrentDate();
-        break;
       case "clearCustomPrompt":
         console.log("clearing prompt!")
         output = await deleteAIPrompt(client.id);
@@ -682,9 +666,6 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber, use
       case "getUpcomingAppointments":
         output = await getUpcomingAppointments(args.clientId, args.limit, userId);
         break;
-      case "getCurrentDate":
-        output = getCurrentDate();
-        break;
       case "clearCustomPrompt":
         console.log("clearing prompt!")
         output = await deleteAIPrompt(client.id);
@@ -801,7 +782,7 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
       email = client.email;
       const phone = client.phonenumber;   
       thread = await createThread(phoneNumber, false, userId); 
-      assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment, userId);
+      assistant = await createAssistant(fname, lname, phone, messages, appointmentType, client, upcomingAppointment, userId);
     }
 
 

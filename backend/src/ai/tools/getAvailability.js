@@ -3,22 +3,29 @@ dotenv.config({path : '../../../.env'})
 const {getAppointmentsByDay} = require('../../model/appointment')
 const { getAppointmentTypes, getAddOns } = require('../../model/appTypes');
 
+
 async function getAvailability(day, appointmentType, addOnArray, userId, clientId = null) {
     console.log("Day:", day);
     console.log("Appointment Type:", appointmentType);
     console.log("Add-ons:", addOnArray);
     console.log("User ID:", userId);
+    
     // Fetch appointment types and add-ons from the database
     const appointmentTypes = await getAppointmentTypes(userId);
-    const addOns = await getAddOns(userId);
+    const allAddOns = await getAddOns(userId);
 
     // Find the requested appointment type
     const appointmentTypeInfo = appointmentTypes.find(type => type.name === appointmentType);
+    console.log("Appointment Type Info:", appointmentTypeInfo);
     if (!appointmentTypeInfo) {
         throw new Error(`Invalid appointment type: ${appointmentType}`);
     }
     
-    const duration = calculateTotalDuration(appointmentTypeInfo, addOns);
+    // Filter to only include the selected add-ons
+    const selectedAddOns = allAddOns.filter(addOn => addOnArray.includes(addOn.name));
+    console.log("Selected Add-ons:", selectedAddOns);
+    
+    const duration = calculateTotalDuration(appointmentTypeInfo, selectedAddOns);
     console.log("Duration:", duration);
     try {
         const date = new Date(day);
@@ -80,6 +87,7 @@ async function getAvailability(day, appointmentType, addOnArray, userId, clientI
         return [];
     }
 }
+
 
 function getDayName(dayIndex) {
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -164,9 +172,9 @@ async function getAvailabilityCron(day, appointmentType, addOnArray, userId, cli
     }
 }
 
-function calculateTotalDuration(appointmentTypeInfo, addOns) {
+function calculateTotalDuration(appointmentTypeInfo, selectedAddOns) {
     const appointmentDuration = appointmentTypeInfo.duration;
-    const addOnsDuration = addOns.reduce((total, addOn) => total + addOn.duration, 0);
+    const addOnsDuration = selectedAddOns.reduce((total, addOn) => total + addOn.duration, 0);
     return appointmentDuration + addOnsDuration;
 }
 
