@@ -11,6 +11,7 @@ const { getAvailability } = require('./getAvailability');
 
 async function rescheduleAppointmentWithAcuity(appointmentId, newDate, newStartTime, userId) {
     const user = await getUserById(userId);
+
     const acuityApiUrl = `https://acuityscheduling.com/api/v1/appointments/${appointmentId}/reschedule`;
     const auth = {
         username: user.acuity_user_id,
@@ -39,11 +40,11 @@ async function rescheduleAppointmentWithAcuity(appointmentId, newDate, newStartT
         throw error;
     }
 }
-// async function main() {
-//     const response = await rescheduleAppointmentByPhoneAndDate("+12038324011", "2025-01-20", "2025-01-20", "12:00", 1);
-//     console.log("response", response)
-// }
-// main();
+async function main() {
+    const response = await rescheduleAppointmentByPhoneAndDate("+12038324011", "2025-01-20", "2025-01-20", "12:00", 1);
+    console.log("response", response)
+}
+main();
 
 async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, newDate, newStartTime, userId) {
     try {
@@ -87,7 +88,9 @@ async function rescheduleAppointmentByPhoneAndDate(phoneNumber, currentDate, new
         }
 
         // Reschedule with Acuity
-        const acuityResponse = await rescheduleAppointmentWithAcuity(appointment.acuityid, newDate, newStartTime, userId);
+        if (appointment.acuityid) {
+            const acuityResponse = await rescheduleAppointmentWithAcuity(appointment.acuityid, newDate, newStartTime, userId);
+        }
 
         await rescheduleAppointment(appointment.id, newDate, newStartTime, newEndTime);
         
