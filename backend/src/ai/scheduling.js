@@ -485,17 +485,15 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
           output = {
             requestedDay: `${getDayOfWeek(args.day)}, ${args.day}`,
             nextAvailableSlots: nextSlots.map(slot => ({
-              date: `${getDayOfWeek(slot.date)}, ${slot.date}`,
-              times: slot.times
+              ...slot,
+              date: `${getDayOfWeek(slot.date)}, ${slot.date}`
             }))
           };
-          console.log("output", output)
         } else {
           output = {
             date: `${getDayOfWeek(args.day)}, ${args.day}`,
             times: output
           };
-          console.log("output", output)
         }
         break;
       case "bookAppointment":
@@ -624,8 +622,8 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber, use
           output = {
             requestedDay: `${getDayOfWeek(args.day)}, ${args.day}`,
             nextAvailableSlots: nextSlots.map(slot => ({
-              date: `${getDayOfWeek(slot.date)}, ${slot.date}`,
-              times: slot.times
+              ...slot,
+              date: `${getDayOfWeek(slot.date)}, ${slot.date}`
             }))
           };
         } else {
