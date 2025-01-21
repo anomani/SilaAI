@@ -18,7 +18,6 @@ const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDate
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { createWaitlistRequest } = require('../model/waitlist');
 const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
-const { confStore } = require('@dotenvx/dotenvx/src/shared/store');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
