@@ -2,8 +2,8 @@ import axios from 'axios';
 import { getToken } from '../utils/auth';
 
 // Replace with your backend API URL
-// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -378,11 +378,25 @@ export const getNotesByClientId = async (clientId) => {
 
 export const createNote = async (clientId, content) => {
   try {
-    const response = await retryRequest(() => throttledRequest(() => api.post('/notes', { clientId, content })));
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.post('/notes', { clientId, content })
+    ));
+    if (!response || !response.data) {
+      throw new Error('Invalid response from server');
+    }
     return response.data;
   } catch (error) {
     console.error('Error creating note:', error);
-    throw error;
+    if (error.response) {
+      // Server responded with an error
+      throw new Error(error.response.data.error || 'Failed to create note');
+    } else if (error.request) {
+      // Request was made but no response received
+      throw new Error('No response from server');
+    } else {
+      // Something else went wrong
+      throw new Error('Failed to create note');
+    }
   }
 };
 
@@ -768,6 +782,29 @@ export const setNextDayRemindersStatus = async (status) => {
     await retryRequest(() => throttledRequest(() => api.post('/settings/nextDayReminders', { status })));
   } catch (error) {
     console.error('Error setting nextDayReminders status:', error);
+    throw error;
+  }
+};
+
+export const updateNote = async (noteId, content) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.put(`/notes/${noteId}`, { content })
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error updating note:', error);
+    throw error;
+  }
+};
+
+export const deleteNote = async (noteId) => {
+  try {
+    await retryRequest(() => throttledRequest(() => 
+      api.delete(`/notes/${noteId}`)
+    ));
+  } catch (error) {
+    console.error('Error deleting note:', error);
     throw error;
   }
 };

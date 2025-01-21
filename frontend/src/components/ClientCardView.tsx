@@ -18,7 +18,7 @@ import {
   Linking,
   ActivityIndicator // Add this import
 } from 'react-native';
-import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientMedia, uploadClientMedia, deleteClientMedia, updateAppointmentDetails, deleteAppointment } from '../services/api';
+import { getClientById, getAppointmentsByClientId, getMessagesByClientId, setMessagesRead, getClientAppointmentsAroundCurrent, getNotesByClientId, createNote, updateAppointmentPayment, getAppointmentsByDay, getClientMedia, uploadClientMedia, deleteClientMedia, updateAppointmentDetails, deleteAppointment, updateNote, deleteNote } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import avatarImage from '../../assets/avatar.png';
 import twilioAvatar from '../../assets/icon.png';
@@ -101,6 +101,9 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
   const [datePickerDate, setDatePickerDate] = useState(new Date());
   const [startTimePickerDate, setStartTimePickerDate] = useState(new Date());
   const [endTimePickerDate, setEndTimePickerDate] = useState(new Date());
+  const [isEditNoteModalVisible, setIsEditNoteModalVisible] = useState<boolean>(false);
+  const [selectedNote, setSelectedNote] = useState<any>(null);
+  const [editedNoteContent, setEditedNoteContent] = useState<string>('');
 
   // Extract clientId from the appointment object
   const currentClientId = appointment?.clientid;
@@ -208,6 +211,8 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
         setIsPaymentModalVisible(false);
         // Trigger a re-render
         setPaymentData(newPaymentData);
+        // Refresh parent component data
+        onDelete(); // This is actually onUpdate, refreshes the appointments list
       } catch (error) {
         console.error('Error updating payment:', error);
         Alert.alert('Error', 'Failed to update payment. Please try again.');
@@ -217,12 +222,25 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
 
   const addNote = async () => {
     try {
-      const data = await createNote(currentClientId, newNote);
+      if (!newNote.trim()) {
+        Alert.alert('Error', 'Note content cannot be empty');
+        return;
+      }
+
+      const data = await createNote(currentClientId, newNote.trim());
+      if (!data) {
+        throw new Error('Failed to create note');
+      }
+      
       setNotes(prevNotes => [data, ...prevNotes]);
       setNewNote('');
       setIsAddNoteModalVisible(false);
     } catch (error) {
       console.error('Error adding note:', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'Failed to add note. Please try again.'
+      );
     }
   };
 
@@ -609,6 +627,110 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
     );
   };
 
+  const handleClientNamePress = async () => {
+    try {
+      // Fetch full client details before navigation
+      const clientDetails = await getClientById(appointment.clientid);
+      navigation.navigate('ClientDetails', { 
+        client: {
+          id: appointment.clientid,
+          firstname: appointment.clientName.split(' ')[0],
+          lastname: appointment.clientName.split(' ')[1] || '',
+          phonenumber: clientDetails.phonenumber,
+          email: clientDetails.email,
+          notes: clientDetails.notes
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching client details:', error);
+      Alert.alert('Error', 'Failed to load client details');
+    }
+  };
+
+  const handleEditNote = async () => {
+    try {
+      if (!selectedNote) return;
+      
+      const updatedNote = await updateNote(selectedNote.id, editedNoteContent);
+      setNotes(prevNotes => prevNotes.map(note => 
+        note.id === selectedNote.id ? updatedNote : note
+      ));
+      setIsEditNoteModalVisible(false);
+      setSelectedNote(null);
+      setEditedNoteContent('');
+    } catch (error) {
+      console.error('Error updating note:', error);
+      Alert.alert('Error', 'Failed to update note');
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    Alert.alert(
+      "Delete Note",
+      "Are you sure you want to delete this note?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteNote(noteId);
+              setNotes(prevNotes => prevNotes.filter(note => note.id !== noteId));
+            } catch (error) {
+              console.error('Error deleting note:', error);
+              Alert.alert('Error', 'Failed to delete note');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const renderEditNoteModal = () => (
+    <Modal
+      transparent={true}
+      visible={isEditNoteModalVisible}
+      onRequestClose={() => setIsEditNoteModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.addNoteModalContent}>
+          <Text style={styles.addNoteModalTitle}>Edit Note</Text>
+          <TextInput
+            style={styles.addNoteModalInput}
+            value={editedNoteContent}
+            onChangeText={setEditedNoteContent}
+            placeholder="Edit your note..."
+            placeholderTextColor="#999"
+            multiline
+            numberOfLines={4}
+          />
+          <View style={styles.addNoteModalButtons}>
+            <TouchableOpacity 
+              style={[styles.addNoteModalButton, styles.cancelButton]} 
+              onPress={() => {
+                setIsEditNoteModalVisible(false);
+                setSelectedNote(null);
+                setEditedNoteContent('');
+              }}
+            >
+              <Text style={styles.addNoteModalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.addNoteModalButton, styles.submitButton]} 
+              onPress={handleEditNote}
+            >
+              <Text style={styles.addNoteModalButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   console.log('ClientCardView rendered. showGallery:', showGallery);
 
   if (isLoading) {
@@ -701,14 +823,7 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
             </View>
             <TouchableOpacity 
               style={styles.clientNameContainer}
-              onPress={() => navigation.navigate('ClientDetails', { 
-                client: {
-                  id: appointment.clientid,
-                  firstname: appointment.clientName.split(' ')[0],
-                  lastname: appointment.clientName.split(' ')[1] || '',
-                  phonenumber: appointment.clientPhoneNumber
-                }
-              })}
+              onPress={handleClientNamePress}
               activeOpacity={0.7}
             >
               <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
@@ -780,30 +895,82 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
         <View style={styles.notesContainer}>
           <Text style={styles.notesTitle}>Notes</Text>
           {notes.length > 0 ? (
-            <View style={styles.noteItem}>
-              <Text style={styles.noteContent}>{notes[0].content}</Text>
-              <Text style={styles.noteDate}>{formatNoteDate(notes[0].createdat)}</Text>
-            </View>
+            <>
+              {/* Always show the first note */}
+              <View style={styles.noteItem}>
+                <View style={styles.noteHeader}>
+                  <Text style={styles.noteDate}>{formatNoteDate(notes[0].createdat)}</Text>
+                  <View style={styles.noteActions}>
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setSelectedNote(notes[0]);
+                        setEditedNoteContent(notes[0].content);
+                        setIsEditNoteModalVisible(true);
+                      }}
+                      style={styles.noteActionButton}
+                    >
+                      <Ionicons name="create-outline" size={20} color="#007AFF" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => handleDeleteNote(notes[0].id)}
+                      style={styles.noteActionButton}
+                    >
+                      <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <Text style={styles.noteContent}>{notes[0].content}</Text>
+              </View>
+
+              {/* Show remaining notes when showAllNotes is true */}
+              {showAllNotes && notes.slice(1).map((note, index) => (
+                <View key={index} style={styles.noteItem}>
+                  <View style={styles.noteHeader}>
+                    <Text style={styles.noteDate}>{formatNoteDate(note.createdat)}</Text>
+                    <View style={styles.noteActions}>
+                      <TouchableOpacity 
+                        onPress={() => {
+                          setSelectedNote(note);
+                          setEditedNoteContent(note.content);
+                          setIsEditNoteModalVisible(true);
+                        }}
+                        style={styles.noteActionButton}
+                      >
+                        <Ionicons name="create-outline" size={20} color="#007AFF" />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        onPress={() => handleDeleteNote(note.id)}
+                        style={styles.noteActionButton}
+                      >
+                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <Text style={styles.noteContent}>{note.content}</Text>
+                </View>
+              ))}
+            </>
           ) : (
             <Text style={styles.noNotesText}>No notes available</Text>
           )}
+
           <TouchableOpacity 
             style={styles.addNoteButton} 
             onPress={() => setIsAddNoteModalVisible(true)}
           >
             <Text style={styles.addNoteButtonText}>Add Note</Text>
           </TouchableOpacity>
+
           {notes.length > 1 && (
-            <TouchableOpacity onPress={() => setShowAllNotes(!showAllNotes)}>
-              <Text style={styles.seeMoreText}>{showAllNotes ? 'See Less' : 'See More'}</Text>
+            <TouchableOpacity 
+              onPress={() => setShowAllNotes(!showAllNotes)}
+              style={styles.seeMoreButton}
+            >
+              <Text style={styles.seeMoreText}>
+                {showAllNotes ? 'See Less' : `See ${notes.length - 1} More Notes`}
+              </Text>
             </TouchableOpacity>
           )}
-          {showAllNotes && notes.slice(1).map((note, index) => (
-            <View key={index} style={styles.noteItem}>
-              <Text style={styles.noteContent}>{note.content}</Text>
-              <Text style={styles.noteDate}>{formatNoteDate(note.createdat)}</Text>
-            </View>
-          ))}
         </View>
         
         <View style={styles.clientAppointmentsContainer}>
@@ -878,6 +1045,7 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
         clientId={currentClientId}
       />
       {renderAddNoteModal()}
+      {renderEditNoteModal()}
       <PaymentModal
         isVisible={isPaymentModalVisible}
         onClose={() => setIsPaymentModalVisible(false)}
@@ -995,18 +1163,31 @@ const styles = StyleSheet.create({
   },
   noteItem: {
     marginBottom: 10,
-    padding: 10,
+    padding: 12,
     backgroundColor: '#3a3a3c',
-    borderRadius: 5,
+    borderRadius: 8,
+  },
+  noteHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  noteActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  noteActionButton: {
+    padding: 5,
   },
   noteContent: {
     color: '#fff',
     fontSize: 14,
+    lineHeight: 20,
   },
   noteDate: {
     color: '#8e8e93',
     fontSize: 12,
-    marginTop: 5,
   },
   addNoteButton: {
     backgroundColor: '#007AFF',
@@ -1018,10 +1199,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-  seeMoreText: {
-    color: '#007AFF',
-    textAlign: 'center',
+  seeMoreButton: {
     marginTop: 10,
+    padding: 8,
+    alignItems: 'center',
   },
   clientAppointmentsContainer: {
     width: '100%',
@@ -1318,38 +1499,50 @@ const styles = StyleSheet.create({
   addNoteModalContent: {
     backgroundColor: '#2c2c2e',
     padding: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     width: '90%',
+    maxWidth: 400,
   },
   addNoteModalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 16,
+    textAlign: 'center',
   },
   addNoteModalInput: {
     borderWidth: 1,
     borderColor: '#444',
-    padding: 8,
-    borderRadius: 4,
-    marginBottom: 16,
-    height: 80,
-    textAlignVertical: 'top',
+    borderRadius: 8,
+    padding: 12,
     color: '#fff',
+    backgroundColor: '#3a3a3c',
+    fontSize: 16,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 16,
   },
   addNoteModalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
   },
   addNoteModalButton: {
-    padding: 10,
-    borderRadius: 4,
-    width: '45%',
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#3a3a3c',
+  },
+  submitButton: {
+    backgroundColor: '#007AFF',
   },
   addNoteModalButtonText: {
-    fontSize: 16,
     color: '#fff',
-    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '600',
   },
   noNotesText: {
     color: '#aaa',
@@ -1646,6 +1839,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  seeMoreText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 
