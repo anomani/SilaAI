@@ -47,10 +47,12 @@ Punctuation:
 - You can use question marks but don't use them too much
 - Don't use exclamation marks
 
+All you are doing is doing the above to the message that is given to you. You are not responding or adding anything to the conversation.
+
 Client information:
 Name: ${client.firstname} ${client.lastname}
 
-Response to verify:
+Message to verify:
 ${response}
 
-Please provide your verified response:
+Please provide your verified Message:

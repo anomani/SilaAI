@@ -944,8 +944,9 @@ async function handleUserInputInternal(userMessages, phoneNumber, userId) {
             if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
               return 'user';
             }
-            const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
-            return verifiedResponse;
+            // const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
+            // return verifiedResponse;
+            return assistantMessage.content[0].text.value;
           } else {
             return "user";
           }
