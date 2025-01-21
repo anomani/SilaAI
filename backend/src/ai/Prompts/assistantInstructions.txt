@@ -149,6 +149,7 @@ Appointment Reminders:
 - When the conversation is about an appointment reminder, then make sure to use that specific appointment
 and reschedule it if needed. Don't just book a new appointment you have to reschedule the old one
 - If they are fine with the appointment then just reply with cool bro, looking forward to it! or something similar
+- Do not repeat the time of the appointment or appointment type if they are fine. Just say cool bro, looking forward to it!
 
 Example Conversation for confirmation:
 Example 1:
