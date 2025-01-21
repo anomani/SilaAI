@@ -18,6 +18,7 @@ const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDate
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { createWaitlistRequest } = require('../model/waitlist');
 const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
+const { confStore } = require('@dotenvx/dotenvx/src/shared/store');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -314,6 +315,12 @@ const tools = [
   }
 ];
 
+// Add this helper function at the top level
+function getDayOfWeek(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { weekday: 'long' });
+}
+
 async function createThread(phoneNumber, initialMessage = false, userId) {
   console.log('Function: createThread');
   console.log('Parameters:');
@@ -475,10 +482,21 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
         totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
         output = await getAvailability(args.day, args.appointmentType, args.addOns, userId, client.id);
         if (output.length === 0) {
+          const nextSlots = await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, userId);
           output = {
-            requestedDay: args.day,
-            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, userId)
+            requestedDay: `${getDayOfWeek(args.day)}, ${args.day}`,
+            nextAvailableSlots: nextSlots.map(slot => ({
+              date: `${getDayOfWeek(slot.date)}, ${slot.date}`,
+              times: slot.times
+            }))
           };
+          console.log("output", output)
+        } else {
+          output = {
+            date: `${getDayOfWeek(args.day)}, ${args.day}`,
+            times: output
+          };
+          console.log("output", output)
         }
         break;
       case "bookAppointment":
@@ -603,9 +621,18 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber, use
         totalDuration = calculateTotalDuration(args.appointmentType, args.addOns);
         output = await getAvailability(args.day, args.appointmentType, args.addOns, userId, client.id);
         if (output.length === 0) {
+          const nextSlots = await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, userId);
           output = {
-            requestedDay: args.day,
-            nextAvailableSlots: await findNextAvailableSlots(args.day, args.appointmentType, args.addOns, userId)
+            requestedDay: `${getDayOfWeek(args.day)}, ${args.day}`,
+            nextAvailableSlots: nextSlots.map(slot => ({
+              date: `${getDayOfWeek(slot.date)}, ${slot.date}`,
+              times: slot.times
+            }))
+          };
+        } else {
+          output = {
+            date: `${getDayOfWeek(args.day)}, ${args.day}`,
+            times: output
           };
         }
         break;
