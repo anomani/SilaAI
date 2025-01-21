@@ -1,4 +1,5 @@
 const dbUtils = require('./dbUtils');
+const { OpenAI } = require('openai');
 
 async function saveThread(phoneNumber, threadId, user_id) {
   console.log('[saveThread] user_id:', user_id);
@@ -91,10 +92,52 @@ async function updateThreadId(phoneNumber, newThreadId, user_id) {
   }
 }
 
+async function getThreadMessages(threadId) {
+  if (!threadId) {
+    throw new Error('Invalid threadId');
+  }
+
+  try {
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const messages = await openai.beta.threads.messages.list(threadId);
+
+    // Format messages in a structured way
+    const formattedMessages = messages.data.map(message => ({
+      role: message.role,
+      content: message.content[0].text.value,
+      created_at: new Date(message.created_at * 1000).toISOString(),
+      id: message.id
+    }));
+
+    return {
+      thread_id: threadId,
+      message_count: formattedMessages.length,
+      messages: formattedMessages
+    };
+
+  } catch (err) {
+    console.error('Error fetching thread messages:', err.message);
+    throw new Error(`Failed to fetch thread messages: ${err.message}`);
+  }
+}
+
+
+// async function main() {
+//   const threadId = 'thread_QZLLvDTB8GJ0poAl6Y30o61w';
+//   const messages = await getThreadMessages(threadId);
+//   console.log(messages);
+// }
+
+// main();
+
 module.exports = {
   saveThread,
   getAllThreads,
   getThreadByPhoneNumber,
   deleteThreadByPhoneNumber,
-  updateThreadId
+  updateThreadId,
+  getThreadMessages
 };
