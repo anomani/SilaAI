@@ -157,6 +157,8 @@ async function findAndUpdateAppointmentByAcuityId(acuityId, updateData) {
 }
 
 async function getUpcomingAppointments(clientId, limit = 5, userId) {
+    console.log('[getUpcomingAppointments] clientId:', clientId);
+    console.log('[getUpcomingAppointments] limit:', limit);
     console.log('[getUpcomingAppointments] userId:', userId);
     const db = dbUtils.getDB();
     const currentDate = new Date().toISOString().split('T')[0];

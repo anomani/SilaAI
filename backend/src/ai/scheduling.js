@@ -550,7 +550,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
         );
         break;
       case "getUpcomingAppointments":
-        output = await getUpcomingAppointments(args.clientId, args.limit, userId);
+        output = await getUpcomingAppointments(client.id, args.limit, userId);
         break;
       case "getCurrentDate":
         output = getCurrentDate();
