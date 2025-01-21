@@ -33,16 +33,15 @@ const Header = ({ clientName, navigation, onClearSuggestedResponse, hasSuggested
           <Ionicons name="information-circle-outline" size={16} color="#9da6b8" style={styles.infoIcon} />
         </TouchableOpacity>
       </View>
-      <View style={styles.headerRight}>
-        {hasSuggestedResponse && (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={onClearSuggestedResponse}
-          >
-            <Text style={styles.clearButtonText}>Clear response</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {hasSuggestedResponse && (
+        <TouchableOpacity
+          style={styles.clearButton}
+          onPress={onClearSuggestedResponse}
+        >
+          <Text style={styles.clearButtonText}>Clear</Text>
+        </TouchableOpacity>
+      )}
+      {!hasSuggestedResponse && <View style={styles.headerRight} />}
     </View>
   );
 };
@@ -666,10 +665,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
     backgroundColor: '#111318',
     borderBottomWidth: 1,
     borderBottomColor: '#292e38',
+  },
+  backButton: {
+    width: 40,
+    alignItems: 'flex-start',
   },
   headerCenter: {
     flex: 1,
@@ -688,19 +692,17 @@ const styles = StyleSheet.create({
   infoIcon: {
     opacity: 0.8,
   },
-  backButton: {
-    width: 40, // Fixed width to help with centering
-  },
-  headerRight: {
-    width: 40, // Fixed width to help with centering
-  },
   clearButton: {
-    padding: 8,
+    width: 40,
+    alignItems: 'flex-end',
   },
   clearButtonText: {
-    color: '#fff',
+    color: '#195de6', // Using the same blue as the send button
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
+  },
+  headerRight: {
+    width: 40, // Maintains layout when clear button is not shown
   },
   contentContainer: {
     flex: 1,

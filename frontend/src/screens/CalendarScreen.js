@@ -260,7 +260,11 @@ const CalendarScreen = ({ navigation }) => {
     if (!appointments || appointments.length === 0) {
       return '0.00';
     }
-    return appointments.reduce((total, appointment) => total + (Number(appointment.price) || 0), 0).toFixed(2);
+    return appointments.reduce((total, appointment) => {
+      const price = Number(appointment.price) || 0;
+      const tip = Number(appointment.tipamount) || 0;
+      return total + price + tip;
+    }, 0).toFixed(2);
   };
 
 
