@@ -263,20 +263,19 @@ async function getMostRecentMessagePerClient(user_id) {
   console.log('[getMostRecentMessagePerClient] user_id:', user_id);
   const db = dbUtils.getDB();
   const sql = `
-    WITH RecentMessages AS (
-      SELECT DISTINCT ON (m.clientid)
+    WITH RankedMessages AS (
+      SELECT 
         m.*,
         c.firstname,
         c.lastname,
         c.phonenumber,
-        CASE WHEN sr.response IS NOT NULL THEN true ELSE false END as hasSuggestedResponse,
-        sr.response as suggestedResponse
+        sr.response as suggestedResponse,
+        ROW_NUMBER() OVER (PARTITION BY m.clientid ORDER BY m.id DESC) as rn
       FROM Messages m
       LEFT JOIN Client c ON m.clientid = c.id
       LEFT JOIN SuggestedResponses sr ON m.clientid = sr.clientid 
         AND sr.user_id = m.user_id
       WHERE m.user_id = $1
-      ORDER BY m.clientid, m.id DESC
     )
     SELECT 
       id,
@@ -289,9 +288,10 @@ async function getMostRecentMessagePerClient(user_id) {
       firstname,
       lastname,
       phonenumber,
-      hasSuggestedResponse,
+      CASE WHEN suggestedResponse IS NOT NULL THEN true ELSE false END as hasSuggestedResponse,
       suggestedResponse
-    FROM RecentMessages
+    FROM RankedMessages
+    WHERE rn = 1
     ORDER BY id DESC
   `;
 
