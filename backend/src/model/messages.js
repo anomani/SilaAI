@@ -264,31 +264,37 @@ async function getMostRecentMessagePerClient(user_id) {
   const db = dbUtils.getDB();
   const sql = `
     WITH RecentMessages AS (
-      SELECT DISTINCT ON (clientid)
-        *
-      FROM Messages
-      WHERE user_id = $1
-      ORDER BY clientid, id DESC
-    ),
-    SuggestedResponses AS (
-      SELECT clientid, response
-      FROM SuggestedResponses
-      WHERE user_id = $1
+      SELECT DISTINCT ON (m.clientid)
+        m.*,
+        c.firstname,
+        c.lastname,
+        c.phonenumber,
+        CASE WHEN sr.response IS NOT NULL THEN true ELSE false END as hasSuggestedResponse,
+        sr.response as suggestedResponse
+      FROM Messages m
+      LEFT JOIN Client c ON m.clientid = c.id
+      LEFT JOIN SuggestedResponses sr ON m.clientid = sr.clientid 
+        AND sr.user_id = m.user_id
+      WHERE m.user_id = $1
+      ORDER BY m.clientid, m.id DESC
     )
     SELECT 
-      COALESCE(rm.id, -1) as id,
-      COALESCE(rm.clientid, sr.clientid) as clientid,
-      rm.fromText,
-      rm.toText,
-      rm.body,
-      rm.date,
-      rm.is_ai,
-      CASE WHEN sr.response IS NOT NULL THEN true ELSE false END as hasSuggestedResponse,
-      sr.response as suggestedResponse
-    FROM RecentMessages rm
-    FULL OUTER JOIN SuggestedResponses sr ON rm.clientid = sr.clientid
-    ORDER BY COALESCE(rm.id, -1) DESC
+      id,
+      clientid,
+      fromText,
+      toText,
+      body,
+      date,
+      is_ai,
+      firstname,
+      lastname,
+      phonenumber,
+      hasSuggestedResponse,
+      suggestedResponse
+    FROM RecentMessages
+    ORDER BY id DESC
   `;
+
   try {
     const res = await db.query(sql, [user_id]);
     return res.rows;
