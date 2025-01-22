@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond, getSuggestedResponse, clearSuggestedResponse, getAIResponseStatus } from '../services/api';
@@ -69,251 +69,77 @@ const ClientMessagesScreen = ({ route }) => {
   const aiStatusPolling = useRef(null);
 
   useEffect(() => {
-    if (isFocused) {
-      const initializeScreen = async () => {
-        const data = await getMessagesByClientId(clientid);
-        const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+    let pollTimer = null;
+    let aiStatusTimer = null;
+
+    const initializeScreen = async () => {
+      try {
+        // Fetch all data in parallel
+        const [messagesData, clientData] = await Promise.all([
+          getMessagesByClientId(clientid),
+          getClientById(clientid)
+        ]);
         
-        fetchMessagesAndSetup();
-        fetchSuggestedResponse();
-        startPollingAIStatus();
-      };
-      
-      initializeScreen();
-    } else {
-      if (polling) {
-        clearInterval(polling);
-        setPolling(null);
+        setClientDetails(clientData);
+        setMessages(messagesData);
+        await setMessagesRead(clientid);
+        
+        // Start polling with a single interval
+        pollTimer = setInterval(async () => {
+          const [newMessages, suggestedResp, aiStatusResp] = await Promise.all([
+            getMessagesByClientId(clientid),
+            getSuggestedResponse(clientid),
+            getAIResponseStatus(clientid)
+          ]);
+
+          setMessages(prevMessages => {
+            const hasNewMessages = newMessages.length !== prevMessages.length;
+            if (hasNewMessages) {
+              setLocalMessages(prev => prev.filter(localMsg => 
+                !newMessages.some(realMsg => 
+                  realMsg.body === localMsg.body && 
+                  realMsg.fromtext === localMsg.fromtext
+                )
+              ));
+              requestAnimationFrame(() => {
+                if (flatListRef.current) {
+                  flatListRef.current.scrollToEnd({ animated: false });
+                }
+              });
+            }
+            return newMessages;
+          });
+
+          if (suggestedResp) {
+            setCurrentSuggestedResponse(suggestedResp);
+            if (!newMessage.trim()) {
+              setEditableSuggestedResponse(suggestedResp);
+            }
+          }
+
+          setAiStatus(aiStatusResp?.status || null);
+        }, 5000);
+      } catch (error) {
+        console.error('Error initializing screen:', error);
       }
-      stopPollingAIStatus();
-      setDraftMessage(clientid, newMessage);
+    };
+
+    if (isFocused) {
+      initializeScreen();
     }
 
     return () => {
-      if (polling) {
-        clearInterval(polling);
-      }
-      stopPollingAIStatus();
+      if (pollTimer) clearInterval(pollTimer);
+      if (aiStatusTimer) clearInterval(aiStatusTimer);
       setDraftMessage(clientid, newMessage);
     };
-  }, [clientid, isFocused, initialSuggestedResponse, clientMessage]);
+  }, [clientid, isFocused]);
 
   const scrollToBottom = useCallback(() => {
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({ animated: true });
     }
   }, []);
-
-  const fetchMessagesAndSetup = useCallback(async () => {
-    try {
-      const data = await getMessagesByClientId(clientid);
-      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
-      setMessages(sortedMessages);
-      
-      fetchClientDetails(clientid);
-      setMessagesAsRead();
-      
-      const pollInterval = setInterval(async () => {
-        await Promise.all([
-          fetchMessages(clientid),
-          fetchSuggestedResponse()
-        ]);
-      }, 5000);
-      setPolling(pollInterval);
-
-      setTimeout(scrollToBottom, 100);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  }, [clientid, scrollToBottom]);
-
-  const fetchMessages = useCallback(async (clientid) => {
-    try {
-      const data = await getMessagesByClientId(clientid);
-      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
-      
-      setMessages(prevMessages => {
-        const hasNewMessages = JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages);
-        if (hasNewMessages) {
-          const newestMessage = sortedMessages[sortedMessages.length - 1];
-          if (newestMessage && newestMessage.fromtext !== '+18446480598') {
-            startPollingAIStatus();
-          }
-          setLocalMessages(prev => prev.filter(localMsg => 
-            !sortedMessages.some(realMsg => 
-              realMsg.body === localMsg.body && 
-              realMsg.fromtext === localMsg.fromtext
-            )
-          ));
-          requestAnimationFrame(() => {
-            scrollToBottom();
-          });
-        }
-        return sortedMessages;
-      });
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  }, [scrollToBottom]);
-
-  useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
-      setKeyboardHeight(e.endCoordinates.height);
-    });
-    const keyboardWillHide = Keyboard.addListener('keyboardWillHide', () => {
-      setKeyboardHeight(0);
-    });
-
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
-      setKeyboardVisible(true);
-    });
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardVisible(false);
-    });
-
-    return () => {
-      keyboardWillShow.remove();
-      keyboardWillHide.remove();
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (Platform.OS === 'ios') {
-      Notifications.setNotificationCategoryAsync('suggestedResponse', [
-        {
-          identifier: 'reply',
-          buttonTitle: 'Reply',
-          options: {
-            opensAppToForeground: false,
-          },
-          textInput: {
-            submitButtonTitle: 'Send',
-            placeholder: 'Edit suggested response...',
-          },
-        },
-      ]);
-    }
-
-    const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
-
-    return () => subscription.remove();
-  }, []);
-
-  const fetchClientDetails = async (clientId) => {
-    try {
-      const clientData = await getClientById(clientId);
-      setClientDetails(clientData);
-      // const autoRespondStatus = await getClientAutoRespond(clientId);
-      // setAutoRespond(autoRespondStatus);
-    } catch (error) {
-      console.error('Error fetching client details:', error);
-    }
-  };
-
-  const setMessagesAsRead = async () => {
-    try {
-      await setMessagesRead(clientid);
-    } catch (error) {
-      console.error('Error setting messages as read:', error);
-    }
-  };
-
-  const fetchSuggestedResponse = async () => {
-    try {
-      const response = await getSuggestedResponse(clientid);
-      if (response) {
-        setCurrentSuggestedResponse(response);
-        if (!newMessage.trim()) {
-          setEditableSuggestedResponse(response);
-        }
-      } else {
-        setCurrentSuggestedResponse('');
-        if (editableSuggestedResponse === currentSuggestedResponse) {
-          setEditableSuggestedResponse('');
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching suggested response:', error);
-    }
-  };
-
-  const handleSendMessage = async () => {
-    console.log('handleSendMessage called', { newMessage, clientDetails });
-
-    const messageToSend = newMessage || currentSuggestedResponse;
-
-    if (typeof messageToSend !== 'string' || messageToSend.trim() === '') {
-      console.log('messageToSend is not a valid string', messageToSend);
-      return;
-    }
-
-    if (!clientDetails) {
-      console.log('clientDetails is null or undefined');
-      return;
-    }
-
-    const tempId = `temp-${Date.now()}`;
-    try {
-      const recipient = clientDetails.phonenumber;
-      console.log('Recipient:', recipient);
-
-      const now = new Date();
-      const adjustedDateString = `${(now.getMonth() + 1)}/${now.getDate()}/${now.getFullYear()}, ${now.toLocaleTimeString('en-US')}`;
-      console.log('Temp message date:', adjustedDateString);
-      
-      const isAI = messageToSend === currentSuggestedResponse;
-
-      const tempMessage = {
-        id: tempId,
-        body: messageToSend,
-        fromtext: '+18446480598',
-        totext: recipient,
-        date: adjustedDateString,
-        is_ai: isAI,
-        sending: true,
-      };
-
-      console.log('Created temp message:', tempMessage);
-
-      // Clear all message-related states immediately
-      setLocalMessages(prev => [...prev, tempMessage]);
-      setNewMessage('');
-      setEditableSuggestedResponse('');
-      setCurrentSuggestedResponse('');
-      setIsSuggestedResponseEdited(false);
-      // Also clear the draft message
-      setDraftMessage(clientid, '');
-      
-      scrollToBottom();
-
-      console.log('Sending message via API'+ messageToSend);
-      await sendMessage(recipient, messageToSend, false, !isAI);
-      
-      console.log('Message sent successfully');
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await fetchMessages(clientid);
-      await fetchSuggestedResponse();
-      
-      setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
-      
-      await clearSuggestedResponse(clientid);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
-    }
-  };
-
-  const handleAutoRespondToggle = async (value) => {
-    try {
-      await updateClientAutoRespond(clientid, value);
-      setAutoRespond(value);
-    } catch (error) {
-      console.error('Error updating auto-respond:', error);
-    }
-  };
 
   const handleScroll = (event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
@@ -412,6 +238,11 @@ const ClientMessagesScreen = ({ route }) => {
 
     return Object.entries(grouped).map(([date, groups]) => ({ date, groups }));
   };
+
+  // Memoize the groupMessagesByDate function
+  const groupedMessages = useMemo(() => {
+    return groupMessagesByDate([...messages, ...localMessages]);
+  }, [messages, localMessages]);
 
   const renderDateSeparator = (date) => (
     <View style={styles.dateSeparator}>
@@ -577,21 +408,25 @@ const ClientMessagesScreen = ({ route }) => {
         ]}>
           <FlatList
             ref={flatListRef}
-            data={groupMessagesByDate([...messages, ...localMessages])}
+            data={groupedMessages}
             renderItem={renderItem}
             keyExtractor={useCallback((item) => item.date, [])}
-            initialNumToRender={20}
-            maxToRenderPerBatch={20}
-            windowSize={21}
-            removeClippedSubviews={false}
+            initialNumToRender={15}
+            maxToRenderPerBatch={10}
+            windowSize={11}
+            removeClippedSubviews={Platform.OS === 'android'}
             onContentSizeChange={() => {
               requestAnimationFrame(() => {
-                scrollToBottom();
+                if (flatListRef.current) {
+                  flatListRef.current.scrollToEnd({ animated: false });
+                }
               });
             }}
             onLayout={() => {
               requestAnimationFrame(() => {
-                scrollToBottom();
+                if (flatListRef.current) {
+                  flatListRef.current.scrollToEnd({ animated: false });
+                }
               });
             }}
             onScroll={handleScroll}

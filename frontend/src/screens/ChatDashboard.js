@@ -22,6 +22,7 @@ const ChatDashboard = ({ navigation }) => {
   const fetchDashboardData = useCallback(async () => {
     try {
       const recentMessages = await getMostRecentMessagePerClient();
+      console.log('Recent Messages:', JSON.stringify(recentMessages, null, 2));
       
       const clientNames = recentMessages.reduce((acc, message) => ({
         ...acc,
@@ -122,10 +123,15 @@ const ChatDashboard = ({ navigation }) => {
   }, [dashboardData, searchQuery, activeTab]);
 
   const handleAcceptSuggestedResponse = async (clientId, suggestedResponse) => {
+    // Immediately disable the button
     setDisabledButtons(prev => new Set([...prev, clientId]));
     
     try {
+      console.log("Accepting suggested response for client:", clientId);
+      console.log("Suggested response:", suggestedResponse);
+      
       if (!suggestedResponse) {
+        console.error("Suggested response is empty or undefined");
         Alert.alert('Error', 'No suggested response available.');
         setDisabledButtons(prev => {
           const next = new Set(prev);
@@ -135,10 +141,12 @@ const ChatDashboard = ({ navigation }) => {
         return;
       }
 
+      // Fetch the client's details to get the phone number
       const client = await getClientById(clientId);
       const phoneNumber = client.phonenumber;
 
       if (!phoneNumber) {
+        console.error("Client phone number is missing");
         Alert.alert('Error', 'Client phone number is missing.');
         setDisabledButtons(prev => {
           const next = new Set(prev);
@@ -148,13 +156,20 @@ const ChatDashboard = ({ navigation }) => {
         return;
       }
 
+      console.log("Sending message to:", phoneNumber);
       await sendMessage(phoneNumber, suggestedResponse, false, false);
+      
+      console.log("Clearing suggested response");
       await clearSuggestedResponse(clientId);
+      
+      console.log('Successfully accepted suggested response for client:', clientId);
       fetchDashboardData();
     } catch (error) {
       console.error('Error accepting suggested response:', error);
+      console.error('Error details:', error.response?.data);
       Alert.alert('Error', `Failed to accept suggested response. ${error.message}`);
     } finally {
+      // Re-enable the button regardless of success or failure
       setDisabledButtons(prev => {
         const next = new Set(prev);
         next.delete(clientId);
@@ -166,6 +181,7 @@ const ChatDashboard = ({ navigation }) => {
   const handleRejectSuggestedResponse = async (clientId) => {
     try {
       await clearSuggestedResponse(clientId);
+      console.log('Rejected suggested response for client:', clientId);
       fetchDashboardData();
     } catch (error) {
       console.error('Error rejecting suggested response:', error);
