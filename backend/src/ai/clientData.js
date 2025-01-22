@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { getMuslimClients } = require('./tools/analyzeNames');
 const { v4: uuidv4 } = require('uuid');
+const { getFormattedClientList } = require('../model/clients');
 const { getClientByName } = require('../model/clients');
 const { bookAppointmentAdmin } = require('./tools/bookAppointment');
 const { appointmentTypes, addOns } = require('../model/appointmentTypes');
@@ -34,7 +35,7 @@ const tools = [
   type: "function",
   function: {
     name: "getInfo",
-    description: "Gets information about a client based on the given query",
+    description: "Gets information about database based on the given query",
     parameters: {
       type: "object",
       properties: {
@@ -119,27 +120,27 @@ const tools = [
     }
   }
 },
-{
-  type: "function",
-  function: {
-    name: "getClientByName",
-    description: "Retrieves a client by their first and last name",
-    parameters: {
-      type: "object",
-      properties: {
-        firstName: {
-          type: "string",
-          description: "The first name of the client"
-        },
-        lastName: {
-          type: "string",
-          description: "The last name of the client"
-        }
-      },
-      required: ["firstName", "lastName"]
-    }
-  }
-},
+// {
+//   type: "function",
+//   function: {
+//     name: "getClientByName",
+//     description: "Retrieves a client by their first and last name",
+//     parameters: {
+//       type: "object",
+//       properties: {
+//         firstName: {
+//           type: "string",
+//           description: "The first name of the client"
+//         },
+//         lastName: {
+//           type: "string",
+//           description: "The last name of the client"
+//         }
+//       },
+//       required: ["firstName", "lastName"]
+//     }
+//   }
+// },
 {
   type: "function",
   function: {
@@ -377,10 +378,16 @@ const tools = [
 
 async function createAssistant(date, userId) {
   console.log("date", date);
-  // Replace ${userId} with actual userId in the instructions
+  
+  // Get formatted client list
+  const clientList = await getFormattedClientList(userId);
+  
+  // Replace ${userId} and ${clientList} with actual values in the instructions
   const instructionsPath = path.join(__dirname, 'Prompts', 'dataInstructions.txt');
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf8');
-  assistantInstructions = assistantInstructions.replace(/\${userId}/g, userId);
+  assistantInstructions = assistantInstructions
+    .replace(/\${userId}/g, userId)
+    .replace(/\${clientList}/g, clientList);
 
   // Fetch appointment types and add-ons for the user
   const appointmentTypes = await getAppointmentTypes(userId);

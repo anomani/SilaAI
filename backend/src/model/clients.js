@@ -432,7 +432,31 @@ async function getNumberOfCustomersContacted(days = 30, user_id) {
     }
 }
 
-
+/**
+ * Gets a formatted list of all clients for the assistant prompt
+ * @param {number} user_id - The ID of the user
+ * @returns {Promise<string>} Formatted string of client information
+ */
+async function getFormattedClientList(user_id) {
+    const db = dbUtils.getDB();
+    const sql = `
+        SELECT id, firstname, lastname, phonenumber 
+        FROM Client 
+        WHERE user_id = $1 
+        ORDER BY lastname, firstname
+    `;
+    const values = [user_id];
+    
+    try {
+        const res = await db.query(sql, values);
+        return res.rows
+            .map(c => `${c.id.toString().padEnd(4)} | ${c.firstname.padEnd(20)} | ${c.lastname.padEnd(16)} | ${c.phonenumber}`)
+            .join('\n');
+    } catch (err) {
+        console.error('Error getting formatted client list:', err.message);
+        throw err;
+    }
+}
 
 module.exports = {
     createClient,
@@ -453,5 +477,6 @@ module.exports = {
     updateClientNames,
     getOldClients,
     updateClientOutreachInfo,
-    getNumberOfCustomersContacted
+    getNumberOfCustomersContacted,
+    getFormattedClientList
 };
