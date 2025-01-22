@@ -450,13 +450,14 @@ async function getFormattedClientList(user_id) {
     try {
         const res = await db.query(sql, values);
         return res.rows
-            .map(c => `${c.id.toString().padEnd(4)} | ${c.firstname.padEnd(20)} | ${c.lastname.padEnd(16)} | ${c.phonenumber}`)
+            .map(c => `${(c.id?.toString() || '').padEnd(4)} | ${(c.firstname || '').padEnd(20)} | ${(c.lastname || '').padEnd(16)} | ${c.phonenumber || ''}`)
             .join('\n');
     } catch (err) {
         console.error('Error getting formatted client list:', err.message);
         throw err;
     }
 }
+
 
 module.exports = {
     createClient,
