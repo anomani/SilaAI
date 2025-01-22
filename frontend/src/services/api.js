@@ -203,29 +203,12 @@ export const getMostRecentMessagePerClient = async () => {
   return retryRequest(async () => {
     const response = await throttledRequest(() => api.get('/chat/most-recent-messages'));
     
-    // Fetch suggested responses for all clients
-    const suggestedResponses = await Promise.all(
-      response.data.map(message => 
-        getSuggestedResponse(message.clientid)
-          .then(suggestedResponse => ({ clientid: message.clientid, hasSuggestedResponse: !!suggestedResponse }))
-          .catch(() => ({ clientid: message.clientid, hasSuggestedResponse: false }))
-      )
-    );
-
-    // Create a map of client IDs to their suggested response status
-    const suggestedResponseMap = Object.fromEntries(
-      suggestedResponses.map(({ clientid, hasSuggestedResponse }) => [clientid, hasSuggestedResponse])
-    );
-
-    // Modify the response data to include the suggested response status
-    const modifiedData = response.data.map(message => ({
+    // The response now includes hasSuggestedResponse and suggestedResponse
+    return response.data.map(message => ({
       ...message,
-      hasSuggestedResponse: suggestedResponseMap[message.clientid],
       // Remove the 'read' property if it exists
       ...(message.read !== undefined && { read: undefined })
     }));
-
-    return modifiedData;
   });
 };
 

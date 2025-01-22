@@ -23,13 +23,10 @@ const ChatDashboard = ({ navigation }) => {
     try {
       const recentMessages = await getMostRecentMessagePerClient();
       
-      const clientNamesPromises = recentMessages.map(async (message) => {
-        const client = await getClientById(message.clientid);
-        return [message.clientid, `${client.firstname} ${client.lastname}`];
-      });
-
-      const clientNamesArray = await Promise.all(clientNamesPromises);
-      const clientNames = Object.fromEntries(clientNamesArray);
+      const clientNames = recentMessages.reduce((acc, message) => ({
+        ...acc,
+        [message.clientid]: `${message.firstname} ${message.lastname}`.trim()
+      }), {});
 
       const newData = { recentMessages, clientNames };
       setDashboardData(newData);
@@ -111,7 +108,7 @@ const ChatDashboard = ({ navigation }) => {
       );
     
     if (activeTab === 'pending') {
-      filtered = filtered.filter(message => message.hasSuggestedResponse);
+      filtered = filtered.filter(message => message.hassuggestedresponse);
     }
 
     return filtered.sort((a, b) => {
@@ -125,15 +122,10 @@ const ChatDashboard = ({ navigation }) => {
   }, [dashboardData, searchQuery, activeTab]);
 
   const handleAcceptSuggestedResponse = async (clientId, suggestedResponse) => {
-    // Immediately disable the button
     setDisabledButtons(prev => new Set([...prev, clientId]));
     
     try {
-      console.log("Accepting suggested response for client:", clientId);
-      console.log("Suggested response:", suggestedResponse);
-      
       if (!suggestedResponse) {
-        console.error("Suggested response is empty or undefined");
         Alert.alert('Error', 'No suggested response available.');
         setDisabledButtons(prev => {
           const next = new Set(prev);
@@ -143,12 +135,10 @@ const ChatDashboard = ({ navigation }) => {
         return;
       }
 
-      // Fetch the client's details to get the phone number
       const client = await getClientById(clientId);
       const phoneNumber = client.phonenumber;
 
       if (!phoneNumber) {
-        console.error("Client phone number is missing");
         Alert.alert('Error', 'Client phone number is missing.');
         setDisabledButtons(prev => {
           const next = new Set(prev);
@@ -158,20 +148,13 @@ const ChatDashboard = ({ navigation }) => {
         return;
       }
 
-      console.log("Sending message to:", phoneNumber);
       await sendMessage(phoneNumber, suggestedResponse, false, false);
-      
-      console.log("Clearing suggested response");
       await clearSuggestedResponse(clientId);
-      
-      console.log('Successfully accepted suggested response for client:', clientId);
       fetchDashboardData();
     } catch (error) {
       console.error('Error accepting suggested response:', error);
-      console.error('Error details:', error.response?.data);
       Alert.alert('Error', `Failed to accept suggested response. ${error.message}`);
     } finally {
-      // Re-enable the button regardless of success or failure
       setDisabledButtons(prev => {
         const next = new Set(prev);
         next.delete(clientId);
@@ -183,7 +166,6 @@ const ChatDashboard = ({ navigation }) => {
   const handleRejectSuggestedResponse = async (clientId) => {
     try {
       await clearSuggestedResponse(clientId);
-      console.log('Rejected suggested response for client:', clientId);
       fetchDashboardData();
     } catch (error) {
       console.error('Error rejecting suggested response:', error);
@@ -192,20 +174,17 @@ const ChatDashboard = ({ navigation }) => {
   };
 
   const renderClient = useCallback(({ item: message }) => {
-    const avatar = message.fromText === '+18446480598' ? require('../../assets/uzi.png') : require('../../assets/avatar.png');
-    let senderName = message.fromText === '+18446480598' ? 'UZI' : dashboardData.clientNames[message.clientid];
+    const avatar = require('../../assets/avatar.png');
+    let senderName = dashboardData.clientNames[message.clientid];
+    
     // If senderName is empty, use the client's phone number
     if (senderName === ' ') {
-      if (message.fromtext === '+18446480598') {
-        senderName = message.totext;
-      } else {
-        senderName = message.fromtext;
-      }
+      senderName = message.fromtext;
     }
     
     let displayMessage, displayDate, clientMessage;
 
-    if (message.hasSuggestedResponse) {
+    if (message.hassuggestedresponse === true) {
       // Show both the client's message and the suggested response
       displayMessage = message.suggestedresponse;
       clientMessage = message.body; // This will be the client's last message
@@ -223,7 +202,7 @@ const ChatDashboard = ({ navigation }) => {
             <Text style={styles.clientName}>{senderName}</Text>
             {displayDate && <Text style={styles.messageTime}>{displayDate}</Text>}
           </View>
-          {message.hasSuggestedResponse && (
+          {message.hassuggestedresponse === true && (
             <View style={styles.suggestedResponseActions}>
               <TouchableOpacity
                 style={[styles.actionButton, disabledButtons.has(message.clientid) && styles.disabledButton]}
@@ -264,11 +243,11 @@ const ChatDashboard = ({ navigation }) => {
         )}
         {displayMessage && (
           <Text 
-            style={[styles.messageText, message.hasSuggestedResponse && styles.suggestedResponseText]}
+            style={[styles.messageText, message.hassuggestedresponse === true && styles.suggestedResponseText]}
             numberOfLines={2}
             ellipsizeMode="tail"
           >
-            {message.hasSuggestedResponse ? "Suggested: " : ""}
+            {message.hassuggestedresponse === true ? "Suggested: " : ""}
             {displayMessage}
           </Text>
         )}

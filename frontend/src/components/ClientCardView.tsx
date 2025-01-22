@@ -1548,6 +1548,9 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 14,
     fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
+    width: '100%',
   },
   noAppointmentsText: {
     color: '#aaa',
