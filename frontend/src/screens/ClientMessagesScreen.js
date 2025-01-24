@@ -15,6 +15,7 @@ const Header = ({ clientName, navigation, onClearSuggestedResponse, hasSuggested
   const handleNamePress = () => {
     if (clientDetails) {
       navigation.navigate('ClientDetails', { client: clientDetails });
+      console.log(clientDetails);
     }
   };
 
@@ -74,14 +75,48 @@ const ClientMessagesScreen = ({ route }) => {
 
     const initializeScreen = async () => {
       try {
-        // Fetch all data in parallel
-        const [messagesData, clientData] = await Promise.all([
-          getMessagesByClientId(clientid),
-          getClientById(clientid)
-        ]);
+        console.log('Initializing screen with clientid:', clientid);
         
-        setClientDetails(clientData);
-        setMessages(messagesData);
+        // First check if we have a valid clientid
+        if (!clientid) {
+          throw new Error('No client ID provided');
+        }
+
+        // Try fetching messages first to isolate the issue
+        let messagesResponse;
+        try {
+          messagesResponse = await getMessagesByClientId(clientid);
+          console.log('Raw messages response:', messagesResponse);
+        } catch (msgError) {
+          console.error('Messages API error:', msgError);
+          console.error('Messages API error details:', msgError.response?.data);
+          throw new Error('Failed to fetch messages');
+        }
+
+        // Try fetching client details
+        let clientResponse;
+        try {
+          clientResponse = await getClientById(clientid);
+          console.log('Raw client response:', clientResponse);
+        } catch (clientError) {
+          console.error('Client API error:', clientError);
+          console.error('Client API error details:', clientError.response?.data);
+          throw new Error('Failed to fetch client details');
+        }
+
+        // Validate responses
+        if (!Array.isArray(messagesResponse)) {
+          console.error('Invalid messages response format:', messagesResponse);
+          throw new Error('Invalid messages data format');
+        }
+
+        if (!clientResponse) {
+          console.error('Invalid client response:', clientResponse);
+          throw new Error('Invalid client data');
+        }
+
+        setClientDetails(clientResponse);
+        setMessages(messagesResponse);
         await setMessagesRead(clientid);
         
         // Start polling with a single interval
@@ -121,6 +156,11 @@ const ClientMessagesScreen = ({ route }) => {
         }, 5000);
       } catch (error) {
         console.error('Error initializing screen:', error);
+        Alert.alert(
+          'Error',
+          `Failed to load messages: ${error.message}`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
       }
     };
 
@@ -212,8 +252,20 @@ const ClientMessagesScreen = ({ route }) => {
   };
 
   const groupMessagesByDate = (messages) => {
+    // Add safety check
+    if (!Array.isArray(messages)) {
+      console.error('Invalid messages format:', messages);
+      return [];
+    }
+
     const grouped = {};
     messages.forEach((message, index) => {
+      // Add null check for message
+      if (!message || !message.date) {
+        console.error('Invalid message format:', message);
+        return;
+      }
+
       const date = message.date.split(', ')[0];
       if (!grouped[date]) {
         grouped[date] = [];
@@ -226,7 +278,15 @@ const ClientMessagesScreen = ({ route }) => {
 
       if (shouldGroup) {
         const lastGroup = grouped[date][grouped[date].length - 1];
-        lastGroup.messages.push(message);
+        if (lastGroup) {
+          lastGroup.messages.push(message);
+        } else {
+          grouped[date].push({
+            sender: message.fromtext,
+            messages: [message],
+            firstMessageDate: message.date
+          });
+        }
       } else {
         grouped[date].push({
           sender: message.fromtext,
@@ -239,9 +299,10 @@ const ClientMessagesScreen = ({ route }) => {
     return Object.entries(grouped).map(([date, groups]) => ({ date, groups }));
   };
 
-  // Memoize the groupMessagesByDate function
+  // Also modify the useMemo hook to include safety checks
   const groupedMessages = useMemo(() => {
-    return groupMessagesByDate([...messages, ...localMessages]);
+    const allMessages = [...(messages || []), ...(localMessages || [])];
+    return groupMessagesByDate(allMessages);
   }, [messages, localMessages]);
 
   const renderDateSeparator = (date) => (

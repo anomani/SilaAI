@@ -22,7 +22,6 @@ const ChatDashboard = ({ navigation }) => {
   const fetchDashboardData = useCallback(async () => {
     try {
       const recentMessages = await getMostRecentMessagePerClient();
-      console.log('Recent Messages:', JSON.stringify(recentMessages, null, 2));
       
       const clientNames = recentMessages.reduce((acc, message) => ({
         ...acc,
