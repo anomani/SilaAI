@@ -3,11 +3,10 @@ const { bookAppointmentAdmin , bookAppointment, bookAppointmentInternal, bookApp
 const moment = require('moment-timezone');
 const { appointmentTypes, addOns } = require('../../model/appointmentTypes');
 
-async function createRecurringAppointments(initialDate, startTime, fname, lname, phone, email, appointmentType, group, price, addOnArray, recurrenceRule, userId, clientId = null) {
+async function createRecurringAppointments(initialDate, startTime, fname, lname, phone, email, appointmentType, price, addOnArray, recurrenceRule, userId, clientId = null) {
     console.log('Initial Date:', initialDate);
     console.log('Start Time:', startTime);
     console.log('Appointment Type:', appointmentType);
-    console.log('Group:', group);
     console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
 
     const appointmentTypeInfo = appointmentTypes[appointmentType];
@@ -54,9 +53,8 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
                             phone,
                             email,
                             appointmentType,
-                            addOnArray,
-                            group,
                             price,
+                            addOnArray,
                             userId
                         );
                         if (result === "Appointment booked successfully") {
@@ -81,11 +79,10 @@ async function createRecurringAppointments(initialDate, startTime, fname, lname,
     return bookedAppointments;
 }
 
-async function createRecurringAppointmentsInternal(initialDate, startTime, fname, lname, phone, email, appointmentType, group, price, addOnArray, recurrenceRule, userId, clientId = null) {
+async function createRecurringAppointmentsInternal(initialDate, startTime, fname, lname, phone, email, appointmentType, price, addOnArray, recurrenceRule, userId, clientId = null) {
     console.log('Initial Date:', initialDate);
     console.log('Start Time:', startTime);
     console.log('Appointment Type:', appointmentType);
-    console.log('Group:', group);
     console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
 
     const appointmentTypeInfo = appointmentTypes[appointmentType];
@@ -157,12 +154,11 @@ async function createRecurringAppointmentsInternal(initialDate, startTime, fname
     return bookedAppointments;
 }
 
-async function createRecurringAppointmentsAdmin(clientId, initialDate, startTime, appointmentType, addOnArray, group, recurrenceRule, userId) {
+async function createRecurringAppointmentsAdmin(clientId, initialDate, startTime, appointmentType, addOnArray , recurrenceRule, userId) {
     console.log('Client ID:', clientId);
     console.log('Initial Date:', initialDate);
     console.log('Start Time:', startTime);
     console.log('Appointment Type:', appointmentType);
-    console.log('Group:', group);
     console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
 
     const appointmentTypeInfo = appointmentTypes[appointmentType];
@@ -206,12 +202,11 @@ async function createRecurringAppointmentsAdmin(clientId, initialDate, startTime
     return bookedAppointments;
 }
 
-async function createRecurringAppointmentsAdminInternal(clientId, initialDate, startTime, appointmentType, addOnArray, group, recurrenceRule, userId) {
+async function createRecurringAppointmentsAdminInternal(clientId, initialDate, startTime, appointmentType, addOnArray, recurrenceRule, userId) {
     console.log('Client ID:', clientId);
     console.log('Initial Date:', initialDate);
     console.log('Start Time:', startTime);
     console.log('Appointment Type:', appointmentType);
-    console.log('Group:', group);
     console.log('Recurrence Rule:', JSON.stringify(recurrenceRule, null, 2));
 
     const appointmentTypeInfo = appointmentTypes[appointmentType];

@@ -72,8 +72,6 @@ function matchesRecurrenceRule(date, recurrenceRule) {
         case 'custom':
             // Implement custom recurrence logic if needed
             return false;
-        default:
-            throw new Error('Invalid recurrence rule');
     }
 }
 

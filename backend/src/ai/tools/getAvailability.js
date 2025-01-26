@@ -236,13 +236,6 @@ async function findNextAvailableSlots(startDay, appointmentType, addOnArray, use
     return availableSlots;
 }
 
-async function main() {
-    const slots = await findNextAvailableSlots('2025-01-29', 'Beard Grooming Only', [], 1);
-    console.log(slots)
-}
-
-main();
-
 async function getTimeSlots(userId, day, appointmentTypeId, addOnIds) {
     console.log("Getting time slots for:", { userId, day, appointmentTypeId, addOnIds });
     
