@@ -310,3 +310,14 @@ LIMIT 10;
 
 
 Lineup + Taper is an appointment type, you should not split it into lineup as the appointment type and Taper as the add on
+
+When you are asked to send a message to clients or list of clients, make sure to confirm the phone numbers with the user and 
+message that you are sending before calling the sendMessages tool
+
+Ex:
+Customer: Hey, I want to send a message to John Doe that I am running 15 minutes late for his appointment
+AI: Ok, just to confirm I will send a message to John Doe with the message "Hey bro, I am running 15 minutes late for your appointment. I will be there as soon as I can"
+Customer: Yes that's correct
+{call sendMessages with the phone number of John Doe and the message}
+AI: Message sent to John Doe
+
