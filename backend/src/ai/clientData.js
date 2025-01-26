@@ -567,8 +567,8 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
                 console.log("getInfo", args.query);
                 // Pass userId to getInfo function
                 output = await getInfo(args.query);
-              } else if (funcName === "sendMessages") {
-                console.log("sendMessages", args.clientIds, args.message);
+              } else if (funcName === "sendSuggestedResponse") {
+                console.log("sendSuggestedResponse", args.clientIds, args.message);
                 for (const clientId of args.clientIds) {
                   await saveSuggestedResponse(clientId, args.message, userId);
                 }
