@@ -19,6 +19,7 @@ const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { getUserById } = require('../model/users');
 const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
 const { sendMessages } = require('../config/twilio');
+const { saveSuggestedResponse } = require('../model/messages');
 // Add this object to store queries
 const queryStore = {};
 const sessions = new Map();
@@ -353,25 +354,25 @@ const tools = [
 {
   type: "function",
   function: {
-    name: "sendMessages",
-    description: "Sends a message to multiple clients",
+    name: "sendSuggestedResponse",
+    description: "Sends a suggested response to a client or a list of clients",
     parameters: {
       type: "object",
       properties: {
-        phoneNumbers: {
+        clientIds: {
           type: "array",
           items: {
-            type: "string",
-            description: "The client's phone number"
+            type: "number",
+            description: "The client's ID"
           },
-          description: "An array of client phone numbers"
+          description: "An array of client IDs"
         },
         message: {
           type: "string",
           description: "The message to send to the clients"
         }
       },
-      required: ["phoneNumbers", "message"]
+      required: ["clientIds", "message"]
     }
   }
 }
@@ -567,8 +568,10 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
                 // Pass userId to getInfo function
                 output = await getInfo(args.query);
               } else if (funcName === "sendMessages") {
-                console.log("sendMessages", args.phoneNumbers, args.message);
-                output = await sendMessages(args.phoneNumbers, args.message, userId);
+                console.log("sendMessages", args.clientIds, args.message);
+                for (const clientId of args.clientIds) {
+                  await saveSuggestedResponse(clientId, args.message, userId);
+                }
                 output = "Message sent to all the clients";
               } else if (funcName === "createCustomList") {
                 console.log("createCustomList", args.name, args.query);
