@@ -18,6 +18,7 @@ const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { getUserById } = require('../model/users');
 const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
+const { sendMessages } = require('../config/twilio');
 // Add this object to store queries
 const queryStore = {};
 const sessions = new Map();
