@@ -568,7 +568,7 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
                 output = await getInfo(args.query);
               } else if (funcName === "sendMessages") {
                 console.log("sendMessages", args.phoneNumbers, args.message);
-                output = await sendMessages(args.phoneNumbers, args.message);
+                output = await sendMessages(args.phoneNumbers, args.message, userId);
                 output = "Message sent to all the clients";
               } else if (funcName === "createCustomList") {
                 console.log("createCustomList", args.name, args.query);
