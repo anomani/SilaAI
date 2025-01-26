@@ -613,7 +613,6 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
                   args.initialDate,
                   args.appointmentType,
                   args.addOns || [],
-                  args.group,
                   args.recurrenceRule,
                   userId,
                   args.clientId,
@@ -625,7 +624,6 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
                   args.startTime,
                   args.appointmentType,
                   args.addOns || [],
-                  args.group,
                   args.recurrenceRule,
                   userId
                 );
