@@ -427,7 +427,6 @@ async function createAssistant(date, userId) {
   }).join('\n\n');
   // Add the appointment types and add-ons information to the beginning of the instructions
   assistantInstructions = `Appointment Types:\n${appointmentTypesString}\nAdd-ons:\n${addOnsString}\n\n${assistantInstructions}`;
-  console.log("assistantInstructions", assistantInstructions)
   // Add the current date to the instructions
   assistantInstructions += `\n\nCurrent Date: ${date}`;
 
@@ -568,7 +567,7 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
                 output = await getInfo(args.query);
               } else if (funcName === "sendMessages") {
                 console.log("sendMessages", args.phoneNumbers, args.message);
-                // output = await sendMessages(args.phoneNumbers, args.message);
+                output = await sendMessages(args.phoneNumbers, args.message);
                 output = "Message sent to all the clients";
               } else if (funcName === "createCustomList") {
                 console.log("createCustomList", args.name, args.query);

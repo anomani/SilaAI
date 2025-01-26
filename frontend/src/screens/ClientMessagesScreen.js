@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond, getSuggestedResponse, clearSuggestedResponse, getAIResponseStatus } from '../services/api';
@@ -15,7 +15,6 @@ const Header = ({ clientName, navigation, onClearSuggestedResponse, hasSuggested
   const handleNamePress = () => {
     if (clientDetails) {
       navigation.navigate('ClientDetails', { client: clientDetails });
-      console.log(clientDetails);
     }
   };
 
@@ -34,15 +33,16 @@ const Header = ({ clientName, navigation, onClearSuggestedResponse, hasSuggested
           <Ionicons name="information-circle-outline" size={16} color="#9da6b8" style={styles.infoIcon} />
         </TouchableOpacity>
       </View>
-      {hasSuggestedResponse && (
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={onClearSuggestedResponse}
-        >
-          <Text style={styles.clearButtonText}>Clear</Text>
-        </TouchableOpacity>
-      )}
-      {!hasSuggestedResponse && <View style={styles.headerRight} />}
+      <View style={styles.headerRight}>
+        {hasSuggestedResponse && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={onClearSuggestedResponse}
+          >
+            <Text style={styles.clearButtonText}>Clear response</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
@@ -70,116 +70,270 @@ const ClientMessagesScreen = ({ route }) => {
   const aiStatusPolling = useRef(null);
 
   useEffect(() => {
-    let pollTimer = null;
-    let aiStatusTimer = null;
-
-    const initializeScreen = async () => {
-      try {
-        console.log('Initializing screen with clientid:', clientid);
-        
-        // First check if we have a valid clientid
-        if (!clientid) {
-          throw new Error('No client ID provided');
-        }
-
-        // Try fetching messages first to isolate the issue
-        let messagesResponse;
-        try {
-          messagesResponse = await getMessagesByClientId(clientid);
-          console.log('Raw messages response:', messagesResponse);
-        } catch (msgError) {
-          console.error('Messages API error:', msgError);
-          console.error('Messages API error details:', msgError.response?.data);
-          throw new Error('Failed to fetch messages');
-        }
-
-        // Try fetching client details
-        let clientResponse;
-        try {
-          clientResponse = await getClientById(clientid);
-          console.log('Raw client response:', clientResponse);
-        } catch (clientError) {
-          console.error('Client API error:', clientError);
-          console.error('Client API error details:', clientError.response?.data);
-          throw new Error('Failed to fetch client details');
-        }
-
-        // Validate responses
-        if (!Array.isArray(messagesResponse)) {
-          console.error('Invalid messages response format:', messagesResponse);
-          throw new Error('Invalid messages data format');
-        }
-
-        if (!clientResponse) {
-          console.error('Invalid client response:', clientResponse);
-          throw new Error('Invalid client data');
-        }
-
-        setClientDetails(clientResponse);
-        setMessages(messagesResponse);
-        await setMessagesRead(clientid);
-        
-        // Start polling with a single interval
-        pollTimer = setInterval(async () => {
-          const [newMessages, suggestedResp, aiStatusResp] = await Promise.all([
-            getMessagesByClientId(clientid),
-            getSuggestedResponse(clientid),
-            getAIResponseStatus(clientid)
-          ]);
-
-          setMessages(prevMessages => {
-            const hasNewMessages = newMessages.length !== prevMessages.length;
-            if (hasNewMessages) {
-              setLocalMessages(prev => prev.filter(localMsg => 
-                !newMessages.some(realMsg => 
-                  realMsg.body === localMsg.body && 
-                  realMsg.fromtext === localMsg.fromtext
-                )
-              ));
-              requestAnimationFrame(() => {
-                if (flatListRef.current) {
-                  flatListRef.current.scrollToEnd({ animated: false });
-                }
-              });
-            }
-            return newMessages;
-          });
-
-          if (suggestedResp) {
-            setCurrentSuggestedResponse(suggestedResp);
-            if (!newMessage.trim()) {
-              setEditableSuggestedResponse(suggestedResp);
-            }
-          }
-
-          setAiStatus(aiStatusResp?.status || null);
-        }, 5000);
-      } catch (error) {
-        console.error('Error initializing screen:', error);
-        Alert.alert(
-          'Error',
-          `Failed to load messages: ${error.message}`,
-          [{ text: 'OK', onPress: () => navigation.goBack() }]
-        );
-      }
-    };
-
     if (isFocused) {
+      const initializeScreen = async () => {
+        const data = await getMessagesByClientId(clientid);
+        const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        fetchMessagesAndSetup();
+        fetchSuggestedResponse();
+        startPollingAIStatus();
+      };
+      
       initializeScreen();
+    } else {
+      if (polling) {
+        clearInterval(polling);
+        setPolling(null);
+      }
+      stopPollingAIStatus();
+      setDraftMessage(clientid, newMessage);
     }
 
     return () => {
-      if (pollTimer) clearInterval(pollTimer);
-      if (aiStatusTimer) clearInterval(aiStatusTimer);
+      if (polling) {
+        clearInterval(polling);
+      }
+      stopPollingAIStatus();
       setDraftMessage(clientid, newMessage);
     };
-  }, [clientid, isFocused]);
+  }, [clientid, isFocused, initialSuggestedResponse, clientMessage]);
 
   const scrollToBottom = useCallback(() => {
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({ animated: true });
     }
   }, []);
+
+  const fetchMessagesAndSetup = useCallback(async () => {
+    try {
+      const data = await getMessagesByClientId(clientid);
+      console.log('[ClientMessages API Response]:', data);
+      
+      if (!data) {
+        setMessages([]);
+        return;
+      }
+
+      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setMessages(sortedMessages);
+      
+      await fetchClientDetails(clientid);
+      await setMessagesAsRead();
+      
+      const pollInterval = setInterval(async () => {
+        await Promise.all([
+          fetchMessages(clientid),
+          fetchSuggestedResponse()
+        ]);
+      }, 5000);
+      setPolling(pollInterval);
+
+      setTimeout(scrollToBottom, 100);
+    } catch (error) {
+      console.error('Error in fetchMessagesAndSetup:', error);
+      setMessages([]); // Set empty array as fallback
+    }
+  }, [clientid, scrollToBottom]);
+
+  const fetchMessages = useCallback(async (clientid) => {
+    try {
+      const data = await getMessagesByClientId(clientid);
+      if (!data) {
+        console.log('No data received from getMessagesByClientId in fetchMessages');
+        return;
+      }
+
+      const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
+      setMessages(prevMessages => {
+        if (!prevMessages) return sortedMessages; // Handle case where prevMessages is undefined
+        
+        const hasNewMessages = JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages);
+        if (hasNewMessages) {
+          const newestMessage = sortedMessages[sortedMessages.length - 1];
+          if (newestMessage && newestMessage.fromtext !== '+18446480598') {
+            startPollingAIStatus();
+          }
+          setLocalMessages(prev => {
+            if (!prev) return []; // Handle case where prev is undefined
+            return prev.filter(localMsg => 
+              !sortedMessages.some(realMsg => 
+                realMsg.body === localMsg.body && 
+                realMsg.fromtext === localMsg.fromtext
+              )
+            );
+          });
+          requestAnimationFrame(() => {
+            scrollToBottom();
+          });
+        }
+        return sortedMessages;
+      });
+    } catch (error) {
+      console.error('Error in fetchMessages:', error);
+      // Don't update messages state on error to preserve existing messages
+    }
+  }, [scrollToBottom]);
+
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener('keyboardWillShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const keyboardWillHide = Keyboard.addListener('keyboardWillHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      Notifications.setNotificationCategoryAsync('suggestedResponse', [
+        {
+          identifier: 'reply',
+          buttonTitle: 'Reply',
+          options: {
+            opensAppToForeground: false,
+          },
+          textInput: {
+            submitButtonTitle: 'Send',
+            placeholder: 'Edit suggested response...',
+          },
+        },
+      ]);
+    }
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
+
+    return () => subscription.remove();
+  }, []);
+
+  const fetchClientDetails = async (clientId) => {
+    try {
+      const clientData = await getClientById(clientId);
+      setClientDetails(clientData);
+      // const autoRespondStatus = await getClientAutoRespond(clientId);
+      // setAutoRespond(autoRespondStatus);
+    } catch (error) {
+      console.error('Error fetching client details:', error);
+    }
+  };
+
+  const setMessagesAsRead = async () => {
+    try {
+      await setMessagesRead(clientid);
+    } catch (error) {
+      console.error('Error setting messages as read:', error);
+    }
+  };
+
+  const fetchSuggestedResponse = async () => {
+    try {
+      const response = await getSuggestedResponse(clientid);
+      if (response) {
+        setCurrentSuggestedResponse(response);
+        if (!newMessage.trim()) {
+          setEditableSuggestedResponse(response);
+        }
+      } else {
+        setCurrentSuggestedResponse('');
+        if (editableSuggestedResponse === currentSuggestedResponse) {
+          setEditableSuggestedResponse('');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching suggested response:', error);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    console.log('handleSendMessage called', { newMessage, clientDetails });
+
+    const messageToSend = newMessage || currentSuggestedResponse;
+
+    if (typeof messageToSend !== 'string' || messageToSend.trim() === '') {
+      console.log('messageToSend is not a valid string', messageToSend);
+      return;
+    }
+
+    if (!clientDetails) {
+      console.log('clientDetails is null or undefined');
+      return;
+    }
+
+    const tempId = `temp-${Date.now()}`;
+    try {
+      const recipient = clientDetails.phonenumber;
+      console.log('Recipient:', recipient);
+
+      const now = new Date();
+      const adjustedDateString = `${(now.getMonth() + 1)}/${now.getDate()}/${now.getFullYear()}, ${now.toLocaleTimeString('en-US')}`;
+      console.log('Temp message date:', adjustedDateString);
+      
+      const isAI = messageToSend === currentSuggestedResponse;
+
+      const tempMessage = {
+        id: tempId,
+        body: messageToSend,
+        fromtext: '+18446480598',
+        totext: recipient,
+        date: adjustedDateString,
+        is_ai: isAI,
+        sending: true,
+      };
+
+      console.log('Created temp message:', tempMessage);
+
+      // Clear all message-related states immediately
+      setLocalMessages(prev => [...prev, tempMessage]);
+      setNewMessage('');
+      setEditableSuggestedResponse('');
+      setCurrentSuggestedResponse('');
+      setIsSuggestedResponseEdited(false);
+      // Also clear the draft message
+      setDraftMessage(clientid, '');
+      
+      scrollToBottom();
+
+      console.log('Sending message via API'+ messageToSend);
+      await sendMessage(recipient, messageToSend, false, !isAI);
+      
+      console.log('Message sent successfully');
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await fetchMessages(clientid);
+      await fetchSuggestedResponse();
+      
+      setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
+      
+      await clearSuggestedResponse(clientid);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setLocalMessages(prev => prev.filter(msg => msg.id !== tempId));
+    }
+  };
+
+  const handleAutoRespondToggle = async (value) => {
+    try {
+      await updateClientAutoRespond(clientid, value);
+      setAutoRespond(value);
+    } catch (error) {
+      console.error('Error updating auto-respond:', error);
+    }
+  };
 
   const handleScroll = (event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
@@ -252,20 +406,18 @@ const ClientMessagesScreen = ({ route }) => {
   };
 
   const groupMessagesByDate = (messages) => {
-    // Add safety check
     if (!Array.isArray(messages)) {
-      console.error('Invalid messages format:', messages);
+      console.error('[ClientMessages] Invalid messages array:', messages);
       return [];
     }
-
+    
     const grouped = {};
     messages.forEach((message, index) => {
-      // Add null check for message
       if (!message || !message.date) {
-        console.error('Invalid message format:', message);
+        console.error('[ClientMessages] Invalid message object:', message);
         return;
       }
-
+      
       const date = message.date.split(', ')[0];
       if (!grouped[date]) {
         grouped[date] = [];
@@ -276,17 +428,9 @@ const ClientMessagesScreen = ({ route }) => {
         prevMessage.fromtext === message.fromtext && 
         isWithinFiveMinutes(prevMessage.date, message.date);
 
-      if (shouldGroup) {
+      if (shouldGroup && grouped[date].length > 0) {
         const lastGroup = grouped[date][grouped[date].length - 1];
-        if (lastGroup) {
-          lastGroup.messages.push(message);
-        } else {
-          grouped[date].push({
-            sender: message.fromtext,
-            messages: [message],
-            firstMessageDate: message.date
-          });
-        }
+        lastGroup.messages.push(message);
       } else {
         grouped[date].push({
           sender: message.fromtext,
@@ -299,12 +443,6 @@ const ClientMessagesScreen = ({ route }) => {
     return Object.entries(grouped).map(([date, groups]) => ({ date, groups }));
   };
 
-  // Also modify the useMemo hook to include safety checks
-  const groupedMessages = useMemo(() => {
-    const allMessages = [...(messages || []), ...(localMessages || [])];
-    return groupMessagesByDate(allMessages);
-  }, [messages, localMessages]);
-
   const renderDateSeparator = (date) => (
     <View style={styles.dateSeparator}>
       <View style={styles.dateLine} />
@@ -314,6 +452,11 @@ const ClientMessagesScreen = ({ route }) => {
   );
 
   const renderMessage = useCallback((messageGroup) => {
+    if (!messageGroup || !messageGroup.sender || !messageGroup.messages) {
+      console.error('[ClientMessages] Invalid message group:', messageGroup);
+      return null;
+    }
+
     const isAssistant = messageGroup.sender === '+18446480598';
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
     
@@ -360,12 +503,18 @@ const ClientMessagesScreen = ({ route }) => {
     );
   }, [messages, aiStatus]);
 
-  const renderItem = useCallback(({ item }) => (
-    <View key={item.date}>
-      {renderDateSeparator(item.date)}
-      {item.groups.map(group => renderMessage(group))}
-    </View>
-  ), [renderMessage]);
+  const renderItem = useCallback(({ item }) => {
+    if (!item || !item.date || !item.groups) {
+      return null;
+    }
+    
+    return (
+      <View key={item.date}>
+        {renderDateSeparator(item.date)}
+        {item.groups.map(group => renderMessage(group))}
+      </View>
+    );
+  }, [renderMessage]);
 
   const handleInputChange = (text) => {
     setNewMessage(text);
@@ -469,25 +618,21 @@ const ClientMessagesScreen = ({ route }) => {
         ]}>
           <FlatList
             ref={flatListRef}
-            data={groupedMessages}
+            data={groupMessagesByDate([...messages, ...localMessages])}
             renderItem={renderItem}
             keyExtractor={useCallback((item) => item.date, [])}
-            initialNumToRender={15}
-            maxToRenderPerBatch={10}
-            windowSize={11}
-            removeClippedSubviews={Platform.OS === 'android'}
+            initialNumToRender={20}
+            maxToRenderPerBatch={20}
+            windowSize={21}
+            removeClippedSubviews={false}
             onContentSizeChange={() => {
               requestAnimationFrame(() => {
-                if (flatListRef.current) {
-                  flatListRef.current.scrollToEnd({ animated: false });
-                }
+                scrollToBottom();
               });
             }}
             onLayout={() => {
               requestAnimationFrame(() => {
-                if (flatListRef.current) {
-                  flatListRef.current.scrollToEnd({ animated: false });
-                }
+                scrollToBottom();
               });
             }}
             onScroll={handleScroll}
@@ -561,15 +706,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     padding: 16,
     backgroundColor: '#111318',
     borderBottomWidth: 1,
     borderBottomColor: '#292e38',
-  },
-  backButton: {
-    width: 40,
-    alignItems: 'flex-start',
   },
   headerCenter: {
     flex: 1,
@@ -588,17 +728,19 @@ const styles = StyleSheet.create({
   infoIcon: {
     opacity: 0.8,
   },
-  clearButton: {
-    width: 40,
-    alignItems: 'flex-end',
-  },
-  clearButtonText: {
-    color: '#195de6', // Using the same blue as the send button
-    fontSize: 14,
-    fontWeight: '600',
+  backButton: {
+    width: 40, // Fixed width to help with centering
   },
   headerRight: {
-    width: 40, // Maintains layout when clear button is not shown
+    width: 40, // Fixed width to help with centering
+  },
+  clearButton: {
+    padding: 8,
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   contentContainer: {
     flex: 1,
