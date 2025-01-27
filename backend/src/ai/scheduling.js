@@ -750,22 +750,11 @@ async function updateAssistantInstructions(phoneNumber) {
 }
 
 async function handleUserInput(userMessages, phoneNumber, userId) {
-  console.log("userMessages", userMessages)
   try {
     const client = await getClientByPhoneNumber(phoneNumber, userId);
-    console.log(`Client found: ${JSON.stringify(client)}`);
-
     let thread = await createThread(phoneNumber, false, userId);
 
-    // Add all user messages to the thread
-    for (const message of userMessages) {
-      await openai.beta.threads.messages.create(thread.id, {
-        role: "user",
-        content: message,
-      });
-    }
-
-    let assistant;
+    // Get current date/time
     const currentDate = new Date(getCurrentDate());
     const dayOfWeek = currentDate.toLocaleString('en-US', { weekday: 'long' });
     const formattedDate = currentDate.toLocaleString('en-US', { 
@@ -777,7 +766,17 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
         hour12: true
     });
     const dateTimeString = `${dayOfWeek}, ${formattedDate}`;
-    console.log("Current date and time:", dateTimeString);
+
+    // Add timestamp to user messages
+    for (const message of userMessages) {
+      await openai.beta.threads.messages.create(thread.id, {
+        role: "user",
+        content: message,
+        metadata: { timestamp: dateTimeString }
+      });
+    }
+
+    let assistant;
     let fname, lname, email;
 
     if (!client.firstname && !client.lastname) {
@@ -812,7 +811,7 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
 
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
-      additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + dateTimeString,
+      additional_instructions: `The current date and time is ${dateTimeString}. Note that this conversation may span multiple days - always consider the timestamp of each message when determining context and don't assume messages from different days are part of the same conversation unless they're explicitly related. Don't use commas or proper punctuation.`,
     });
 
     const MAX_RETRIES = 3;
