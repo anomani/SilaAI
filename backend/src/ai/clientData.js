@@ -609,6 +609,7 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
               } else if (funcName === "blockTime") {
                 output = await createBlockedTime(args.date, args.startTime, args.endTime, args.reason, userId);
               } else if (funcName === "findRecurringAvailability") {
+                console.log("findRecurringAvailability", args.initialDate, args.appointmentType, args.addOns, args.recurrenceRule, userId, args.clientId);
                 output = await findRecurringAvailability(
                   args.initialDate,
                   args.appointmentType,
@@ -618,6 +619,7 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
                   args.clientId,
                 );
               } else if (funcName === "createRecurringAppointmentsAdmin") {
+                console.log("createRecurringAppointmentsAdmin", args.clientId, args.initialDate, args.startTime, args.appointmentType, args.addOns, args.recurrenceRule);
                 output = await createRecurringAppointmentsAdmin(
                   args.clientId,
                   args.initialDate,
