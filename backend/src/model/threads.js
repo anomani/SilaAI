@@ -126,7 +126,7 @@ async function getThreadMessages(threadId) {
 
 
 async function main() {
-  const threadId = 'thread_UMrT08Enxx8rQNuDpM66Itxj';
+  const threadId = 'thread_EcWzhUR0KjfsObYJSdVpfsER';
   const messages = await getThreadMessages(threadId);
   console.log(messages);
 }
