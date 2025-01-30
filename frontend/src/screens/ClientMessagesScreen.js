@@ -39,7 +39,7 @@ const Header = ({ clientName, navigation, onClearSuggestedResponse, hasSuggested
             style={styles.clearButton}
             onPress={onClearSuggestedResponse}
           >
-            <Text style={styles.clearButtonText}>Clear response</Text>
+            <Text style={styles.clearButtonText}>Clear</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -714,6 +714,7 @@ const styles = StyleSheet.create({
   headerCenter: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitleContainer: {
     flexDirection: 'row',
@@ -729,10 +730,12 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   backButton: {
-    width: 40, // Fixed width to help with centering
+    width: 100,
+    alignItems: 'flex-start',
   },
   headerRight: {
-    width: 40, // Fixed width to help with centering
+    width: 100,
+    alignItems: 'flex-end',
   },
   clearButton: {
     padding: 8,
@@ -741,6 +744,8 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: 'bold',
+    textAlign: 'right',
+    flexShrink: 0,
   },
   contentContainer: {
     flex: 1,
@@ -754,7 +759,7 @@ const styles = StyleSheet.create({
   },
   messageListContent: {
     flexGrow: 1,
-    paddingBottom: 16, // Base padding
+    paddingBottom: 16,
   },
   messageContainer: {
     flexDirection: 'row',
@@ -769,10 +774,10 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   clientMessageContent: {
-    alignItems: 'flex-start', // Override alignment for client messages
+    alignItems: 'flex-start',
   },
   clientMessageSender: {
-    alignSelf: 'flex-start', // Override alignment for client sender name
+    alignSelf: 'flex-start',
   },
   avatar: {
     width: 32,
@@ -782,13 +787,13 @@ const styles = StyleSheet.create({
   },
   messageContent: {
     maxWidth: '75%',
-    alignItems: 'flex-end', // Align content to the right for assistant messages
+    alignItems: 'flex-end',
   },
   messageSender: {
     color: '#9da6b8',
     fontSize: 13,
     marginBottom: 4,
-    alignSelf: 'flex-end', // Align sender name to the right
+    alignSelf: 'flex-end',
   },
   messageBubble: {
     borderRadius: 12,
@@ -940,7 +945,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic'
   },
   clickableText: {
-    color: '#007AFF',  // iOS blue color
+    color: '#007AFF',
     textDecorationLine: 'underline',
   },
 });
