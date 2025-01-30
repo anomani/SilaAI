@@ -193,11 +193,10 @@ const CalendarScreen = ({ navigation }) => {
     setIsLoading(true);
     setAppointments([]); // Clear existing appointments
     try {
-      const estDate = new Date(date); 
-      estDate.setHours(estDate.getHours() - 4); // Convert to EST
-      const year = estDate.getFullYear();
-      const month = String(estDate.getMonth() + 1).padStart(2, '0');
-      const day = String(estDate.getDate()).padStart(2, '0');
+      // Format date directly without timezone adjustment
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
       const formattedDate = `${year}-${month}-${day}`;
 
       const response = await getAppointmentsByDay(formattedDate);

@@ -808,7 +808,6 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
       assistant = await createAssistant(fname, lname, phone, messages, appointmentType, client, upcomingAppointment, userId);
     }
 
-
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
       additional_instructions: `The current date and time is ${dateTimeString}. Note that this conversation may span multiple days - always consider the timestamp of each message when determining context and don't assume messages from different days are part of the same conversation unless they're explicitly related. Don't use commas or proper punctuation.`,
@@ -830,9 +829,13 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
             if (assistantMessage.content[0].text.value === 'user' || assistantMessage.content[0].text.value === 'User') {
               return 'user';
             }
-            const verifiedResponse = await verifyResponse(assistantMessage.content[0].text.value, client, thread);
-            return verifiedResponse
+            // Get the response but don't add it to the thread yet
+            const verifiedResponse = assistantMessage.content[0].text.value;
             
+            // Delete the assistant's message from the thread since it hasn't been sent yet
+            await openai.beta.threads.messages.del(thread.id, assistantMessage.id);
+            
+            return verifiedResponse;
           } else {
             return "user";
           }
@@ -1107,5 +1110,12 @@ async function shouldAIRespond(userMessages, thread) {
     return false; // Default to human attention if there's an error
   }
 }
+
+// async function main() {
+//   const response = await handleUserInput(['Hi'], '+12038324011', 1);
+//   console.log(response);
+// }
+
+// main();
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal, handleToolCalls, handleToolCallsInternal};
