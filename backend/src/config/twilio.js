@@ -170,6 +170,9 @@ async function handleIncomingMessage(req, res) {
       return res.status(200).send('Message received');
     }
 
+    // Set status to pending before starting the delay timer
+    await updateAIResponseStatus(clientId, 'pending');
+
     // Add message to pending messages
     if (!pendingMessages.has(Author)) {
       pendingMessages.set(Author, []);
@@ -178,13 +181,6 @@ async function handleIncomingMessage(req, res) {
       const formattedAuthor = formatPhoneNumber(Author);
       let delayInMs;
       delayInMs = 30000;
-      // if (formattedAuthor === '+12038324011') {
-      //   // Short delay for special number (1-10 seconds)
-      //   delayInMs = 1; // 20 seconds delay
-      // } else {
-      //   // Normal delay for other numbers (1-5 minutes)
-      //   // delayInMs = Math.floor(Math.random() * (5 * 60 * 1000 - 1 * 60 * 1000 + 1)) + 1 * 60 * 1000;
-      // }
 
       setTimeout(() => processDelayedResponse(Author, user.id), delayInMs);
     }
@@ -208,11 +204,6 @@ async function processDelayedResponse(phoneNumber, userId) {
     if (messages && messages.length > 0) {
       const client = await getClientByPhoneNumber(phoneNumber, userId);
       
-      // Set status to pending before AI processing
-      if (client && client.id) {
-        await updateAIResponseStatus(client.id, 'pending');
-      }
-
       const responseMessage = await handleUserInput(messages, phoneNumber, userId);
       console.log(responseMessage);
       
