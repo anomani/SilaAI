@@ -28,6 +28,7 @@ import InitiateConversation from './src/screens/InitiateConversation';
 import MetricsScreen from './src/screens/MetricsScreen';
 import SettingsPage from './src/screens/SettingsPage';
 import AppointmentTypesScreen from './src/screens/AppointmentTypesScreen';
+import MessageTemplatesScreen from './src/screens/MessageTemplatesScreen';
 
 // Import new login and register components
 import Login from './src/components/Login';
@@ -197,6 +198,7 @@ const AppContent: React.FC = () => {
             initialParams={{ handleLogout }}
           />
           <Stack.Screen name="AppointmentTypes" component={AppointmentTypesScreen} />
+          <Stack.Screen name="MessageTemplates" component={MessageTemplatesScreen} />
         </>
       ) : (
         <>
