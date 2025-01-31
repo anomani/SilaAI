@@ -18,6 +18,8 @@ let expo = new Expo();
 
 // Add this near the top of the file, with other imports and global variables
 const pendingMessages = new Map();
+const messageTimeouts = new Map();
+const DEBOUNCE_TIME = 1000; // Wait 1 second for potential follow-up messages
 
 function formatPhoneNumber(phoneNumber) {
   // Remove all non-digit characters
@@ -170,21 +172,23 @@ async function handleIncomingMessage(req, res) {
       return res.status(200).send('Message received');
     }
 
-    // Set status to pending before starting the delay timer
+    // Set status to pending immediately
     await updateAIResponseStatus(clientId, 'pending');
+
+    // Clear any existing timeout for this sender
+    if (messageTimeouts.has(Author)) {
+      clearTimeout(messageTimeouts.get(Author));
+    }
 
     // Add message to pending messages
     if (!pendingMessages.has(Author)) {
       pendingMessages.set(Author, []);
-      
-      // Check if the number is the special case
-      const formattedAuthor = formatPhoneNumber(Author);
-      let delayInMs;
-      delayInMs = 30000;
-
-      setTimeout(() => processDelayedResponse(Author, user.id), delayInMs);
     }
     pendingMessages.get(Author).push(Body);
+
+    // Set new timeout
+    const timeoutId = setTimeout(() => processDelayedResponse(Author, user.id), DEBOUNCE_TIME);
+    messageTimeouts.set(Author, timeoutId);
 
     // Immediately respond to Twilio
     res.status(200).send('Message received');
