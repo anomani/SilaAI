@@ -91,7 +91,13 @@ router.post('/first-message-template', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { template } = req.body;
+    console.log('Received request to update first message template:', {
+      userId,
+      template,
+      body: req.body
+    });
     await setFirstMessageTemplate(userId, template);
+    console.log('Successfully updated first message template for user:', userId);
     res.json({ success: true });
   } catch (error) {
     console.error('Error setting first message template:', error);

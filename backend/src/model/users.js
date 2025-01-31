@@ -205,7 +205,19 @@ async function setFirstMessageTemplate(userId, template) {
   const sql = 'UPDATE users SET first_message_template = $1 WHERE id = $2';
   const values = [template, userId];
   try {
+    console.log('Executing SQL to update first message template:', {
+      sql,
+      values,
+      userId,
+      template
+    });
     await db.query(sql, values);
+    
+    // Verify the update
+    const verifySQL = 'SELECT first_message_template FROM users WHERE id = $1';
+    const verifyResult = await db.query(verifySQL, [userId]);
+    console.log('Verification result:', verifyResult.rows[0]);
+    
     console.log(`First message template updated for user: ${userId}`);
   } catch (err) {
     console.error('Error setting first message template:', err.message);
