@@ -1,10 +1,9 @@
 const { getUnpaidAppointmentsByDate, getEndingAppointments, getAppointmentsByDay } = require('../../model/appointment');
 const { sendNotificationToUser } = require('./notifications');
-const { getUserById } = require('../../model/users');
+const { getUserById, getReminderMessageTemplate } = require('../../model/users');
 const { sendMessage } = require('../twilio');
 const { getClientById } = require('../../model/clients');
 const { getMessagesByClientId } = require('../../model/messages');
-const { getReminderMessageTemplate } = require('../../model/settings');
 
 // Helper function to convert 24-hour time to AM/PM format
 function convertTo12Hour(time24) {
@@ -69,8 +68,8 @@ async function sendNextDayAppointmentReminders(userId) {
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         console.log("tomorrowStr", tomorrowStr)
         
-        // Get the user's message template
-        const messageTemplate = await getReminderMessageTemplate(userId);
+        // Get user data for templates
+        const user = await getUserById(userId);
         
         // Get all appointments for tomorrow
         const appointments = await getAppointmentsByDay(userId, tomorrowStr);
@@ -90,9 +89,12 @@ async function sendNextDayAppointmentReminders(userId) {
                 
                 let message;
                 if (!messageHistory || messageHistory.length === 0) {
-                    message = `Hey ${client.firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at ${formattedTime}?`;
+                    const firstMessageTemplate = user.first_message_template || 'Hey {firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at {time}?';
+                    message = firstMessageTemplate
+                        .replace('{firstname}', client.firstname)
+                        .replace('{time}', formattedTime);
                 } else {
-                    // Replace template variables
+                    const messageTemplate = user.reminder_template || 'Hey {firstname}, just wanted to confirm if you\'re good for your appointment tomorrow at {time}?';
                     message = messageTemplate
                         .replace('{firstname}', client.firstname)
                         .replace('{time}', formattedTime);
