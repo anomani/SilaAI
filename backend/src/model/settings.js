@@ -62,9 +62,42 @@ async function setNextDayRemindersStatus(userId, status) {
   }
 }
 
+async function getReminderMessageTemplate(userId) {
+  const db = dbUtils.getDB();
+  const sql = 'SELECT value FROM Settings WHERE user_id = $1 AND feature_name = $2';
+  const values = [userId, 'reminderMessageTemplate'];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0]?.value || 'Hey {firstname}, just wanted to confirm if you\'re good for your appointment tomorrow at {time}?';
+  } catch (err) {
+    console.error('Error fetching reminder message template:', err.message);
+    throw err;
+  }
+}
+
+async function setReminderMessageTemplate(userId, template) {
+  const db = dbUtils.getDB();
+  const sql = `
+    INSERT INTO Settings (user_id, feature_name, value)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (user_id, feature_name) DO UPDATE
+    SET value = EXCLUDED.value
+  `;
+  const values = [userId, 'reminderMessageTemplate', template];
+  try {
+    await db.query(sql, values);
+    console.log(`Reminder message template updated for user: ${userId}`);
+  } catch (err) {
+    console.error('Error setting reminder message template:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   getFillMyCalendarStatus,
   setFillMyCalendarStatus,
   getNextDayRemindersStatus,
   setNextDayRemindersStatus,
+  getReminderMessageTemplate,
+  setReminderMessageTemplate,
 };

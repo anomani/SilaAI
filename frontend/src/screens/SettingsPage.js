@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Button, Linking } from 'react-native';
-import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser, getNextDayRemindersStatus, setNextDayRemindersStatus } from '../services/api';
+import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Button, Linking, TextInput } from 'react-native';
+import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser, getNextDayRemindersStatus, setNextDayRemindersStatus, getReminderMessageTemplate, setReminderMessageTemplate } from '../services/api';
 import { Ionicons } from '@expo/vector-icons'; // Make sure to import this
 import Footer from '../components/Footer'; // Import the Footer component
 import { useRoute } from '@react-navigation/native';
@@ -11,6 +11,8 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
+  const [messageTemplate, setMessageTemplate] = useState('');
+  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
   const route = useRoute();
   const { handleLogout } = route.params;
   const [fillMyCalendarLoading, setFillMyCalendarLoading] = useState(false);
@@ -19,14 +21,16 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [calendarStatus, remindersStatus, userData] = await Promise.all([
+        const [calendarStatus, remindersStatus, userData, template] = await Promise.all([
           getFillMyCalendarStatus(),
           getNextDayRemindersStatus(),
-          getCurrentUser()
+          getCurrentUser(),
+          getReminderMessageTemplate()
         ]);
         setFillMyCalendar(calendarStatus.status);
         setNextDayReminders(remindersStatus.status);
         setUser(userData);
+        setMessageTemplate(template.value);
       } catch (err) {
         setError('Failed to fetch data');
       } finally {
@@ -60,6 +64,16 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
       Alert.alert('Error', 'Failed to update status');
     } finally {
       setNextDayRemindersLoading(false);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    try {
+      await setReminderMessageTemplate(messageTemplate);
+      setIsEditingTemplate(false);
+      Alert.alert('Success', 'Reminder message template updated successfully');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update reminder message template');
     }
   };
 
@@ -145,6 +159,46 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
                 ios_backgroundColor="#2c2c2e"
                 disabled={nextDayRemindersLoading}
               />
+            </View>
+
+            <View style={styles.messageTemplateContainer}>
+              <View style={styles.messageTemplateHeader}>
+                <Text style={styles.label}>Reminder Message Template</Text>
+                <TouchableOpacity 
+                  onPress={() => setIsEditingTemplate(!isEditingTemplate)}
+                  style={styles.editButton}
+                >
+                  <Ionicons 
+                    name={isEditingTemplate ? "close" : "create-outline"} 
+                    size={24} 
+                    color="#81b0ff" 
+                  />
+                </TouchableOpacity>
+              </View>
+              
+              {isEditingTemplate ? (
+                <View style={styles.templateEditContainer}>
+                  <TextInput
+                    style={styles.templateInput}
+                    value={messageTemplate}
+                    onChangeText={setMessageTemplate}
+                    multiline
+                    placeholder="Enter message template..."
+                    placeholderTextColor="#666"
+                  />
+                  <Text style={styles.templateHint}>
+                    Available variables: {'{firstname}'}, {'{time}'}
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.saveButton}
+                    onPress={handleSaveTemplate}
+                  >
+                    <Text style={styles.saveButtonText}>Save Template</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={styles.templatePreview}>{messageTemplate}</Text>
+              )}
             </View>
           </View>
 
@@ -296,6 +350,52 @@ const styles = StyleSheet.create({
     color: '#ff4444',
     textAlign: 'center',
     marginTop: 20,
+  },
+  messageTemplateContainer: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: '#3a3a3c',
+    borderRadius: 12,
+  },
+  messageTemplateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  templateEditContainer: {
+    marginTop: 8,
+  },
+  templateInput: {
+    backgroundColor: '#2c2c2e',
+    borderRadius: 8,
+    padding: 12,
+    color: '#fff',
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  templateHint: {
+    color: '#666',
+    fontSize: 12,
+    marginTop: 8,
+  },
+  templatePreview: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  saveButton: {
+    backgroundColor: '#81b0ff',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  editButton: {
+    padding: 8,
   },
 });
 
