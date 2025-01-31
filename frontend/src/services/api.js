@@ -791,3 +791,22 @@ export const deleteNote = async (noteId) => {
     throw error;
   }
 };
+
+export const getReminderMessageTemplate = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.get('/settings/reminderTemplate')));
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching reminder message template:', error);
+    throw error;
+  }
+};
+
+export const setReminderMessageTemplate = async (template) => {
+  try {
+    await retryRequest(() => throttledRequest(() => api.post('/settings/reminderTemplate', { template })));
+  } catch (error) {
+    console.error('Error setting reminder message template:', error);
+    throw error;
+  }
+};
