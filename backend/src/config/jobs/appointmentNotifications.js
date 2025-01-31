@@ -117,13 +117,71 @@ async function sendNextDayAppointmentReminders(userId) {
     }
 }
 
+async function testNextDayAppointmentReminders(userId) {
+    try {
+        // Get tomorrow's date
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        console.log("\n=== TEST MODE: Next Day Appointment Reminders ===");
+        console.log("Date:", tomorrowStr);
+        
+        // Get user data for templates
+        const user = await getUserById(userId);
+        console.log("\nUser:", user.username);
+        
+        // Get all appointments for tomorrow
+        const appointments = await getAppointmentsByDay(userId, tomorrowStr);
+        console.log("\nFound", appointments.length, "appointments for tomorrow");
+        
+        // Test messages for each appointment
+        for (const appointment of appointments) {
+            // Get client details using clientId
+            const client = await getClientById(appointment.clientid);
+            if (client && client.phonenumber) {
+                // Convert the time to 12-hour format
+                const formattedTime = convertTo12Hour(appointment.starttime);
+                
+                // Check if there's any message history
+                const messageHistory = await getMessagesByClientId(client.id);
+                
+                let message;
+                if (!messageHistory || messageHistory.length === 0) {
+                    const firstMessageTemplate = user.first_message_template || 'Hey {firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at {time}?';
+                    message = firstMessageTemplate
+                        .replace('{firstname}', client.firstname)
+                        .replace('{time}', formattedTime);
+                    console.log("\n[First Time Message]");
+                } else {
+                    const messageTemplate = user.reminder_template || 'Hey {firstname}, just wanted to confirm if you\'re good for your appointment tomorrow at {time}?';
+                    message = messageTemplate
+                        .replace('{firstname}', client.firstname)
+                        .replace('{time}', formattedTime);
+                    console.log("\n[Regular Reminder]");
+                }
+                
+                console.log("To:", client.firstname, `(${client.phonenumber})`);
+                console.log("Message:", message);
+                console.log("Time:", formattedTime);
+                console.log("Message History:", messageHistory ? messageHistory.length : 0, "messages");
+            }
+        }
+        
+        console.log("\n=== End Test ===\n");
+    } catch (error) {
+        console.error(`Error testing next day appointment reminders for user ${userId}:`, error);
+    }
+}
+
 // async function main() {
-//     await sendNextDayAppointmentReminders(1);
+//     await testNextDayAppointmentReminders(1);
 // }
 // main();
+
 module.exports = {
     checkUnpaidAppointments,
     checkEndingAppointments,
     sendNextDayAppointmentReminders,
+    testNextDayAppointmentReminders,
     convertTo12Hour  // Export for testing
 };

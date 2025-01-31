@@ -1,36 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, Button, Linking, TextInput } from 'react-native';
-import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser, getNextDayRemindersStatus, setNextDayRemindersStatus, getReminderMessageTemplate, setReminderMessageTemplate } from '../services/api';
-import { Ionicons } from '@expo/vector-icons'; // Make sure to import this
-import Footer from '../components/Footer'; // Import the Footer component
+import { View, Text, Switch, StyleSheet, ActivityIndicator, Alert, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { getFillMyCalendarStatus, setFillMyCalendarStatus, getCurrentUser, getNextDayRemindersStatus, setNextDayRemindersStatus } from '../services/api';
+import { Ionicons } from '@expo/vector-icons';
+import Footer from '../components/Footer';
 import { useRoute } from '@react-navigation/native';
 
-const SettingsPage = ({ navigation }) => { // Add navigation prop
+const SettingsPage = ({ navigation }) => {
   const [fillMyCalendar, setFillMyCalendar] = useState(false);
-  const [nextDayReminders, setNextDayReminders] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [user, setUser] = useState(null);
-  const [messageTemplate, setMessageTemplate] = useState('');
-  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
   const route = useRoute();
   const { handleLogout } = route.params;
   const [fillMyCalendarLoading, setFillMyCalendarLoading] = useState(false);
-  const [nextDayRemindersLoading, setNextDayRemindersLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [calendarStatus, remindersStatus, userData, template] = await Promise.all([
+        const [calendarStatus, userData] = await Promise.all([
           getFillMyCalendarStatus(),
-          getNextDayRemindersStatus(),
-          getCurrentUser(),
-          getReminderMessageTemplate()
+          getCurrentUser()
         ]);
         setFillMyCalendar(calendarStatus.status);
-        setNextDayReminders(remindersStatus.status);
         setUser(userData);
-        setMessageTemplate(template.value);
       } catch (err) {
         setError('Failed to fetch data');
       } finally {
@@ -54,29 +46,6 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
     }
   };
 
-  const handleToggleReminders = async () => {
-    try {
-      setNextDayRemindersLoading(true);
-      await setNextDayRemindersStatus(!nextDayReminders);
-      setNextDayReminders(!nextDayReminders);
-    } catch (err) {
-      setError('Failed to update status');
-      Alert.alert('Error', 'Failed to update status');
-    } finally {
-      setNextDayRemindersLoading(false);
-    }
-  };
-
-  const handleSaveTemplate = async () => {
-    try {
-      await setReminderMessageTemplate(messageTemplate);
-      setIsEditingTemplate(false);
-      Alert.alert('Success', 'Reminder message template updated successfully');
-    } catch (err) {
-      Alert.alert('Error', 'Failed to update reminder message template');
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.container}>
@@ -95,126 +64,81 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
 
   return (
     <View style={styles.container}>
-      <View style={styles.contentContainer}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.title}>Account</Text>
-        </View>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Account</Text>
+      </View>
 
-        <View style={styles.scrollContent}>
-          {user && (
-            <View style={styles.section}>
-              <View style={styles.userInfo}>
-                <View style={styles.infoRow}>
-                  <Ionicons name="person-outline" size={20} color="#81b0ff" />
-                  <Text style={styles.infoText}>Username: {user.username}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Ionicons name="call-outline" size={20} color="#81b0ff" />
-                  <Text style={styles.infoText}>Phone Number: {user.phoneNumber}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Ionicons name="link-outline" size={20} color="#81b0ff" />
-                  <Text style={styles.infoLabel}>Booking URL: </Text>
-                  <TouchableOpacity 
-                    onPress={() => Linking.openURL(`https://uzicuts.netlify.app/${user.id}`)}
-                  >
-                    <Text style={[styles.infoText, styles.link]}>
-                      https://uzicuts.netlify.app/{user.id}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
-
+      <ScrollView style={styles.scrollContent}>
+        {user && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Preferences</Text>
-            <View style={styles.setting}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="calendar-outline" size={24} color="#81b0ff" />
-                <Text style={styles.label}>Fill My Calendar</Text>
+            <View style={styles.userInfo}>
+              <View style={styles.infoRow}>
+                <Ionicons name="person-outline" size={20} color="#81b0ff" />
+                <Text style={styles.infoText}>Username: {user.username}</Text>
               </View>
-              <Switch
-                value={fillMyCalendar}
-                onValueChange={handleToggle}
-                trackColor={{ false: '#2c2c2e', true: '#81b0ff' }}
-                thumbColor={fillMyCalendar ? '#ffffff' : '#767577'}
-                ios_backgroundColor="#2c2c2e"
-                disabled={fillMyCalendarLoading}
-              />
-            </View>
-            <View style={styles.setting}>
-              <View style={styles.settingLeft}>
-                <Ionicons name="notifications-outline" size={24} color="#81b0ff" />
-                <Text style={styles.label}>Next Day Reminders</Text>
+              <View style={styles.infoRow}>
+                <Ionicons name="call-outline" size={20} color="#81b0ff" />
+                <Text style={styles.infoText}>Phone Number: {user.phoneNumber}</Text>
               </View>
-              <Switch
-                value={nextDayReminders}
-                onValueChange={handleToggleReminders}
-                trackColor={{ false: '#2c2c2e', true: '#81b0ff' }}
-                thumbColor={nextDayReminders ? '#ffffff' : '#767577'}
-                ios_backgroundColor="#2c2c2e"
-                disabled={nextDayRemindersLoading}
-              />
-            </View>
-
-            <View style={styles.messageTemplateContainer}>
-              <View style={styles.messageTemplateHeader}>
-                <Text style={styles.label}>Reminder Message Template</Text>
+              <View style={styles.infoRow}>
+                <Ionicons name="link-outline" size={20} color="#81b0ff" />
+                <Text style={styles.infoLabel}>Booking URL: </Text>
                 <TouchableOpacity 
-                  onPress={() => setIsEditingTemplate(!isEditingTemplate)}
-                  style={styles.editButton}
+                  onPress={() => Linking.openURL(`https://uzicuts.netlify.app/${user.id}`)}
                 >
-                  <Ionicons 
-                    name={isEditingTemplate ? "close" : "create-outline"} 
-                    size={24} 
-                    color="#81b0ff" 
-                  />
+                  <Text style={[styles.infoText, styles.link]}>
+                    https://uzicuts.netlify.app/{user.id}
+                  </Text>
                 </TouchableOpacity>
               </View>
-              
-              {isEditingTemplate ? (
-                <View style={styles.templateEditContainer}>
-                  <TextInput
-                    style={styles.templateInput}
-                    value={messageTemplate}
-                    onChangeText={setMessageTemplate}
-                    multiline
-                    placeholder="Enter message template..."
-                    placeholderTextColor="#666"
-                  />
-                  <Text style={styles.templateHint}>
-                    Available variables: {'{firstname}'}, {'{time}'}
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.saveButton}
-                    onPress={handleSaveTemplate}
-                  >
-                    <Text style={styles.saveButtonText}>Save Template</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <Text style={styles.templatePreview}>{messageTemplate}</Text>
-              )}
             </View>
           </View>
+        )}
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Service Management</Text>
-            <TouchableOpacity 
-              style={styles.navigationButton}
-              onPress={() => navigation.navigate('AppointmentTypes')}
-            >
-              <View style={styles.buttonContent}>
-                <Ionicons name="cut-outline" size={24} color="#81b0ff" />
-                <Text style={styles.buttonText}>Manage Appointment Types</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={24} color="#81b0ff" />
-            </TouchableOpacity>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Preferences</Text>
+          <View style={styles.setting}>
+            <View style={styles.settingLeft}>
+              <Ionicons name="calendar-outline" size={24} color="#81b0ff" />
+              <Text style={styles.label}>Fill My Calendar</Text>
+            </View>
+            <Switch
+              value={fillMyCalendar}
+              onValueChange={handleToggle}
+              trackColor={{ false: '#2c2c2e', true: '#81b0ff' }}
+              thumbColor={fillMyCalendar ? '#ffffff' : '#767577'}
+              ios_backgroundColor="#2c2c2e"
+              disabled={fillMyCalendarLoading}
+            />
           </View>
+
+          <TouchableOpacity 
+            style={[styles.navigationButton, { marginTop: 12 }]}
+            onPress={() => navigation.navigate('MessageTemplates')}
+          >
+            <View style={styles.buttonContent}>
+              <Ionicons name="notifications-outline" size={24} color="#81b0ff" />
+              <Text style={styles.buttonText}>Next Day Reminders</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#81b0ff" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Service Management</Text>
+          <TouchableOpacity 
+            style={styles.navigationButton}
+            onPress={() => navigation.navigate('AppointmentTypes')}
+          >
+            <View style={styles.buttonContent}>
+              <Ionicons name="cut-outline" size={24} color="#81b0ff" />
+              <Text style={styles.buttonText}>Manage Appointment Types</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#81b0ff" />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity 
@@ -224,8 +148,8 @@ const SettingsPage = ({ navigation }) => { // Add navigation prop
           <Ionicons name="log-out-outline" size={20} color="#ff4444" />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
-        <Footer navigation={navigation} />
-      </View>
+      </ScrollView>
+      <Footer navigation={navigation} />
     </View>
   );
 };
@@ -234,14 +158,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1c1c1e',
-  },
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  scrollContent: {
-    flex: 1,
-    paddingVertical: 16,
   },
   header: {
     flexDirection: 'row',
@@ -258,6 +174,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  scrollContent: {
+    flex: 1,
+    paddingVertical: 16,
   },
   section: {
     marginBottom: 24,
@@ -351,51 +271,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
   },
-  messageTemplateContainer: {
-    marginTop: 16,
-    padding: 16,
-    backgroundColor: '#3a3a3c',
-    borderRadius: 12,
-  },
-  messageTemplateHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  templateEditContainer: {
-    marginTop: 8,
-  },
-  templateInput: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 8,
-    padding: 12,
-    color: '#fff',
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  templateHint: {
-    color: '#666',
-    fontSize: 12,
-    marginTop: 8,
-  },
-  templatePreview: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  saveButton: {
-    backgroundColor: '#81b0ff',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  editButton: {
-    padding: 8,
   },
 });
 
