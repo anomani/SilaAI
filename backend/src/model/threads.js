@@ -125,13 +125,13 @@ async function getThreadMessages(threadId) {
 }
 
 
-async function main() {
-  const threadId = 'thread_EcWzhUR0KjfsObYJSdVpfsER';
-  const messages = await getThreadMessages(threadId);
-  console.log(messages);
-}
+// async function main() {
+//   const threadId = 'thread_EcWzhUR0KjfsObYJSdVpfsER';
+//   const messages = await getThreadMessages(threadId);
+//   console.log(messages);
+// }
 
-main();
+// main();
 
 module.exports = {
   saveThread,
