@@ -299,11 +299,11 @@ const ClientMessagesScreen = ({ route }) => {
 
       // Clear all message-related states immediately
       setLocalMessages(prev => [...prev, tempMessage]);
-      setNewMessage('');
-      setEditableSuggestedResponse('');
-      setCurrentSuggestedResponse('');
+      setNewMessage(''); // Clear new message
+      setEditableSuggestedResponse(''); // Clear editable suggested response
+      setCurrentSuggestedResponse(''); // Clear current suggested response
       setIsSuggestedResponseEdited(false);
-      // Also clear the draft message
+      // Clear the draft message
       setDraftMessage(clientid, '');
       
       scrollToBottom();
@@ -562,9 +562,12 @@ const ClientMessagesScreen = ({ route }) => {
   const handleClearSuggestedResponse = useCallback(async () => {
     try {
       await clearSuggestedResponse(clientid);
+      // Clear all text-related states
       setCurrentSuggestedResponse('');
       setEditableSuggestedResponse('');
+      setNewMessage('');
       setIsSuggestedResponseEdited(false);
+      setDraftMessage(clientid, '');
     } catch (error) {
       console.error('Error clearing suggested response:', error);
     }

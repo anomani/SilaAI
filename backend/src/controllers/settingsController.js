@@ -1,4 +1,4 @@
-const { getFillMyCalendarStatus, setFillMyCalendarStatus, getNextDayRemindersStatus, setNextDayRemindersStatus } = require('../model/settings');
+const { getFillMyCalendarStatus, setFillMyCalendarStatus, getNextDayRemindersStatus, setNextDayRemindersStatus, getReminderMessageTemplate, setReminderMessageTemplate } = require('../model/settings');
 
 async function getFillMyCalendar(req, res) {
   const userId = req.user.id;
@@ -46,9 +46,34 @@ async function setNextDayReminders(req, res) {
   }
 }
 
+async function getMessageTemplate(req, res) {
+  const userId = req.user.id;
+  try {
+    const value = await getReminderMessageTemplate(userId);
+    res.json({ value });
+  } catch (error) {
+    console.error('Error getting reminder message template:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
+async function setMessageTemplate(req, res) {
+  const userId = req.user.id;
+  try {
+    const { template } = req.body;
+    await setReminderMessageTemplate(userId, template);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error setting reminder message template:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+}
+
 module.exports = {
   getFillMyCalendar,
   setFillMyCalendar,
   getNextDayReminders,
   setNextDayReminders,
+  getMessageTemplate,
+  setMessageTemplate,
 };

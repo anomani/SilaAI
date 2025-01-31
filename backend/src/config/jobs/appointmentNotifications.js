@@ -4,6 +4,7 @@ const { getUserById } = require('../../model/users');
 const { sendMessage } = require('../twilio');
 const { getClientById } = require('../../model/clients');
 const { getMessagesByClientId } = require('../../model/messages');
+const { getReminderMessageTemplate } = require('../../model/settings');
 
 // Helper function to convert 24-hour time to AM/PM format
 function convertTo12Hour(time24) {
@@ -67,9 +68,14 @@ async function sendNextDayAppointmentReminders(userId) {
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         console.log("tomorrowStr", tomorrowStr)
+        
+        // Get the user's message template
+        const messageTemplate = await getReminderMessageTemplate(userId);
+        
         // Get all appointments for tomorrow
         const appointments = await getAppointmentsByDay(userId, tomorrowStr);
         console.log("appointments", appointments)
+        
         // Send reminder for each appointment
         for (const appointment of appointments) {
             // Get client details using clientId
@@ -86,7 +92,10 @@ async function sendNextDayAppointmentReminders(userId) {
                 if (!messageHistory || messageHistory.length === 0) {
                     message = `Hey ${client.firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at ${formattedTime}?`;
                 } else {
-                    message = `Hey ${client.firstname}, just wanted to confirm if you're good for your appointment tomorrow at ${formattedTime}?`;
+                    // Replace template variables
+                    message = messageTemplate
+                        .replace('{firstname}', client.firstname)
+                        .replace('{time}', formattedTime);
                 }
                 
                 console.log("message: ", message)
