@@ -161,6 +161,57 @@ async function createUserManual(username, password, email, phoneNumber, isBarber
   }
 }
 
+async function getReminderMessageTemplate(userId) {
+  const db = dbUtils.getDB();
+  const sql = 'SELECT reminder_template FROM users WHERE id = $1';
+  const values = [userId];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0]?.reminder_template || 'Hey {firstname}, just wanted to confirm if you\'re good for your appointment tomorrow at {time}?';
+  } catch (err) {
+    console.error('Error fetching reminder template:', err.message);
+    throw err;
+  }
+}
+
+async function setReminderMessageTemplate(userId, template) {
+  const db = dbUtils.getDB();
+  const sql = 'UPDATE users SET reminder_template = $1 WHERE id = $2';
+  const values = [template, userId];
+  try {
+    await db.query(sql, values);
+    console.log(`Reminder template updated for user: ${userId}`);
+  } catch (err) {
+    console.error('Error setting reminder template:', err.message);
+    throw err;
+  }
+}
+
+async function getFirstMessageTemplate(userId) {
+  const db = dbUtils.getDB();
+  const sql = 'SELECT first_message_template FROM users WHERE id = $1';
+  const values = [userId];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0]?.first_message_template || 'Hey {firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at {time}?';
+  } catch (err) {
+    console.error('Error fetching first message template:', err.message);
+    throw err;
+  }
+}
+
+async function setFirstMessageTemplate(userId, template) {
+  const db = dbUtils.getDB();
+  const sql = 'UPDATE users SET first_message_template = $1 WHERE id = $2';
+  const values = [template, userId];
+  try {
+    await db.query(sql, values);
+    console.log(`First message template updated for user: ${userId}`);
+  } catch (err) {
+    console.error('Error setting first message template:', err.message);
+    throw err;
+  }
+}
 
 module.exports = {
   createUser,
@@ -172,5 +223,9 @@ module.exports = {
   getAllUsers,
   getUserByBusinessNumber,
   getUserByEmail,
-  getUserByCalendarID
+  getUserByCalendarID,
+  getReminderMessageTemplate,
+  setReminderMessageTemplate,
+  getFirstMessageTemplate,
+  setFirstMessageTemplate
 };

@@ -794,7 +794,7 @@ export const deleteNote = async (noteId) => {
 
 export const getReminderMessageTemplate = async () => {
   try {
-    const response = await retryRequest(() => throttledRequest(() => api.get('/settings/reminderTemplate')));
+    const response = await retryRequest(() => throttledRequest(() => api.get('/users/reminder-template')));
     return response.data;
   } catch (error) {
     console.error('Error fetching reminder message template:', error);
@@ -804,9 +804,28 @@ export const getReminderMessageTemplate = async () => {
 
 export const setReminderMessageTemplate = async (template) => {
   try {
-    await retryRequest(() => throttledRequest(() => api.post('/settings/reminderTemplate', { template })));
+    await retryRequest(() => throttledRequest(() => api.post('/users/reminder-template', { template })));
   } catch (error) {
     console.error('Error setting reminder message template:', error);
+    throw error;
+  }
+};
+
+export const getFirstMessageTemplate = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.get('/users/first-message-template')));
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching first message template:', error);
+    throw error;
+  }
+};
+
+export const setFirstMessageTemplate = async (template) => {
+  try {
+    await retryRequest(() => throttledRequest(() => api.post('/users/first-message-template', { template })));
+  } catch (error) {
+    console.error('Error setting first message template:', error);
     throw error;
   }
 };
