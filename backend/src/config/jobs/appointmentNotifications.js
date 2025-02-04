@@ -98,14 +98,16 @@ async function sendNextDayAppointmentReminders(userId) {
             
             let message;
             if (!messageHistory || messageHistory.length === 0) {
-                const firstMessageTemplate = user.first_message_template || 'Hey {firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at {time}?';
+                const firstMessageTemplate = (user.first_message_template || 'Hey {firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at {time}?')
+                    .replace(/\\n/g, '\n'); // Convert \n to actual line breaks
                 message = firstMessageTemplate
                     .replace('{firstname}', client.firstname)
                     .replace('{time}', appointments.length === 1 
                         ? appointments[0].formattedTime 
                         : appointments.map(a => a.formattedTime).join(' and '));
             } else {
-                const messageTemplate = user.reminder_template || 'Hey {firstname}, just wanted to confirm if you\'re good for your appointment tomorrow at {time}?';
+                const messageTemplate = (user.reminder_template || 'Hey {firstname}, just wanted to confirm if you\'re good for your appointment tomorrow at {time}?')
+                    .replace(/\\n/g, '\n'); // Convert \n to actual line breaks
                 message = messageTemplate
                     .replace('{firstname}', client.firstname)
                     .replace('{time}', appointments.length === 1 
@@ -132,7 +134,7 @@ async function sendNextDayAppointmentReminders(userId) {
 async function testNextDayAppointmentReminders(userId) {
     try {
         const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setDate(tomorrow.getDate() + 7);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         console.log("\n=== TEST MODE: Next Day Appointment Reminders ===");
         console.log("Date:", tomorrowStr);
@@ -170,7 +172,8 @@ async function testNextDayAppointmentReminders(userId) {
             
             let message;
             if (!messageHistory || messageHistory.length === 0) {
-                const firstMessageTemplate = user.first_message_template || 'Hey {firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at {time}?';
+                const firstMessageTemplate = (user.first_message_template || 'Hey {firstname}, this is Uzi from UziCuts reaching out from my new business number. Please save it to your contacts.\n\nJust wanted to confirm, are you good for your appointment tomorrow at {time}?')
+                    .replace(/\\n/g, '\n'); // Convert \n to actual line breaks
                 message = firstMessageTemplate
                     .replace('{firstname}', client.firstname)
                     .replace('{time}', appointments.length === 1 
@@ -178,7 +181,8 @@ async function testNextDayAppointmentReminders(userId) {
                         : appointments.map(a => a.formattedTime).join(' and '));
                 console.log("\n[First Time Message]");
             } else {
-                const messageTemplate = user.reminder_template || 'Hey {firstname}, just wanted to confirm if you\'re good for your appointment tomorrow at {time}?';
+                const messageTemplate = (user.response_template || 'Hey {firstname}, just wanted to confirm if you\'re good for your appointment tomorrow at {time}?')
+                    .replace(/\\n/g, '\n'); // Convert \n to actual line breaks
                 message = messageTemplate
                     .replace('{firstname}', client.firstname)
                     .replace('{time}', appointments.length === 1 
@@ -186,23 +190,22 @@ async function testNextDayAppointmentReminders(userId) {
                         : appointments.map(a => a.formattedTime).join(' and '));
                 console.log("\n[Regular Reminder]");
             }
-            
+
             console.log("To:", client.firstname, `(${phoneNumber})`);
             console.log("Message:", message);
             console.log("Appointments:", appointments.map(a => a.formattedTime).join(', '));
             console.log("Message History:", messageHistory ? messageHistory.length : 0, "messages");
         }
-        
         console.log("\n=== End Test ===\n");
     } catch (error) {
         console.error(`Error testing next day appointment reminders for user ${userId}:`, error);
     }
 }
 
-// async function main() {
-//     await testNextDayAppointmentReminders(1);
-// }
-// main();
+async function main() {
+    await testNextDayAppointmentReminders(1);
+}
+main();
 
 module.exports = {
     checkUnpaidAppointments,

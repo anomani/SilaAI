@@ -55,12 +55,15 @@ const InitiateConversation = ({ route, navigation }) => {
   const { selectedClients, clientCount } = route.params;
   const [conversationMessage, setConversationMessage] = useState(`Hey {firstName}, this is Uzi from Uzi Cuts reaching out from my new business number`);
   const [aiPrompt, setAiPrompt] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const initiateConversation = async () => {
     if (!conversationMessage.trim()) {
       alert('Please enter a message');
       return;
     }
+    
+    setIsLoading(true);
     try {
       for (const clientId of selectedClients) {
         await setAIPrompt(clientId, aiPrompt);
@@ -77,6 +80,8 @@ const InitiateConversation = ({ route, navigation }) => {
     } catch (error) {
       console.error('Error initiating conversations or updating outreach dates:', error);
       alert('Failed to initiate conversations or update outreach dates');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -128,14 +133,22 @@ const InitiateConversation = ({ route, navigation }) => {
           <TouchableOpacity
             style={[styles.button, styles.buttonCancel]}
             onPress={() => navigation.goBack()}
+            disabled={isLoading}
           >
             <Text style={styles.textStyle}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, styles.buttonInitiate]}
+            style={[
+              styles.button, 
+              styles.buttonInitiate,
+              isLoading && styles.buttonDisabled
+            ]}
             onPress={initiateConversation}
+            disabled={isLoading}
           >
-            <Text style={styles.textStyle}>Initiate</Text>
+            <Text style={styles.textStyle}>
+              {isLoading ? 'Sending...' : 'Initiate'}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -225,6 +238,10 @@ const styles = StyleSheet.create({
   },
   buttonInitiate: {
     backgroundColor: '#007bff',
+  },
+  buttonDisabled: {
+    backgroundColor: '#666',
+    opacity: 0.7,
   },
   textStyle: {
     color: 'white',
