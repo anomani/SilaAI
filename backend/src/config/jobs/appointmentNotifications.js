@@ -202,10 +202,10 @@ async function testNextDayAppointmentReminders(userId) {
     }
 }
 
-async function main() {
-    await testNextDayAppointmentReminders(1);
-}
-main();
+// async function main() {
+//     await testNextDayAppointmentReminders(1);
+// }
+// main();
 
 module.exports = {
     checkUnpaidAppointments,
