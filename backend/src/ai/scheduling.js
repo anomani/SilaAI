@@ -807,7 +807,7 @@ async function handleUserInput(userMessages, phoneNumber, userId) {
       thread = await createThread(phoneNumber, false, userId); 
       assistant = await createAssistant(fname, lname, phone, messages, appointmentType, client, upcomingAppointment, userId);
     }
-
+    console.log("CURRENT DATE TIME STRING: 9611", dateTimeString)
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
       additional_instructions: `The current date and time is ${dateTimeString}. Note that this conversation may span multiple days - always consider the timestamp of each message when determining context and don't assume messages from different days are part of the same conversation unless they're explicitly related. Don't use commas or proper punctuation.`,
