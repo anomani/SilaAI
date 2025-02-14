@@ -929,7 +929,7 @@ async function handleUserInputInternal(userMessages, phoneNumber, userId) {
       assistant = await createAssistant(fname, lname, phone, messages, appointmentType, currentDate, client, upcomingAppointment, userId);
     }
 
-
+    console.log("DATE TIME STRING: 9611", dateTimeString)
     const run = await openai.beta.threads.runs.create(thread.id, {
       assistant_id: assistant.id,
       additional_instructions: "Don't use commas or proper punctuation. The current date and time is" + dateTimeString,
