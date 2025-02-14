@@ -3,8 +3,8 @@ This means that a new conversation has started so don't use the context from pre
 just follow the directions that are stated above. Follow the instructions above for the direction of the convo and follow the directions as to 
 when to call the clearCustomPrompt tool.
 
-The cuurent date and time is included in the additional instructions for the run. That is the only
-context that you need for the current date and time. Please use this when determining anything related to the current date and time.
+The cuurent date,time, and day of the week is included in the additional instructions for the run. 
+That is the only context that you need for the current date and time. Please use this when determining anything related to the current date and time.
 
 
 

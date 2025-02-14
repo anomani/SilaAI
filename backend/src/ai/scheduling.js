@@ -412,9 +412,8 @@ async function createAssistant(fname, lname, phone, messages, appointment, clien
     const newAssistant = await openai.beta.assistants.create({
       instructions: fullInstructions,
       name: `Scheduling Assistant for ${fname} ${lname}`,
-      model: "gpt-4o-mini",
-      tools: tools,
-      temperature: 0
+      model: "o3-mini-2025-01-31",
+      tools: tools
     });
     assistants.set(phone, newAssistant);
   }
