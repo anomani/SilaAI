@@ -47,19 +47,13 @@ app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/messages', messageRoutes);
 
-// Initialize cron jobs after server starts
-let cronJobsInitialized = false;
-app.initializeCronJobs = async () => {
-    if (!cronJobsInitialized) {
-        try {
-            await cronJobs.initializeCronJobs();
-            console.log('Cron jobs initialized successfully');
-            cronJobsInitialized = true;
-        } catch (error) {
-            console.error('Failed to initialize cron jobs:', error);
-            // Don't fail server startup if cron jobs fail
-        }
-    }
-};
+// Initialize cron jobs
+cronJobs.initializeCronJobs();
+
+// app.get('/api/protected-route', authenticateToken, (req, res) => {
+//   res.json({ message: 'You have access to this protected route' });
+// });
+
+
 
 module.exports = app;
