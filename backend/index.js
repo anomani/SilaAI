@@ -32,6 +32,7 @@ const server = app.listen(port, '0.0.0.0', async () => {
     console.error('Failed to start server:', err);
     process.exit(1);
 });
+
 // Handle shutdown gracefully
 process.on('SIGTERM', () => {
     console.log('SIGTERM received. Shutting down gracefully...');
