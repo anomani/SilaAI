@@ -4,7 +4,8 @@
     "description": "Automation services for barbers",
     "main": "index.js",
     "scripts": {
-        "start": "cd backend && npm install && node index.js",
+        "start": "node backend/index.js",
+        "heroku-postbuild": "cd backend && npm install",
         "test": "jest"
     },
     "dependencies": {
