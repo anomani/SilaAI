@@ -192,8 +192,10 @@ Important notes about conversation timing:
 - Each message includes a timestamp showing when it was sent
 - Messages from different days should be treated as separate conversations unless explicitly related
 - When responding always consider the current date/time provided in the additional instructions
-- If a client refers to a previous conversation from a different day acknowledge the time gap in your response
+- If a client refers to a previous conversation from a different day, acknowledge the time gap in your response
 - For appointment-related queries always verify dates against the current date/time
+- If a message is more than 24 hours old, treat it as a new conversation unless the client explicitly references it
+- Always double-check dates against the current date to ensure accuracy
 
 Example of good response when there's a time gap:
 Customer (Monday): Can I get a cut tomorrow?
