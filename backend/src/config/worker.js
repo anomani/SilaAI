@@ -3,8 +3,21 @@ const { processOpenAIJob } = require('../ai/openaiProcessor');
 
 console.log('Initializing worker with OpenAI processor:', processOpenAIJob ? 'Available' : 'Not available');
 
+// Get Redis URL from environment, fallback to local Redis if not available
+const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+console.log('Using Redis URL:', REDIS_URL.replace(/redis:\/\/.*@/, 'redis://****@')); // Log URL safely
+
 // Create OpenAI queue with proper configuration
-const openaiQueue = new Queue('openai-queue', process.env.REDIS_URL, {
+const openaiQueue = new Queue('openai-queue', REDIS_URL, {
+  redis: {
+    tls: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: false,
+    retryStrategy: function (times) {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    }
+  },
   settings: {
     lockDuration: 300000, // 5 minutes
     stalledInterval: 30000, // 30 seconds
@@ -18,7 +31,16 @@ const openaiQueue = new Queue('openai-queue', process.env.REDIS_URL, {
   }
 });
 
-const messageQueue = new Queue('message-queue', process.env.REDIS_URL, {
+const messageQueue = new Queue('message-queue', REDIS_URL, {
+  redis: {
+    tls: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    maxRetriesPerRequest: 3,
+    enableReadyCheck: false,
+    retryStrategy: function (times) {
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    }
+  },
   settings: {
     lockDuration: 300000, // 5 minutes
     stalledInterval: 30000, // 30 seconds
