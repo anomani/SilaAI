@@ -412,7 +412,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, clien
     const newAssistant = await openai.beta.assistants.create({
       instructions: fullInstructions,
       name: `Scheduling Assistant for ${fname} ${lname}`,
-      model: "o3-mini-2025-01-31",
+      model: "gpt-4o",
       tools: tools
     });
     assistants.set(phone, newAssistant);
@@ -1111,7 +1111,7 @@ async function shouldAIRespond(userMessages, thread) {
 }
 
 // async function main() {
-//   const response = await handleUserInput(['Hi'], '+12038324011', 1);
+//   const response = await handleUserInput(['What day is it today?'], '+12038324011', 1);
 //   console.log(response);
 // }
 
