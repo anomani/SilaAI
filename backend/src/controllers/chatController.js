@@ -6,6 +6,7 @@ const { getCustomList } = require('../model/customLists');
 const { getClientById } = require('../model/clients');
 const { getStoredQuery } = require('../ai/clientData');
 const { handleUserInputClaude } = require('../ai/claude-chat');
+const { openaiQueue } = require('../config/worker');
 const messageQueue = new Map();
 const { saveSuggestedResponse, getSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
 const { getMessageMetrics } = require('../model/messages');
@@ -33,16 +34,57 @@ const handleChatRequest = async (req, res) => {
 const handleUserInputDataController = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { message } = req.body;
-    console.log(message)
+    const { message, initialMessage = false } = req.body;
+    
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
-    const responseMessage = await handleUserInputData(message, userId);
-    res.json({ message: responseMessage });
+
+    // Add job to queue
+    const job = await openaiQueue.add({
+      message,
+      userId,
+      initialMessage,
+      timestamp: new Date().toISOString()
+    });
+
+    // Return job ID immediately
+    res.json({
+      jobId: job.id,
+      status: 'queued',
+      message: 'Your request is being processed'
+    });
+
   } catch (error) {
     console.error('Error handling user input data:', error);
     res.status(500).json({ error: 'Error processing request' });
+  }
+};
+
+const checkJobStatus = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await openaiQueue.getJob(jobId);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    const state = await job.getState();
+    const progress = job._progress;
+    const result = job.returnvalue;
+    const error = job.failedReason;
+
+    res.json({
+      jobId: job.id,
+      status: state,
+      progress,
+      result: result || null,
+      error: error || null
+    });
+  } catch (error) {
+    console.error('Error checking job status:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -229,7 +271,8 @@ const transcribeAudioController = async (req, res) => {
 
 module.exports = { 
   handleChatRequest, 
-  handleUserInputDataController, 
+  handleUserInputDataController,
+  checkJobStatus,
   getMessagesByClientIdController, 
   getAllMessagesGroupedByClientController, 
   sendMessageController, 

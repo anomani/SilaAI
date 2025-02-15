@@ -4,6 +4,7 @@ const { handleUserInput, createThread } = require('../ai/scheduling');
 const { saveMessage, toggleLastMessageReadStatus, saveSuggestedResponse, clearSuggestedResponse } = require('../model/messages');
 const { createClient, getClientByPhoneNumber, getClientAutoRespond } = require('../model/clients');
 const { updateAIResponseStatus } = require('../model/messageStatus');
+const { messageQueue } = require('./worker');
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
@@ -323,8 +324,39 @@ async function getContactPhoneNumberFromConversation(conversationSid) {
   }
 }
 
+async function sendMessageQueued(to, body, userId, initialMessage = true, manual = true) {
+  const to_formatted = formatPhoneNumber(to);
+  
+  // Add message to queue
+  const job = await messageQueue.add({
+    to: to_formatted,
+    body,
+    userId,
+    initialMessage,
+    manual,
+    timestamp: new Date().toISOString()
+  });
+
+  return job;
+}
+
+// Process message queue
+messageQueue.process(async (job) => {
+  const { to, body, userId, initialMessage, manual } = job.data;
+  
+  try {
+    // Use the existing sendMessage function to maintain consistency
+    const result = await sendMessage(to, body, userId, initialMessage, manual);
+    return result;
+  } catch (error) {
+    console.error(`Failed to send message: ${error.message}`);
+    throw error;
+  }
+});
+
 module.exports = {
   sendMessage,
+  sendMessageQueued,
   handleIncomingMessage,
   sendMessages,
   sendNotificationToUser,
