@@ -85,5 +85,4 @@ module.exports = {
   messageQueue,
   openaiQueue
 };
-
 console.log('Worker started with proper queue configuration');
