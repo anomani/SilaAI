@@ -1,7 +1,9 @@
 const Queue = require('bull');
-const { handleUserInputData } = require('../ai/clientData');
+const { processOpenAIJob } = require('../ai/openaiProcessor');
 
-// Create Bull queues with proper configuration
+console.log('Initializing worker with OpenAI processor:', processOpenAIJob ? 'Available' : 'Not available');
+
+// Create OpenAI queue with proper configuration
 const openaiQueue = new Queue('openai-queue', process.env.REDIS_URL, {
   settings: {
     lockDuration: 300000, // 5 minutes
@@ -33,21 +35,14 @@ const messageQueue = new Queue('message-queue', process.env.REDIS_URL, {
 // Process OpenAI jobs
 openaiQueue.process(async (job) => {
   console.log(`Processing OpenAI job ${job.id}`);
+  console.log('Job data:', job.data);
+  
   const { message, userId, initialMessage = false } = job.data;
 
   try {
-    // Update job progress
-    await job.progress(10);
-
-    // Use existing handleUserInputData function
-    const response = await handleUserInputData(message, userId, initialMessage);
-
-    // Update job progress
-    await job.progress(100);
-
+    const response = await processOpenAIJob(message, userId, initialMessage);
     console.log(`OpenAI job ${job.id} completed successfully`);
     return response;
-
   } catch (error) {
     console.error(`Error processing OpenAI job ${job.id}:`, error);
     throw error;
@@ -85,4 +80,5 @@ module.exports = {
   messageQueue,
   openaiQueue
 };
-console.log('Worker started with proper queue configuration');
+
+console.log('Worker started with OpenAI queue configuration');

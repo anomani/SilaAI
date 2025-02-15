@@ -18,15 +18,16 @@ const { findRecurringAvailability } = require('./tools/recurringAvailability');
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { getUserById } = require('../model/users');
 const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
-const { sendMessages } = require('../config/twilio');
 const { saveSuggestedResponse } = require('../model/messages');
-// Add this object to store queries
-const queryStore = {};
-const sessions = new Map();
 
+// Initialize OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Add this object to store queries
+const queryStore = {};
+const sessions = new Map();
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -700,11 +701,15 @@ function getStoredQuery(id) {
   return queryStore[id];
 }
 
-async function main() {
-  const resp = await handleUserInputData("When is my next availability for an adult cut?", 1);
-  console.log(resp);
-}
+// async function main() {
+//   const resp = await handleUserInputData("When is my next availability for an adult cut?", 1);
+//   console.log(resp);
+// }
 
-main();
+// main();
 
-module.exports = { handleUserInputData, getStoredQuery };
+// Export all required functions
+module.exports = {
+  handleUserInputData,
+  getStoredQuery
+};

@@ -40,7 +40,7 @@ const handleUserInputDataController = async (req, res) => {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    // Add job to queue
+    // Add job to queue and get job ID
     const job = await openaiQueue.add({
       message,
       userId,
@@ -48,15 +48,15 @@ const handleUserInputDataController = async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    // Return job ID immediately
+    // Return job ID immediately so frontend can poll status
     res.json({
       jobId: job.id,
       status: 'queued',
-      message: 'Your request is being processed'
+      message: 'Request is being processed. Use the job ID to check status.'
     });
 
   } catch (error) {
-    console.error('Error handling user input data:', error);
+    console.error('Error queueing user input:', error);
     res.status(500).json({ error: 'Error processing request' });
   }
 };
@@ -71,20 +71,19 @@ const checkJobStatus = async (req, res) => {
     }
 
     const state = await job.getState();
-    const progress = job._progress;
     const result = job.returnvalue;
     const error = job.failedReason;
 
+    // Return detailed status
     res.json({
       jobId: job.id,
       status: state,
-      progress,
       result: result || null,
       error: error || null
     });
   } catch (error) {
     console.error('Error checking job status:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Error checking job status' });
   }
 };
 
