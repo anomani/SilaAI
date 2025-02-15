@@ -15,6 +15,7 @@ const { getSuggestedResponseCountController } = require('../controllers/chatCont
 const { transcribeAudioController } = require('../controllers/chatController');
 const { authenticateToken } = require('../middleware/authMiddleware');
 const { handleUserInputData, getStoredQuery } = require('../ai/clientData');
+const { checkJobStatus } = require('../controllers/chatController');
 // Configure multer for handling file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -62,5 +63,8 @@ router.post('/new-thread', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Failed to create new thread' });
   }
 });
+
+// Add new route for checking job status
+router.get('/status/:jobId', authenticateToken, checkJobStatus);
 
 module.exports = router;

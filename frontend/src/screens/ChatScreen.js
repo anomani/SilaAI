@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, SafeAreaView, StatusBar, Keyboard } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { handleUserInput, transcribeAudio, createNewThread } from '../services/api';
+import { handleUserInput, transcribeAudio, createNewThread, pollJobStatus } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../components/ChatContext';
 import { Audio } from 'expo-av';
@@ -178,12 +178,30 @@ const ChatScreen = () => {
     setIsAITyping(true);
 
     try {
+      // Send the message and get job ID
       const response = await handleUserInput(text);
-      const responseMessage = typeof response === 'string' ? response : response.message;
-      setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
+      
+      if (response.jobId) {
+        // If we got a job ID, start polling for the result
+        const result = await pollJobStatus(response.jobId, (status) => {
+          // Optional: Update UI with job progress
+          if (status.progress) {
+            console.log(`Job progress: ${status.progress}%`);
+          }
+        });
+        
+        setMessages([...newMessages, { text: result, sender: 'bot' }]);
+      } else {
+        // Handle direct response (backwards compatibility)
+        const responseMessage = typeof response === 'string' ? response : response.message;
+        setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages([...newMessages, { text: 'Sorry, there was an error processing your request.', sender: 'bot' }]);
+      setMessages([...newMessages, { 
+        text: error.message || 'Sorry, there was an error processing your request.', 
+        sender: 'bot' 
+      }]);
     } finally {
       setIsAITyping(false);
     }

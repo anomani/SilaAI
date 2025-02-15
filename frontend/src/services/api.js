@@ -172,7 +172,9 @@ export const deleteAppointment = async (appointmentId) => {
 
 export const handleUserInput = async (message) => {
   try {
-    const response = await retryRequest(() => throttledRequest(() => api.post('/chat/handle-user-input', { message })));
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.post('/chat/handle-user-input', { message })
+    ));
     return response.data;
   } catch (error) {
     console.error('Error handling user input:', error);
@@ -290,7 +292,9 @@ export const startMuslimClientsJob = async () => {
 
 export const checkJobStatus = async (jobId) => {
   try {
-    const response = await retryRequest(() => throttledRequest(() => api.get(`/chat/job-status/${jobId}`)));
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get(`/chat/status/${jobId}`)
+    ));
     return response.data;
   } catch (error) {
     console.error('Error checking job status:', error);
@@ -828,4 +832,38 @@ export const setFirstMessageTemplate = async (template) => {
     console.error('Error setting first message template:', error);
     throw error;
   }
+};
+
+// Helper function to poll job status
+export const pollJobStatus = async (jobId, onProgress) => {
+  const pollInterval = 1000; // 1 second
+  const maxAttempts = 300; // 5 minutes max
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    const status = await checkJobStatus(jobId);
+    
+    // Call progress callback if provided
+    if (onProgress) {
+      onProgress(status);
+    }
+
+    if (status.status === 'completed') {
+      return status.result;
+    }
+
+    if (status.status === 'failed') {
+      throw new Error(status.error || 'Job failed');
+    }
+
+    if (['active', 'waiting'].includes(status.status)) {
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      attempts++;
+      continue;
+    }
+
+    throw new Error(`Unexpected job status: ${status.status}`);
+  }
+
+  throw new Error('Job timed out');
 };
