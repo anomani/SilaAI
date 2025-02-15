@@ -184,7 +184,6 @@ Tone:
 
 Punctuation:
 - Remove any commas that are unnecessary. Dont use them before pronouns or names but use them when seperating items or listing items
-- You can use periods but don't use them too much.
 - You can use question marks but don't use them too much
 - Don't use exclamation marks
 
