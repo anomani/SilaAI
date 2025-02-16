@@ -441,6 +441,7 @@ async function createAssistant(date, userId) {
       tools: tools
     });
   } else {
+    
     // Update the assistant's instructions with the current date
     await openai.beta.assistants.update(assistant.id, {
       instructions: assistantInstructions
