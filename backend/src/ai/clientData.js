@@ -437,9 +437,8 @@ async function createAssistant(date, userId) {
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions,
       name: "Client Data",
-      model: "gpt-4o",
-      tools: tools,
-      temperature: 1
+      model: "o3-mini-2025-01-31",
+      tools: tools
     });
   } else {
     // Update the assistant's instructions with the current date
