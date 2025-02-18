@@ -18,6 +18,9 @@ async function handleWebhook(req, res) {
         // }
         console.log(req.body)
         const { action, id: appointmentId, calendarID } = req.body;
+        console.log("Action:", action);
+        console.log("Appointment ID:", appointmentId);
+        console.log("Calendar ID:", calendarID);
         const user = await getUserByCalendarID(calendarID);
         console.log("User:", user);
         const appointmentDetails = await fetchAppointmentDetails(appointmentId, user);
