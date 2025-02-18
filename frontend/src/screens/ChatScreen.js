@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, SafeAreaView, StatusBar, Keyboard } from 'react-native';
+import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, SafeAreaView, StatusBar, Keyboard, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { handleUserInput, transcribeAudio, createNewThread, pollJobStatus } from '../services/api';
+import { handleUserInput, transcribeAudio, createNewThread, pollJobStatus, createAIChatThread, getAIChatThreads, getAIChatThread, updateAIChatThreadTitle, deleteAIChatThread } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../components/ChatContext';
 import { Audio } from 'expo-av';
@@ -105,6 +105,71 @@ const SoundWave = ({ isRecording }) => {
   );
 };
 
+const ThreadSidebar = ({ threads, activeThreadId, onThreadSelect, onNewThread, onDeleteThread, onEditTitle }) => {
+  const [editingThread, setEditingThread] = useState(null);
+  const [newTitle, setNewTitle] = useState('');
+
+  const handleEditTitle = (thread) => {
+    setEditingThread(thread);
+    setNewTitle(thread.title);
+  };
+
+  const handleSaveTitle = async () => {
+    if (editingThread && newTitle.trim()) {
+      await onEditTitle(editingThread.id, newTitle.trim());
+      setEditingThread(null);
+      setNewTitle('');
+    }
+  };
+
+  return (
+    <View style={styles.sidebar}>
+      <FlatList
+        data={threads}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.threadItem}>
+            {editingThread?.id === item.id ? (
+              <View style={styles.editTitleContainer}>
+                <TextInput
+                  style={styles.editTitleInput}
+                  value={newTitle}
+                  onChangeText={setNewTitle}
+                  onSubmitEditing={handleSaveTitle}
+                  autoFocus
+                />
+                <TouchableOpacity onPress={handleSaveTitle}>
+                  <Ionicons name="checkmark" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.threadButton,
+                  activeThreadId === item.id && styles.activeThread
+                ]}
+                onPress={() => onThreadSelect(item)}
+              >
+                <Text style={styles.threadTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <View style={styles.threadActions}>
+                  <TouchableOpacity onPress={() => handleEditTitle(item)}>
+                    <Ionicons name="pencil" size={20} color="#666" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => onDeleteThread(item.id)}>
+                    <Ionicons name="trash" size={20} color="#666" />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      />
+    </View>
+  );
+};
+
 const ChatScreen = () => {
   const [message, setMessage] = useState('');
   const { messages, setMessages } = useChat();
@@ -117,8 +182,11 @@ const ChatScreen = () => {
   const [inputHeight, setInputHeight] = useState(40);
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
-  const silenceThreshold = -50; // Adjust this value as needed (in dB)
-  const silenceDuration = 1500; // 1.5 seconds of silence before stopping
+  const [threads, setThreads] = useState([]);
+  const [activeThread, setActiveThread] = useState(null);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const silenceThreshold = -50;
+  const silenceDuration = 1500;
   const silenceTimer = useRef(null);
   const silenceStartTime = useRef(null);
 
@@ -160,57 +228,223 @@ const ChatScreen = () => {
     };
   }, []);
 
-  const suggestedPrompts = [
-    "Create a list of clients who have not shown up in more than 6 months",
-    "How many appointments have I done in June?",
-    "How many active clients do I have",
-    "Create a list of my muslim clients",
-    "Create a list of clients named Adam Nomani"
-  ];
+  useEffect(() => {
+    loadThreads();
+  }, []);
 
-  const handleSend = async (text = message) => {
-    if (text.trim() === '') return;
+  const loadThreads = async () => {
+    try {
+      const threadList = await getAIChatThreads();
+      setThreads(threadList);
+      if (threadList.length > 0) {
+        const thread = await getAIChatThread(threadList[0].id);
+        if (thread) {
+          setActiveThread(thread);
+          console.log("THREAD", thread);
+          const formattedMessages = thread.messages?.messages?.map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })) || [];
+          setMessages(formattedMessages);
+          setShowIntro(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading threads:', error);
+      setThreads([]);
+      setMessages([]);
+      setShowIntro(true);
+    }
+  };
 
-    setShowIntro(false);
-    const newMessages = [...messages, { text: text, sender: 'user' }];
-    setMessages(newMessages);
+  const handleNewThread = async () => {
+    try {
+      setMessages([]);
+      setShowIntro(true);
+      setActiveThread(null);
+      setShowSidebar(false);
+    } catch (error) {
+      console.error('Error creating new thread:', error);
+    }
+  };
+
+  const handleThreadSelect = async (thread) => {
+    try {
+      const fullThread = await getAIChatThread(thread.id);
+      setActiveThread(fullThread);
+      setMessages(fullThread.messages?.messages || []);
+      setShowIntro(false);
+      setShowSidebar(false);
+    } catch (error) {
+      console.error('Error loading thread:', error);
+    }
+  };
+
+  const handleDeleteThread = async (threadId) => {
+    try {
+      await deleteAIChatThread(threadId);
+      setThreads(threads.filter(t => t.id !== threadId));
+      if (activeThread?.id === threadId) {
+        const remainingThreads = threads.filter(t => t.id !== threadId);
+        if (remainingThreads.length > 0) {
+          handleThreadSelect(remainingThreads[0]);
+        } else {
+          setActiveThread(null);
+          setMessages([]);
+          setShowIntro(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting thread:', error);
+    }
+  };
+
+  const handleEditTitle = async (threadId, newTitle) => {
+    try {
+      const updatedThread = await updateAIChatThreadTitle(threadId, newTitle);
+      setThreads(threads.map(t => t.id === threadId ? { ...t, title: newTitle } : t));
+      if (activeThread?.id === threadId) {
+        setActiveThread({ ...activeThread, title: newTitle });
+      }
+    } catch (error) {
+      console.error('Error updating thread title:', error);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!message.trim()) return;
+
+    // Create a new message object with unique ID and timestamp
+    const userMessage = {
+      id: Date.now(),
+      content: message,
+      role: 'user',
+      timestamp: new Date().toISOString()
+    };
+
+    // Add user message to messages state immediately
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+    
+    // Clear input field
     setMessage('');
     setIsAITyping(true);
 
     try {
-      // Send the message and get job ID
-      const response = await handleUserInput(text);
+      // Send message to backend with OpenAI thread ID if exists
+      const response = await handleUserInput(message, activeThread?.thread_id);
       
+      if (response.error) {
+        setIsAITyping(false);
+        setMessages(prevMessages => [...prevMessages, {
+          id: Date.now(),
+          content: `Error: ${response.error}`,
+          role: 'assistant',
+          timestamp: new Date().toISOString()
+        }]);
+        return;
+      }
+
       if (response.jobId) {
-        // If we got a job ID, start polling for the result
-        const result = await pollJobStatus(response.jobId, (status) => {
-          // Optional: Update UI with job progress
-          if (status.progress) {
-            console.log(`Job progress: ${status.progress}%`);
+        // Poll for job status
+        const pollInterval = setInterval(async () => {
+          try {
+            const status = await pollJobStatus(response.jobId);
+            console.log('Poll status:', status);
+
+            if (status.status === 'completed') {
+              clearInterval(pollInterval);
+              setIsAITyping(false);
+
+              // Update thread if needed
+              if (status.result?.threadId) {
+                try {
+                  const threadDetails = await getAIChatThread(status.result.threadId);
+                  if (threadDetails) {
+                    const newThread = {
+                      id: threadDetails.id,
+                      thread_id: threadDetails.thread_id,
+                      title: threadDetails.title,
+                      lastMessageAt: new Date().toISOString()
+                    };
+
+                    // Update threads list
+                    setThreads(prevThreads => {
+                      const threadExists = prevThreads.some(t => t.id === newThread.id);
+                      if (threadExists) {
+                        return prevThreads.map(t => 
+                          t.id === newThread.id 
+                            ? { ...t, lastMessageAt: new Date().toISOString(), title: threadDetails.title }
+                            : t
+                        );
+                      }
+                      return [newThread, ...prevThreads];
+                    });
+
+                    // Set as active thread if no active thread
+                    if (!activeThread) {
+                      setActiveThread(newThread);
+                    } else if (activeThread.id === newThread.id) {
+                      setActiveThread(newThread);
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error updating thread details:', error);
+                }
+              }
+
+              // Add assistant's response to messages
+              if (status.result?.message) {
+                setMessages(prevMessages => {
+                  // Check if message already exists
+                  const messageExists = prevMessages.some(msg => 
+                    msg.role === 'assistant' && 
+                    msg.content === status.result.message
+                  );
+                  
+                  if (messageExists) return prevMessages;
+                  
+                  return [...prevMessages, {
+                    id: Date.now(),
+                    content: status.result.message,
+                    role: 'assistant',
+                    timestamp: new Date().toISOString()
+                  }];
+                });
+              }
+            } else if (status.status === 'failed') {
+              clearInterval(pollInterval);
+              setIsAITyping(false);
+              setMessages(prevMessages => [...prevMessages, {
+                id: Date.now(),
+                content: 'Error: Failed to process message',
+                role: 'assistant',
+                timestamp: new Date().toISOString()
+              }]);
+            }
+          } catch (error) {
+            clearInterval(pollInterval);
+            setIsAITyping(false);
+            console.error('Error polling status:', error);
           }
-        });
-        
-        setMessages([...newMessages, { text: result, sender: 'bot' }]);
-      } else {
-        // Handle direct response (backwards compatibility)
-        const responseMessage = typeof response === 'string' ? response : response.message;
-        setMessages([...newMessages, { text: responseMessage, sender: 'bot' }]);
+        }, 1000); // Poll every second
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      setMessages([...newMessages, { 
-        text: error.message || 'Sorry, there was an error processing your request.', 
-        sender: 'bot' 
-      }]);
-    } finally {
       setIsAITyping(false);
+      console.error('Error sending message:', error);
+      setMessages(prevMessages => [...prevMessages, {
+        id: Date.now(),
+        content: 'Error sending message. Please try again.',
+        role: 'assistant',
+        timestamp: new Date().toISOString()
+      }]);
     }
   };
 
-  const handleLinkPress = (id) => {
-    console.log('Navigating with id:', id);
-    navigation.navigate('QueryResults', { id });
-  };
+  const suggestedPrompts = [
+    "Create a list of clients who have not shown up in more than 6 months",
+    "How many appointments have I done in June?",
+    "How many active clients do I have"
+  ];
 
   const handlePromptClick = (prompt) => {
     setMessage(prompt);
@@ -218,16 +452,14 @@ const ChatScreen = () => {
   };
 
   const renderItem = ({ item }) => {
-    console.log("ITEM", item);
     
     let id = null;
-    if (item.sender === 'bot') {
+    if (item.role === 'assistant' && item.content) {
       const idRegex = /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i;
-      const match = item.text.match(idRegex);
+      const match = item.content.match(idRegex);
       id = match ? match[1] : null;
     }
     
-    console.log("ID", id);
 
     const handleLinkPress = () => {
       if (id) {
@@ -240,10 +472,10 @@ const ChatScreen = () => {
       <View
         style={[
           styles.messageContainer,
-          item.sender === 'user' ? styles.userMessage : styles.botMessage
+          item.role === 'user' ? styles.userMessage : styles.botMessage
         ]}
       >
-        {item.sender === 'bot' && id ? (
+        {item.role === 'assistant' && id ? (
           <Text style={styles.messageText}>
             View list{' '}
             <Text
@@ -255,7 +487,7 @@ const ChatScreen = () => {
             .
           </Text>
         ) : (
-          <Text style={styles.messageText}>{item.text}</Text>
+          <Text style={styles.messageText}>{item.content}</Text>
         )}
       </View>
     );
@@ -361,16 +593,6 @@ const ChatScreen = () => {
     }
   };
 
-  const handleNewChat = async () => {
-    try {
-      await createNewThread();
-      setMessages([]);
-      setShowIntro(true);
-    } catch (error) {
-      console.error('Error creating new chat:', error);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView 
@@ -378,47 +600,64 @@ const ChatScreen = () => {
         style={styles.container}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
-        <View style={[
-          styles.contentContainer, 
-          keyboardVisible && styles.contentContainerKeyboardVisible
-        ]}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.headerTitleContainer}>
-              <Text style={styles.headerTitle}>UZI AI</Text>
-            </View>
-            <TouchableOpacity onPress={handleNewChat} style={styles.newChatButton}>
-              <Ionicons name="add-circle-outline" size={24} color="#fff" />
-            </TouchableOpacity>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setShowSidebar(!showSidebar)} style={styles.menuButton}>
+            <Ionicons name="menu" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>{activeThread?.title || 'New Chat'}</Text>
           </View>
-          <View style={styles.chatListContainer}>
-            {showIntro && messages.length === 0 ? (
-              renderIntro()
-            ) : (
-              <FlatList
-                ref={flatListRef}
-                data={messages}
-                renderItem={renderItem}
-                keyExtractor={(item, index) => index.toString()}
-                contentContainerStyle={[
-                  styles.chatContainer,
-                  { paddingBottom: keyboardHeight + 16 }
-                ]}
-                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-              />
-            )}
+          <TouchableOpacity onPress={handleNewThread} style={styles.newChatButton}>
+            <Ionicons name="create-outline" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <Modal
+          visible={showSidebar}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowSidebar(false)}
+        >
+          <View style={styles.modalContainer}>
+            <ThreadSidebar
+              threads={threads}
+              activeThreadId={activeThread?.id}
+              onThreadSelect={handleThreadSelect}
+              onNewThread={handleNewThread}
+              onDeleteThread={handleDeleteThread}
+              onEditTitle={handleEditTitle}
+            />
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              onPress={() => setShowSidebar(false)}
+            />
           </View>
+        </Modal>
+
+        <View style={styles.contentContainer}>
+          {showIntro && messages.length === 0 ? (
+            renderIntro()
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={renderItem}
+              keyExtractor={(item, index) => index.toString()}
+              contentContainerStyle={styles.chatContainer}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+              onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+            />
+          )}
+          
           {isAITyping && (
             <View style={styles.typingIndicatorContainer}>
               <TypingIndicator />
             </View>
           )}
+          
           <View style={styles.inputContainer}>
             <TextInput
-              style={[styles.input, { flexGrow: 1 }]}
+              style={[styles.input, { height: Math.max(40, inputHeight) }]}
               value={message}
               onChangeText={setMessage}
               placeholder="Type a message"
@@ -439,7 +678,7 @@ const ChatScreen = () => {
               )}
             </TouchableOpacity>
             <TouchableOpacity 
-              onPress={() => handleSend()} 
+              onPress={() => handleSend(message)} 
               style={[
                 styles.sendButton,
                 !message.trim() && styles.sendButtonDisabled
@@ -464,37 +703,104 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121214',
   },
-  contentContainer: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  contentContainerKeyboardVisible: {
-    justifyContent: 'flex-start',
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: 'rgba(18, 18, 20, 0.9)',
+    justifyContent: 'center',
+    padding: 10,
+    paddingTop: Platform.OS === "ios" ? 8 : 5,
+    backgroundColor: '#121214',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    height: Platform.OS === "ios" ? 55 : 45,
   },
-  backButton: {
+  menuButton: {
     position: 'absolute',
     left: 15,
+    top: Platform.OS === "ios" ? 15 : 10,
     zIndex: 1,
   },
   headerTitleContainer: {
     flex: 1,
     alignItems: 'center',
+    marginTop: Platform.OS === "ios" ? 7 : 0,
   },
   headerTitle: {
     color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
   },
-  chatListContainer: {
+  newChatButton: {
+    position: 'absolute',
+    right: 15,
+    top: Platform.OS === "ios" ? 15 : 10,
+    zIndex: 1,
+  },
+  modalContainer: {
     flex: 1,
+    flexDirection: 'row',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  sidebar: {
+    width: '80%',
+    maxWidth: 350,
+    backgroundColor: '#1a1a1a',
+    padding: 15,
+    paddingTop: Platform.OS === "ios" ? 50 : 35,
+    borderTopRightRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  threadItem: {
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  threadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 10,
+    backgroundColor: '#2a2a2a',
+  },
+  activeThread: {
+    backgroundColor: '#3a3a3a',
+  },
+  threadTitle: {
+    color: '#fff',
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  threadActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+  },
+  editTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+    borderRadius: 10,
+    padding: 12,
+  },
+  editTitleInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 15,
+    padding: 8,
+    marginRight: 10,
+  },
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#121214',
+    marginHorizontal: 10,
   },
   chatContainer: {
     padding: 10,
@@ -517,12 +823,14 @@ const styles = StyleSheet.create({
   userMessage: {
     alignSelf: 'flex-end',
     borderBottomRightRadius: 5,
-    backgroundColor: '#195de6',
+    backgroundColor: '#2563eb',
+    marginLeft: '20%',
   },
   botMessage: {
     alignSelf: 'flex-start',
     borderBottomLeftRadius: 5,
     backgroundColor: '#333333',
+    marginRight: '20%',
   },
   messageText: {
     color: '#fff',
@@ -627,11 +935,6 @@ const styles = StyleSheet.create({
     height: 30,
     backgroundColor: '#fff',
     borderRadius: 1.5,
-  },
-  newChatButton: {
-    position: 'absolute',
-    right: 15,
-    zIndex: 1,
   },
 });
 
