@@ -13,6 +13,7 @@ const { getMessageMetrics } = require('../model/messages');
 const { getMostRecentMessagePerClient } = require('../model/messages');
 const { countSuggestedResponses } = require('../model/messages');
 const { handleAudioTranscription } = require('../ai/whisper');
+const { updateThreadLastMessage } = require('../model/threads');
 
 const handleChatRequest = async (req, res) => {
   try {
@@ -34,8 +35,8 @@ const handleChatRequest = async (req, res) => {
 const handleUserInputDataController = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { message, initialMessage = false } = req.body;
-    
+    const { message, threadId } = req.body;
+    console.log("input dataaa threadId", threadId);
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
@@ -44,7 +45,7 @@ const handleUserInputDataController = async (req, res) => {
     const job = await openaiQueue.add({
       message,
       userId,
-      initialMessage,
+      threadId,
       timestamp: new Date().toISOString()
     });
 
@@ -67,23 +68,45 @@ const checkJobStatus = async (req, res) => {
     const job = await openaiQueue.getJob(jobId);
 
     if (!job) {
-      return res.status(404).json({ error: 'Job not found' });
+      return res.status(404).json({ 
+        status: 'not_found',
+        error: 'Job not found' 
+      });
     }
 
     const state = await job.getState();
     const result = job.returnvalue;
     const error = job.failedReason;
 
-    // Return detailed status
+    // Add more detailed logging
+    console.log('Job state:', state);
+    console.log('Job result:', result);
+    console.log('Job error:', error);
+
+    // If the job is completed and has a threadId, update the last_message_at
+    if (state === 'completed' && result?.threadId) {
+      try {
+        await updateThreadLastMessage(result.threadId, req.user.id);
+      } catch (err) {
+        console.error('Error updating thread last message:', err);
+      }
+    }
+
+    // Return a more structured response with default values
     res.json({
       jobId: job.id,
-      status: state,
-      result: result || null,
-      error: error || null
+      status: state || 'unknown',
+      result: result?.message || null,
+      threadId: result?.threadId || null,
+      error: result?.error || error || null
     });
   } catch (error) {
     console.error('Error checking job status:', error);
-    res.status(500).json({ error: 'Error checking job status' });
+    res.status(500).json({ 
+      status: 'error',
+      error: 'Error checking job status',
+      details: error.message 
+    });
   }
 };
 

@@ -1,17 +1,17 @@
 const clientData = require('./clientData');
 
-async function processOpenAIJob(message, userId, initialMessage = false) {
+async function processOpenAIJob(message, userId, threadId = null) {
   try {
     console.log('Processing message:', message);
     console.log('User ID:', userId);
-    console.log('Initial message:', initialMessage);
+    console.log('Thread ID:', threadId);
     
     if (typeof clientData.handleUserInputData !== 'function') {
       console.error('Available exports from clientData:', Object.keys(clientData));
       throw new Error('handleUserInputData is not properly exported from clientData.js');
     }
 
-    const response = await clientData.handleUserInputData(message, userId, initialMessage);
+    const response = await clientData.handleUserInputData(message, userId, threadId);
     console.log('Response received:', response);
     return response;
   } catch (error) {
