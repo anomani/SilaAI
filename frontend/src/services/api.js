@@ -837,64 +837,33 @@ export const setFirstMessageTemplate = async (template) => {
 };
 
 // Helper function to poll job status
-export const pollJobStatus = async (jobId, onProgress) => {
-  const pollInterval = 1000; // 1 second
-  const maxAttempts = 300; // 5 minutes max
-  let attempts = 0;
+export const pollJobStatus = async (jobId) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get(`/chat/status/${jobId}`)
+    ));
 
-  while (attempts < maxAttempts) {
-    try {
-      const response = await retryRequest(() => throttledRequest(() => 
-        api.get(`/chat/status/${jobId}`)
-      ));
-
-      // Add more detailed error handling
-      if (!response || !response.data) {
-        throw new Error('Invalid response from server');
-      }
-
-      const status = response.data;
-
-      // Call progress callback if provided
-      if (onProgress) {
-        onProgress(status);
-      }
-
-      // Check for error state first
-      if (status.error) {
-        throw new Error(status.error);
-      }
-
-      // Handle different status states
-      switch (status.status) {
-        case 'completed':
-          return status.result;
-        case 'failed':
-          throw new Error(status.error || 'Job failed');
-        case 'not_found':
-          throw new Error('Job not found');
-        case 'active':
-        case 'waiting':
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
-          attempts++;
-          continue;
-        default:
-          throw new Error(`Unexpected job status: ${status.status}`);
-      }
-    } catch (error) {
-      console.error('Error polling job status:', error);
-      // Only throw after max attempts or for certain errors
-      if (attempts >= maxAttempts || 
-          error.message.includes('not found') || 
-          error.message.includes('Invalid response')) {
-        throw error;
-      }
-      attempts++;
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    // Add more detailed error handling
+    if (!response || !response.data) {
+      throw new Error('Invalid response from server');
     }
-  }
 
-  throw new Error('Job polling timed out');
+    // Map the response to match the expected structure
+    const result = response.data;
+    return {
+      status: result.status || 'unknown',
+      result: result.result?.message || result.message,
+      threadId: result.result?.threadId || result.threadId,
+      thread_id: result.result?.thread_id || result.thread_id,
+      error: result.error || null
+    };
+  } catch (error) {
+    console.error('Error polling job status:', error);
+    return {
+      status: 'failed',
+      error: error.message || 'Failed to check job status'
+    };
+  }
 };
 
 // AI Chat Thread functions
@@ -915,22 +884,42 @@ export const getAIChatThreads = async () => {
     const response = await retryRequest(() => throttledRequest(() => 
       api.get('/ai-chat/threads')
     ));
-    return response.data;
+
+    // Ensure we have a valid response
+    if (!response || !response.data) {
+      console.warn('No data received from server');
+      return [];
+    }
+
+    // Ensure we return an array
+    return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     console.error('Error fetching AI chat threads:', error);
-    throw error;
+    // Return empty array instead of throwing
+    return [];
   }
 };
 
 export const getAIChatThread = async (threadId) => {
   try {
+    if (!threadId) {
+      console.warn('No threadId provided');
+      return null;
+    }
+
     const response = await retryRequest(() => throttledRequest(() => 
       api.get(`/ai-chat/threads/${threadId}`)
     ));
+
+    if (!response || !response.data) {
+      console.warn('No data received from server');
+      return null;
+    }
+
     return response.data;
   } catch (error) {
     console.error('Error fetching AI chat thread:', error);
-    throw error;
+    return null;
   }
 };
 
