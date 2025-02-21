@@ -198,7 +198,6 @@ async function fetchAppointmentDetails(appointmentId, user) {
     }
 }
 
-
 async function fetchAllAppointments(userId) {
     const user = await getUserById(userId);
     const apiUrl = 'https://acuityscheduling.com/api/v1/appointments';
