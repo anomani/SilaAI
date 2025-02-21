@@ -38,27 +38,66 @@ router.post('/threads', authenticateToken, async (req, res) => {
 // Get all chat threads for the user
 router.get('/threads', authenticateToken, async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        error: 'User not authenticated',
+        status: 'error'
+      });
+    }
+
     const threads = await getAIChatThreads(req.user.id);
-    res.json(threads);
+    
+    // Always return an array, even if empty
+    res.json(threads || []);
   } catch (error) {
     console.error('Error fetching chat threads:', error);
-    res.status(500).json({ error: 'Failed to fetch chat threads' });
+    // Return empty array on error instead of error response
+    res.json([]);
   }
 });
 
 // Get a specific thread and its messages
 router.get('/threads/:id', authenticateToken, async (req, res) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        error: 'User not authenticated',
+        status: 'error'
+      });
+    }
+
     const thread = await getAIChatThread(req.params.id, req.user.id);
     if (!thread) {
-      return res.status(404).json({ error: 'Thread not found' });
+      return res.json({
+        id: req.params.id,
+        messages: { messages: [] },
+        status: 'not_found'
+      });
     }
-    console.log(thread)
-    const messages = await getThreadMessages(thread.thread_id);
-    res.json({ ...thread, messages });
+
+    try {
+      const messages = await getThreadMessages(thread.thread_id);
+      res.json({
+        ...thread,
+        messages,
+        status: 'success'
+      });
+    } catch (messageError) {
+      console.error('Error fetching thread messages:', messageError);
+      // Return thread with empty messages array
+      res.json({
+        ...thread,
+        messages: { messages: [] },
+        status: 'partial'
+      });
+    }
   } catch (error) {
     console.error('Error fetching thread:', error);
-    res.status(500).json({ error: 'Failed to fetch thread' });
+    res.json({
+      id: req.params.id,
+      messages: { messages: [] },
+      status: 'error'
+    });
   }
 });
 
