@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, TextInput, FlatList, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Animated, SafeAreaView, StatusBar, Keyboard, Modal } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { handleUserInput, transcribeAudio, createNewThread, pollJobStatus, createAIChatThread, getAIChatThreads, getAIChatThread, updateAIChatThreadTitle, deleteAIChatThread } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { useChat } from '../components/ChatContext';
@@ -172,7 +172,7 @@ const ThreadSidebar = ({ threads, activeThreadId, onThreadSelect, onNewThread, o
 
 const ChatScreen = () => {
   const [message, setMessage] = useState('');
-  const { messages, setMessages } = useChat();
+  const { messages, setMessages, activeThreadContext, setActiveThreadContext } = useChat();
   const navigation = useNavigation();
   const [showIntro, setShowIntro] = useState(true);
   const [isAITyping, setIsAITyping] = useState(false);
@@ -183,12 +183,15 @@ const ChatScreen = () => {
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [threads, setThreads] = useState([]);
-  const [activeThread, setActiveThread] = useState(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const silenceThreshold = -50;
   const silenceDuration = 1500;
   const silenceTimer = useRef(null);
   const silenceStartTime = useRef(null);
+  const [isFirstLoad, setIsFirstLoad] = useState(true);
+  const activeThreadRef = useRef(null);
+  const [activeThread, setActiveThread] = useState(null);
+  const [listKey, setListKey] = useState(0);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -228,26 +231,41 @@ const ChatScreen = () => {
     };
   }, []);
 
-  useEffect(() => {
-    loadThreads();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Screen focused, loading threads with activeThreadRef:', activeThreadRef.current);
+      loadThreads();
+    }, [])
+  );
 
   const loadThreads = async () => {
     try {
       const threadList = await getAIChatThreads();
-      setThreads(threadList);
-      if (threadList.length > 0) {
-        const thread = await getAIChatThread(threadList[0].id);
-        if (thread) {
-          setActiveThread(thread);
-          console.log("THREAD", thread);
-          const formattedMessages = thread.messages?.messages?.map(msg => ({
-            role: msg.role,
-            content: msg.content
-          })) || [];
-          setMessages(formattedMessages);
-          setShowIntro(false);
+      setThreads(threadList || []);
+      
+      if (!threadList || threadList.length === 0) {
+        console.log('No threads found');
+        setMessages([]);
+        setShowIntro(true);
+        return;
+      }
+
+      if (activeThreadContext) {
+        console.log('Restoring thread from context:', activeThreadContext.id);
+        const savedThread = threadList.find(t => t.id === activeThreadContext.id);
+        if (savedThread) {
+          await handleThreadSelect(savedThread);
+          return;
         }
+      }
+      
+      if (isFirstLoad) {
+        console.log('First load, showing new chat');
+        setActiveThread(null);
+        setActiveThreadContext(null);
+        setMessages([]);
+        setShowIntro(true);
+        setIsFirstLoad(false);
       }
     } catch (error) {
       console.error('Error loading threads:', error);
@@ -257,27 +275,38 @@ const ChatScreen = () => {
     }
   };
 
-  const handleNewThread = async () => {
-    try {
-      setMessages([]);
-      setShowIntro(true);
-      setActiveThread(null);
-      setShowSidebar(false);
-    } catch (error) {
-      console.error('Error creating new thread:', error);
-    }
-  };
-
   const handleThreadSelect = async (thread) => {
     try {
+      console.log('Selecting thread:', thread.id);
       const fullThread = await getAIChatThread(thread.id);
       setActiveThread(fullThread);
-      setMessages(fullThread.messages?.messages || []);
+      setActiveThreadContext(fullThread);
+      
+      const formattedMessages = (fullThread.messages?.messages || [])
+        .map(msg => ({
+          id: msg.id || Date.now(),
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.created_at || new Date().toISOString()
+        }))
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      
+      setMessages(formattedMessages);
       setShowIntro(false);
       setShowSidebar(false);
     } catch (error) {
       console.error('Error loading thread:', error);
     }
+  };
+
+  const handleNewThread = async () => {
+    console.log('Starting new thread, clearing state');
+    setMessages([]);
+    setShowIntro(true);
+    setActiveThread(null);
+    setActiveThreadContext(null);
+    setShowSidebar(false);
+    setIsFirstLoad(false);
   };
 
   const handleDeleteThread = async (threadId) => {
@@ -311,27 +340,23 @@ const ChatScreen = () => {
     }
   };
 
-  const handleSend = async () => {
-    if (!message.trim()) return;
+  const handleSend = async (text) => {
+    const messageToSend = text || message;
+    if (!messageToSend.trim()) return;
 
-    // Create a new message object with unique ID and timestamp
     const userMessage = {
       id: Date.now(),
-      content: message,
+      content: messageToSend,
       role: 'user',
       timestamp: new Date().toISOString()
     };
 
-    // Add user message to messages state immediately
     setMessages(prevMessages => [...prevMessages, userMessage]);
-    
-    // Clear input field
     setMessage('');
     setIsAITyping(true);
 
     try {
-      // Send message to backend with OpenAI thread ID if exists
-      const response = await handleUserInput(message, activeThread?.thread_id);
+      const response = await handleUserInput(messageToSend, activeThread?.thread_id);
       
       if (response.error) {
         setIsAITyping(false);
@@ -345,34 +370,46 @@ const ChatScreen = () => {
       }
 
       if (response.jobId) {
-        // Poll for job status
         const pollInterval = setInterval(async () => {
           try {
             const status = await pollJobStatus(response.jobId);
             console.log('Poll status:', status);
 
+            if (status.status === 'failed') {
+              clearInterval(pollInterval);
+              setIsAITyping(false);
+              setMessages(prevMessages => [
+                ...prevMessages,
+                {
+                  id: Date.now(),
+                  content: status.error || 'Error: Failed to process message',
+                  role: 'assistant',
+                  timestamp: new Date().toISOString()
+                }
+              ]);
+              return;
+            }
+
             if (status.status === 'completed') {
               clearInterval(pollInterval);
               setIsAITyping(false);
 
-              // Update thread if needed
-              if (status.result?.threadId) {
+              if (status.threadId) {
                 try {
-                  const threadDetails = await getAIChatThread(status.result.threadId);
+                  const threadDetails = await getAIChatThread(status.threadId);
                   if (threadDetails) {
                     const newThread = {
                       id: threadDetails.id,
-                      thread_id: threadDetails.thread_id,
+                      thread_id: status.thread_id || threadDetails.thread_id,
                       title: threadDetails.title,
                       lastMessageAt: new Date().toISOString()
                     };
 
-                    // Update threads list
                     setThreads(prevThreads => {
                       const threadExists = prevThreads.some(t => t.id === newThread.id);
                       if (threadExists) {
-                        return prevThreads.map(t => 
-                          t.id === newThread.id 
+                        return prevThreads.map(t =>
+                          t.id === newThread.id
                             ? { ...t, lastMessageAt: new Date().toISOString(), title: threadDetails.title }
                             : t
                         );
@@ -380,53 +417,60 @@ const ChatScreen = () => {
                       return [newThread, ...prevThreads];
                     });
 
-                    // Set as active thread if no active thread
                     if (!activeThread) {
                       setActiveThread(newThread);
+                      setActiveThreadContext(newThread);
                     } else if (activeThread.id === newThread.id) {
                       setActiveThread(newThread);
+                      setActiveThreadContext(newThread);
                     }
+
+                    const formattedMessages = (threadDetails.messages?.messages || [])
+                      .map(msg => ({
+                        id: msg.id || Date.now(),
+                        role: msg.role,
+                        content: msg.content,
+                        timestamp: msg.created_at || new Date().toISOString()
+                      }))
+                      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+                    setMessages(formattedMessages);
+                    flatListRef.current?.scrollToEnd({ animated: true });
+                    setListKey(prev => prev + 1);
                   }
                 } catch (error) {
                   console.error('Error updating thread details:', error);
                 }
-              }
-
-              // Add assistant's response to messages
-              if (status.result?.message) {
+              } else if (status.result && status.result.trim()) {
+                const newMessage = {
+                  id: Date.now(),
+                  content: status.result,
+                  role: 'assistant',
+                  timestamp: new Date().toISOString()
+                };
                 setMessages(prevMessages => {
-                  // Check if message already exists
-                  const messageExists = prevMessages.some(msg => 
-                    msg.role === 'assistant' && 
-                    msg.content === status.result.message
-                  );
-                  
-                  if (messageExists) return prevMessages;
-                  
-                  return [...prevMessages, {
-                    id: Date.now(),
-                    content: status.result.message,
-                    role: 'assistant',
-                    timestamp: new Date().toISOString()
-                  }];
+                  const updatedMessages = [...prevMessages, newMessage];
+                  flatListRef.current?.scrollToEnd({ animated: true });
+                  return updatedMessages;
                 });
+                setListKey(prev => prev + 1);
               }
-            } else if (status.status === 'failed') {
-              clearInterval(pollInterval);
-              setIsAITyping(false);
-              setMessages(prevMessages => [...prevMessages, {
-                id: Date.now(),
-                content: 'Error: Failed to process message',
-                role: 'assistant',
-                timestamp: new Date().toISOString()
-              }]);
             }
           } catch (error) {
+            console.error('Error polling status:', error);
             clearInterval(pollInterval);
             setIsAITyping(false);
-            console.error('Error polling status:', error);
+            setMessages(prevMessages => [
+              ...prevMessages,
+              {
+                id: Date.now(),
+                content: 'Error: Failed to check message status',
+                role: 'assistant',
+                timestamp: new Date().toISOString()
+              }
+            ]);
           }
-        }, 1000); // Poll every second
+        }, 1000);
       }
     } catch (error) {
       setIsAITyping(false);
@@ -452,14 +496,12 @@ const ChatScreen = () => {
   };
 
   const renderItem = ({ item }) => {
-    
     let id = null;
     if (item.role === 'assistant' && item.content) {
       const idRegex = /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/i;
       const match = item.content.match(idRegex);
       id = match ? match[1] : null;
     }
-    
 
     const handleLinkPress = () => {
       if (id) {
@@ -586,12 +628,20 @@ const ChatScreen = () => {
   const handleRecordingComplete = async (uri) => {
     try {
       const transcription = await transcribeAudio(uri);
-      // Directly send the transcribed message without setting it in the input
       await handleSend(transcription);
     } catch (err) {
       console.error('Failed to transcribe audio', err);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      console.log('Screen unmounting, saving thread reference:', activeThread?.id);
+      if (activeThread) {
+        activeThreadRef.current = activeThread;
+      }
+    };
+  }, [activeThread]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -639,6 +689,7 @@ const ChatScreen = () => {
             renderIntro()
           ) : (
             <FlatList
+              key={listKey}
               ref={flatListRef}
               data={messages}
               renderItem={renderItem}
@@ -835,6 +886,7 @@ const styles = StyleSheet.create({
   messageText: {
     color: '#fff',
     fontSize: 16,
+    lineHeight: 22,
   },
   link: {
     color: '#4a90e2',
