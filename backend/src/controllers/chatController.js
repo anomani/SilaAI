@@ -92,14 +92,42 @@ const checkJobStatus = async (req, res) => {
       }
     }
 
-    // Return a more structured response with default values
-    res.json({
-      jobId: job.id,
-      status: state || 'unknown',
-      result: result?.message || null,
-      threadId: result?.threadId || null,
-      error: result?.error || error || null
-    });
+    // Handle different job states
+    switch (state) {
+      case 'completed':
+        return res.json({
+          jobId: job.id,
+          status: 'completed',
+          result: result?.message || null,
+          threadId: result?.threadId || null,
+          error: null
+        });
+      case 'failed':
+        return res.json({
+          jobId: job.id,
+          status: 'failed',
+          result: null,
+          error: error || 'Job failed without specific error'
+        });
+      case 'active':
+        return res.json({
+          jobId: job.id,
+          status: 'active',
+          message: 'Job is still processing'
+        });
+      case 'waiting':
+        return res.json({
+          jobId: job.id,
+          status: 'waiting',
+          message: 'Job is in queue'
+        });
+      default:
+        return res.json({
+          jobId: job.id,
+          status: state || 'unknown',
+          message: 'Job status is unknown'
+        });
+    }
   } catch (error) {
     console.error('Error checking job status:', error);
     res.status(500).json({ 

@@ -147,26 +147,34 @@ async function createAIChatThread(title, threadId, user_id) {
 }
 
 async function getAIChatThreads(user_id) {
+  if (!user_id) {
+    throw new Error('user_id is required');
+  }
+  
   const db = dbUtils.getDB();
-  const sql = 'SELECT * FROM ai_chat_threads WHERE user_id = $1 ORDER BY created_at DESC';
+  const sql = 'SELECT * FROM ai_chat_threads WHERE user_id = $1 ORDER BY last_message_at DESC NULLS LAST';
   try {
     const res = await db.query(sql, [user_id]);
-    return res.rows;
+    return res.rows || [];
   } catch (err) {
     console.error('Error fetching AI chat threads:', err.message);
-    throw err;
+    throw new Error(`Failed to fetch AI chat threads: ${err.message}`);
   }
 }
 
 async function getAIChatThread(id, user_id) {
+  if (!id || !user_id) {
+    throw new Error('id and user_id are required');
+  }
+  
   const db = dbUtils.getDB();
   const sql = 'SELECT * FROM ai_chat_threads WHERE id = $1 AND user_id = $2';
   try {
     const res = await db.query(sql, [id, user_id]);
-    return res.rows[0];
+    return res.rows[0] || null;
   } catch (err) {
     console.error('Error fetching AI chat thread:', err.message);
-    throw err;
+    throw new Error(`Failed to fetch AI chat thread: ${err.message}`);
   }
 }
 
