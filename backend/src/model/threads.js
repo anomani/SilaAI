@@ -124,6 +124,139 @@ async function getThreadMessages(threadId) {
   }
 }
 
+// AI Chat Threads functions
+async function createAIChatThread(title, threadId, user_id) {
+  if (!threadId || !user_id) {
+    throw new Error('Invalid threadId or user_id');
+  }
+  const db = dbUtils.getDB();
+
+  const sql = `
+    INSERT INTO ai_chat_threads (title, thread_id, user_id, last_message_at)
+    VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+    RETURNING id, title, thread_id, created_at, last_message_at
+  `;
+  const values = [title || 'New Chat', threadId, user_id];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error creating AI chat thread:', err.message);
+    throw err;
+  }
+}
+
+async function getAIChatThreads(user_id) {
+  if (!user_id) {
+    throw new Error('user_id is required');
+  }
+  
+  const db = dbUtils.getDB();
+  const sql = 'SELECT * FROM ai_chat_threads WHERE user_id = $1 ORDER BY last_message_at DESC NULLS LAST';
+  try {
+    const res = await db.query(sql, [user_id]);
+    return res.rows || [];
+  } catch (err) {
+    console.error('Error fetching AI chat threads:', err.message);
+    throw new Error(`Failed to fetch AI chat threads: ${err.message}`);
+  }
+}
+
+async function getAIChatThread(id, user_id) {
+  if (!id || !user_id) {
+    throw new Error('id and user_id are required');
+  }
+  
+  const db = dbUtils.getDB();
+  const sql = 'SELECT * FROM ai_chat_threads WHERE id = $1 AND user_id = $2';
+  try {
+    const res = await db.query(sql, [id, user_id]);
+    return res.rows[0] || null;
+  } catch (err) {
+    console.error('Error fetching AI chat thread:', err.message);
+    throw new Error(`Failed to fetch AI chat thread: ${err.message}`);
+  }
+}
+
+async function updateAIChatThreadTitle(id, title, user_id) {
+  const db = dbUtils.getDB();
+  const sql = 'UPDATE ai_chat_threads SET title = $1 WHERE id = $2 AND user_id = $3 RETURNING *';
+  try {
+    const res = await db.query(sql, [title, id, user_id]);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error updating AI chat thread title:', err.message);
+    throw err;
+  }
+}
+
+async function deleteAIChatThread(id, user_id) {
+  const db = dbUtils.getDB();
+  const sql = 'DELETE FROM ai_chat_threads WHERE id = $1 AND user_id = $2 RETURNING *';
+  try {
+    const res = await db.query(sql, [id, user_id]);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error deleting AI chat thread:', err.message);
+    throw err;
+  }
+}
+
+async function getThreadByOpenAIId(openaiThreadId, user_id) {
+  const db = dbUtils.getDB();
+  const sql = 'SELECT * FROM ai_chat_threads WHERE thread_id = $1 AND user_id = $2';
+  try {
+    const res = await db.query(sql, [openaiThreadId, user_id]);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error fetching thread by OpenAI ID:', err.message);
+    throw err;
+  }
+}
+
+async function updateThreadLastMessage(threadId, user_id) {
+  const db = dbUtils.getDB();
+  
+  // If the threadId starts with 'thread_', it's an OpenAI thread ID
+  if (typeof threadId === 'string' && threadId.startsWith('thread_')) {
+    const thread = await getThreadByOpenAIId(threadId, user_id);
+    if (!thread) {
+      throw new Error('Thread not found');
+    }
+    threadId = thread.id;
+  }
+
+  const sql = 'UPDATE ai_chat_threads SET last_message_at = CURRENT_TIMESTAMP WHERE id = $1 AND user_id = $2 RETURNING *';
+  try {
+    const res = await db.query(sql, [threadId, user_id]);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error updating thread last message:', err.message);
+    throw err;
+  }
+}
+
+async function updateAIChatThread(id, threadId, user_id) {
+  if (!id || !threadId || !user_id) {
+    throw new Error('Invalid id, threadId, or user_id');
+  }
+  const db = dbUtils.getDB();
+
+  const sql = `
+    UPDATE ai_chat_threads 
+    SET thread_id = $1, last_message_at = CURRENT_TIMESTAMP
+    WHERE id = $2 AND user_id = $3
+    RETURNING id, title, thread_id, created_at, last_message_at
+  `;
+  const values = [threadId, id, user_id];
+  try {
+    const res = await db.query(sql, values);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error updating AI chat thread:', err.message);
+    throw err;
+  }
+}
 
 // async function main() {
 //   const threadId = 'thread_EcWzhUR0KjfsObYJSdVpfsER';
@@ -139,5 +272,13 @@ module.exports = {
   getThreadByPhoneNumber,
   deleteThreadByPhoneNumber,
   updateThreadId,
-  getThreadMessages
+  getThreadMessages,
+  createAIChatThread,
+  getAIChatThreads,
+  getAIChatThread,
+  updateAIChatThreadTitle,
+  deleteAIChatThread,
+  updateThreadLastMessage,
+  getThreadByOpenAIId,
+  updateAIChatThread
 };

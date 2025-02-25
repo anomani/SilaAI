@@ -15,7 +15,7 @@ const { cancelAppointment, cancelAppointmentById } = require('./tools/cancelAppo
 const { createBlockedTime } = require('../model/appointment');
 const { createRecurringAppointments, createRecurringAppointmentsAdmin } = require('./tools/recurringAppointments');
 const { findRecurringAvailability } = require('./tools/recurringAvailability');
-const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
+const { getThreadByPhoneNumber, saveThread, createAIChatThread, getAIChatThread, updateAIChatThreadTitle, getThreadByOpenAIId, updateAIChatThread } = require('../model/threads');
 const { getUserById } = require('../model/users');
 const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
 const { saveSuggestedResponse } = require('../model/messages');
@@ -494,58 +494,127 @@ async function createThread(userId, initialMessage = false) {
   }
 }
 
-async function handleUserInputData(userMessage, userId, initialMessage = false) {
+async function generateThreadTitle(userMessage, assistant) {
   try {
-    // Add validation for userId
-    if (!userId) {
-      return "Error: User ID is required";
+    const tempThread = await openai.beta.threads.create();
+    await openai.beta.threads.messages.create(tempThread.id, {
+      role: "user",
+      content: `Generate a very concise title (3-4 words max) that summarizes this message: "${userMessage}". 
+                Respond with ONLY the title, no quotes or extra text.`
+    });
+
+    const run = await openai.beta.threads.runs.create(tempThread.id, {
+      assistant_id: assistant.id
+    });
+
+    while (true) {
+      await delay(1000);
+      const runStatus = await openai.beta.threads.runs.retrieve(tempThread.id, run.id);
+      
+      if (runStatus.status === "completed") {
+        const messages = await openai.beta.threads.messages.list(tempThread.id);
+        const titleMessage = messages.data.find(msg => msg.role === 'assistant');
+        const title = titleMessage?.content[0]?.text?.value?.trim().replace(/["']/g, '') || "New Chat";
+        
+        // Clean up the temporary thread
+        await openai.beta.threads.del(tempThread.id);
+        console.log("title", title);
+        return title;
+      } else if (runStatus.status === "failed") {
+        await openai.beta.threads.del(tempThread.id);
+        return "New Chat";
+      }
     }
+  } catch (error) {
+    console.error('Error generating title:', error);
+    return "New Chat";
+  }
+}
+
+async function handleUserInputData(userMessage, userId, threadId = null) {
+  try {
+    if (!userId) {
+      return {
+        error: "Error: User ID is required"
+      };
+    }
+    console.log("threadId", threadId);
 
     const date = getCurrentDate();
     console.log("date", date);
     const assistant = await createAssistant(date, userId);
     
     try {
-      const thread = await createThread(userId, initialMessage);
-      // If it's an initial message and empty, just return the thread
-      if (initialMessage && !userMessage) {
-        return { thread: thread.id };
+      let thread;
+      let openAIThreadId = threadId; // If threadId is passed, it's the OpenAI thread ID
+      let dbThreadId;
+      let title;
+      
+      // If we have a threadId (OpenAI thread ID), try to get the existing thread from DB
+      if (openAIThreadId) {
+        console.log('Looking up thread by OpenAI ID:', openAIThreadId);
+        const dbThread = await getThreadByOpenAIId(openAIThreadId, userId);
+        
+        if (dbThread) {
+          dbThreadId = dbThread.id;
+          try {
+            // Try to retrieve the OpenAI thread
+            thread = await openai.beta.threads.retrieve(openAIThreadId);
+            console.log('Successfully retrieved existing thread:', openAIThreadId);
+          } catch (error) {
+            console.error('Error retrieving OpenAI thread:', error);
+            // If the OpenAI thread doesn't exist, create a new one and update the DB
+            thread = await openai.beta.threads.create();
+            openAIThreadId = thread.id;
+            // Update the existing thread with new OpenAI thread ID
+            await updateAIChatThread(dbThreadId, openAIThreadId, userId);
+          }
+        }
       }
       
-      // Check if there's an active run
-      const runs = await openai.beta.threads.runs.list(thread.id);
-      const activeRun = runs.data.find(run => ['in_progress', 'queued'].includes(run.status));
-
-      if (activeRun) {
-        // If there's an active run, wait for it to complete
-        await waitForRunCompletion(thread.id, activeRun.id);
+      // Create a new thread if we don't have one
+      if (!thread) {
+        console.log('Creating new thread as no valid thread found');
+        thread = await openai.beta.threads.create();
+        openAIThreadId = thread.id;
+        title = await generateThreadTitle(userMessage, assistant);
+        const savedThread = await createAIChatThread(title, openAIThreadId, userId);
+        dbThreadId = savedThread.id;
       }
 
-      // Now it's safe to create a new message and start a new run
-      const message = await openai.beta.threads.messages.create(thread.id, {
+      // Create a new message in the thread
+      console.log('Creating message in thread:', openAIThreadId);
+      await openai.beta.threads.messages.create(openAIThreadId, {
         role: "user",
         content: userMessage,
       });
-      let run;
-      try {
-        run = await openai.beta.threads.runs.create(thread.id, {
-          assistant_id: assistant.id
-        });
-      } catch (error) {
-        console.error('Error creating run:', error);
-        throw new Error('Error creating run: ' + error.message);
-      }
+
+      // Start a new run
+      console.log('Starting run with assistant:', assistant.id);
+      const run = await openai.beta.threads.runs.create(openAIThreadId, {
+        assistant_id: assistant.id
+      });
 
       while (true) {
         await delay(1000);
-        const runStatus = await openai.beta.threads.runs.retrieve(thread.id, run.id);
+        const runStatus = await openai.beta.threads.runs.retrieve(openAIThreadId, run.id);
 
         if (runStatus.status === "completed") {
-          const messages = await openai.beta.threads.messages.list(thread.id);
+          const messages = await openai.beta.threads.messages.list(openAIThreadId);
           const assistantMessage = messages.data.find(msg => msg.role === 'assistant');
 
+          // If this is a new thread, update the title based on the first message
+          if (!threadId) {
+            title = await generateThreadTitle(userMessage, assistant);
+            await updateAIChatThreadTitle(dbThreadId, title, userId);
+          }
+
           if (assistantMessage) {
-            return assistantMessage.content[0].text.value;
+            return {
+              message: assistantMessage.content[0].text.value,
+              threadId: dbThreadId,
+              thread_id: openAIThreadId // Return OpenAI thread ID for subsequent messages
+            };
           }
         } else if (runStatus.status === "requires_action") {
           const requiredActions = runStatus.required_action.submit_tool_outputs;
@@ -651,17 +720,17 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
           }
 
           if (toolOutputs.length > 0) {
-            await openai.beta.threads.runs.submitToolOutputs(thread.id, run.id, {
+            await openai.beta.threads.runs.submitToolOutputs(openAIThreadId, run.id, {
               tool_outputs: toolOutputs
             });
           } else {
             // If all tool calls failed, we'll cancel the run and ask the AI to rephrase the question
-            await openai.beta.threads.runs.cancel(thread.id, run.id);
-            const message = await openai.beta.threads.messages.create(thread.id, {
+            await openai.beta.threads.runs.cancel(openAIThreadId, run.id);
+            const message = await openai.beta.threads.messages.create(openAIThreadId, {
               role: "user",
               content: "I'm sorry, but I couldn't process that request. Could you please rephrase your question or provide more details?",
             });
-            run = await openai.beta.threads.runs.create(thread.id, {
+            run = await openai.beta.threads.runs.create(openAIThreadId, {
               assistant_id: assistant.id
             });
           }
@@ -673,13 +742,19 @@ async function handleUserInputData(userMessage, userId, initialMessage = false) 
         }
       }
     } catch (error) {
-      console.error('Error creating thread:', error);
-      return "I apologize, but I couldn't create a conversation thread. Please ensure your account is properly set up with a business number.";
+      console.error('Error in thread operation:', error);
+      return {
+        error: "I apologize, but I couldn't process your request. Please try again.",
+        details: error.message
+      };
     }
   } catch (error) {
     console.error('Detailed error in handleUserInputData:', error);
     console.log('User message:', userMessage);
-    return "I apologize, but I encountered an error while processing your request. Please ensure your account is properly set up and try again.";
+    return {
+      error: "I apologize, but I encountered an error while processing your request. Please try again.",
+      details: error.message
+    };
   }
 }
 

@@ -5,7 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
-import { savePushToken } from './src/services/api';
+import { savePushToken, getSuggestedResponseCount } from './src/services/api';
 import { ChatProvider } from './src/components/ChatContext';
 import { MessageProvider } from './src/components/MessageContext';
 import DailyAppointments from './src/screens/DailyAppointments';
@@ -88,13 +88,45 @@ async function registerForPushNotificationsAsync(): Promise<string | undefined> 
 
 const AppContent: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [badgeCount, setBadgeCount] = useState<number>(0);
   const navigation = useNavigation();
   const notificationListener = useRef<Notifications.Subscription>();
   const responseListener = useRef<Notifications.Subscription>();
 
+  // Add function to update badge count
+  const updateBadgeCount = useCallback(async () => {
+    try {
+      if (isLoggedIn) {
+        const count = await getSuggestedResponseCount();
+        setBadgeCount(count);
+        await Notifications.setBadgeCountAsync(count);
+      } else {
+        setBadgeCount(0);
+        await Notifications.setBadgeCountAsync(0);
+      }
+    } catch (error) {
+      console.error('Error updating badge count:', error);
+    }
+  }, [isLoggedIn]);
+
+  // Add interval to update badge count
+  useEffect(() => {
+    updateBadgeCount();
+    const interval = setInterval(updateBadgeCount, 30000); // Update every 30 seconds
+
+    return () => {
+      clearInterval(interval);
+      // Clear badge count on unmount
+      Notifications.setBadgeCountAsync(0);
+    };
+  }, [updateBadgeCount]);
+
   const handleLogout = useCallback(async () => {
     await logout();
     setIsLoggedIn(false);
+    // Clear badge count on logout
+    await Notifications.setBadgeCountAsync(0);
+    setBadgeCount(0);
   }, []);
 
   const handleLogin = useCallback(() => {
@@ -106,6 +138,11 @@ const AppContent: React.FC = () => {
     const checkLoginStatus = async () => {
       const token = await getToken();
       setIsLoggedIn(!!token);
+      if (!token) {
+        // Clear badge count if not logged in
+        await Notifications.setBadgeCountAsync(0);
+        setBadgeCount(0);
+      }
     };
 
     // Check login status initially

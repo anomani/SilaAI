@@ -2,8 +2,8 @@ import axios from 'axios';
 import { getToken } from '../utils/auth';
 
 // Replace with your backend API URL
-// const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
+// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -170,10 +170,12 @@ export const deleteAppointment = async (appointmentId) => {
   }
 };
 
-export const handleUserInput = async (message) => {
+export const handleUserInput = async (message, threadId = null) => {
   try {
+    console.log("Message", message)
+    console.log("Thread ID", threadId)
     const response = await retryRequest(() => throttledRequest(() => 
-      api.post('/chat/handle-user-input', { message })
+      api.post('/chat/handle-user-input', { message, threadId })
     ));
     return response.data;
   } catch (error) {
@@ -835,35 +837,111 @@ export const setFirstMessageTemplate = async (template) => {
 };
 
 // Helper function to poll job status
-export const pollJobStatus = async (jobId, onProgress) => {
-  const pollInterval = 1000; // 1 second
-  const maxAttempts = 300; // 5 minutes max
-  let attempts = 0;
+export const pollJobStatus = async (jobId) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get(`/chat/status/${jobId}`)
+    ));
 
-  while (attempts < maxAttempts) {
-    const status = await checkJobStatus(jobId);
-    
-    // Call progress callback if provided
-    if (onProgress) {
-      onProgress(status);
+    // Add more detailed error handling
+    if (!response || !response.data) {
+      throw new Error('Invalid response from server');
     }
 
-    if (status.status === 'completed') {
-      return status.result;
-    }
-
-    if (status.status === 'failed') {
-      throw new Error(status.error || 'Job failed');
-    }
-
-    if (['active', 'waiting'].includes(status.status)) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-      attempts++;
-      continue;
-    }
-
-    throw new Error(`Unexpected job status: ${status.status}`);
+    // Map the response to match the expected structure
+    const result = response.data;
+    return {
+      status: result.status || 'unknown',
+      result: result.result?.message || result.message,
+      threadId: result.result?.threadId || result.threadId,
+      thread_id: result.result?.thread_id || result.thread_id,
+      error: result.error || null
+    };
+  } catch (error) {
+    console.error('Error polling job status:', error);
+    return {
+      status: 'failed',
+      error: error.message || 'Failed to check job status'
+    };
   }
+};
 
-  throw new Error('Job timed out');
+// AI Chat Thread functions
+export const createAIChatThread = async (title) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.post('/ai-chat/threads', { title })
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error creating AI chat thread:', error);
+    throw error;
+  }
+};
+
+export const getAIChatThreads = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get('/ai-chat/threads')
+    ));
+
+    // Ensure we have a valid response
+    if (!response || !response.data) {
+      console.warn('No data received from server');
+      return [];
+    }
+
+    // Ensure we return an array
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Error fetching AI chat threads:', error);
+    // Return empty array instead of throwing
+    return [];
+  }
+};
+
+export const getAIChatThread = async (threadId) => {
+  try {
+    if (!threadId) {
+      console.warn('No threadId provided');
+      return null;
+    }
+
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.get(`/ai-chat/threads/${threadId}`)
+    ));
+
+    if (!response || !response.data) {
+      console.warn('No data received from server');
+      return null;
+    }
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching AI chat thread:', error);
+    return null;
+  }
+};
+
+export const updateAIChatThreadTitle = async (threadId, title) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.put(`/ai-chat/threads/${threadId}`, { title })
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error updating AI chat thread title:', error);
+    throw error;
+  }
+};
+
+export const deleteAIChatThread = async (threadId) => {
+  try {
+    await retryRequest(() => throttledRequest(() => 
+      api.delete(`/ai-chat/threads/${threadId}`)
+    ));
+  } catch (error) {
+    console.error('Error deleting AI chat thread:', error);
+    throw error;
+  }
 };
