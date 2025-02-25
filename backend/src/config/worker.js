@@ -59,15 +59,28 @@ openaiQueue.process(async (job) => {
   console.log(`Processing OpenAI job ${job.id}`);
   console.log('Job data:', job.data);
   
-  const { message, userId, initialMessage = false } = job.data;
+  const { message, userId, threadId } = job.data;
 
   try {
-    const response = await processOpenAIJob(message, userId, initialMessage);
-    console.log(`OpenAI job ${job.id} completed successfully`);
-    return response;
+    const response = await processOpenAIJob(message, userId, threadId);
+    console.log(`OpenAI job ${job.id} completed successfully:`, response);
+    
+    // Ensure we always return a properly structured response
+    return {
+      status: 'completed',
+      message: response.message || null,
+      threadId: response.threadId || null,
+      error: response.error || null
+    };
   } catch (error) {
     console.error(`Error processing OpenAI job ${job.id}:`, error);
-    throw error;
+    // Return a properly structured error response
+    return {
+      status: 'failed',
+      error: error.message || 'Unknown error occurred',
+      message: null,
+      threadId: null
+    };
   }
 });
 
