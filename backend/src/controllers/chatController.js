@@ -222,18 +222,53 @@ const sendMessagesToSelectedClients = async (req, res) => {
   try {
     const userId = req.user.id;
     const { ids, messageTemplate } = req.body;
-    for (const id of ids) {
-      const client = await getClientById(id);
-      if (client) {
-        const personalizedMessage = messageTemplate.replace('{firstName}', client.firstname);
-        await sendMessage(client.phonenumber, personalizedMessage, userId);
-      } else {
-        console.log(`Client not found for id: ${id}`);
+    const results = {
+      success: [],
+      failed: []
+    };
+
+    // Process all clients in parallel instead of sequentially
+    await Promise.all(ids.map(async (id) => {
+      try {
+        const client = await getClientById(id);
+        if (client) {
+          const personalizedMessage = messageTemplate.replace('{firstName}', client.firstname);
+          await sendMessage(client.phonenumber, personalizedMessage, userId);
+          results.success.push(id);
+        } else {
+          console.log(`Client not found for id: ${id}`);
+          results.failed.push({ id, reason: 'Client not found' });
+        }
+      } catch (clientError) {
+        console.error(`Error sending message to client ${id}:`, clientError);
+        results.failed.push({ id, reason: 'Message sending failed' });
+        // Error is caught per client, so parallel processing continues
       }
+    }));
+
+    // If at least one message was sent successfully, consider the operation successful
+    if (results.success.length > 0) {
+      res.status(200).json({ 
+        message: `Messages sent successfully to ${results.success.length} clients` + 
+                (results.failed.length > 0 ? ` (${results.failed.length} failed)` : ''),
+        results
+      });
+    } else if (results.failed.length > 0) {
+      // All messages failed, but we still return 200 to not break frontend
+      res.status(200).json({ 
+        message: `All ${results.failed.length} message(s) failed to send`,
+        results
+      });
+    } else {
+      // No clients were processed (shouldn't happen normally)
+      res.status(200).json({ 
+        message: 'No clients were processed',
+        results
+      });
     }
-    res.status(200).json({ message: 'Messages sent successfully' });
   } catch (error) {
-    console.error('Error sending messages to selected clients:', error);
+    // This catch will only trigger for errors outside the client processing loop
+    console.error('Unexpected error sending messages to selected clients:', error);
     res.status(500).json({ error: 'Error sending messages' });
   }
 }
