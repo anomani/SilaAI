@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../../.env' });
 
 const openai = new OpenAI({
-  apiKey: "sk-proj-qgeFK451cWki7oGv7s1xT3BlbkFJdMZerPnr4Mnqn1O203jE"
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 async function analyzeNames(names) {
