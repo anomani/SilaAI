@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../../../.env' });
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: "sk-proj-qgeFK451cWki7oGv7s1xT3BlbkFJdMZerPnr4Mnqn1O203jE"
 });
 
 async function analyzeNames(names) {
@@ -40,7 +40,7 @@ async function analyzeNames(names) {
 }
 
 async function getMuslimClients() {
-  const allClientsQuery = "SELECT id, firstname, lastname FROM Client";
+  const allClientsQuery = "SELECT id, firstname, lastname FROM Client WHERE user_id = 1";
   const allClients = await getInfo(allClientsQuery);
 
   const names = allClients.map(client => `${client.firstname} ${client.lastname}`);
@@ -59,4 +59,44 @@ async function getMuslimClients() {
   return query;
 }
 
-module.exports = { analyzeNames, getMuslimClients };
+async function getMuslimClientsWithNoEid(user_id) {
+  console.log('[getMuslimClientsWithNoEid] Starting...');
+  
+  try {
+    const dbUtils = require('../../model/dbUtils');
+    const db = dbUtils.getDB();
+    
+    // Get the SQL query for Muslim clients
+    const muslimClientsQuery = await getMuslimClients();
+    
+    // Modified query to get Muslim clients who don't have Eid messages in one go
+    const query = `
+      WITH MuslimClients AS (${muslimClientsQuery.replace(';', '')})
+      SELECT DISTINCT mc.*
+      FROM MuslimClients mc
+      WHERE NOT EXISTS (
+        SELECT 1 
+        FROM Messages m 
+        WHERE m.clientid = mc.id 
+        AND m.user_id = $1
+        AND m.body ILIKE '%eid mubarak%'
+      )
+    `;
+    
+    const result = await db.query(query, [user_id]);
+    console.log('Found Muslim clients with no Eid messages:', result.rows.length);
+    return result.rows;
+  } catch (err) {
+    console.error('Error in getMuslimClientsWithNoEid:', err.message);
+    console.error('Stack trace:', err.stack);
+    throw err;
+  }
+}
+
+// async function main() {
+//   const clients = await getMuslimClientsWithNoEid(1);
+//   console.log(clients);
+// }
+
+// main();
+module.exports = { analyzeNames, getMuslimClients, getMuslimClientsWithNoEid };
