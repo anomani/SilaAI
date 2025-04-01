@@ -4,7 +4,7 @@ dotenv.config({ path: '../../.env' });
 const { getInfo } = require('./tools/getCustomers');
 const fs = require('fs');
 const path = require('path');
-const { getMuslimClients } = require('./tools/analyzeNames');
+const { getMuslimClients, getMuslimClientsWithNoEid } = require('./tools/analyzeNames');
 const { v4: uuidv4 } = require('uuid');
 const { getFormattedClientList } = require('../model/clients');
 const { getClientByName } = require('../model/clients');
@@ -78,6 +78,18 @@ const tools = [
   function: {
     name: "getMuslimClients",
     description: "Starts a background job to analyze Muslim names and returns a job ID",
+    parameters: {
+      type: "object",
+      properties: {},
+      required: []
+    }
+  }
+},
+{
+  type: "function",
+  function: {
+    name: "getMuslimClientsWithNoEid",
+    description: "Returns a list of Muslim clients who haven't received an Eid Mubarak message",
     parameters: {
       type: "object",
       properties: {},
@@ -656,6 +668,12 @@ async function handleUserInputData(userMessage, userId, threadId = null) {
                 const listLink = `/custom-list?id=${queryId}`;
                 console.log(listLink);
                 output = queryId;
+              } else if (funcName === "getMuslimClientsWithNoEid") {
+                console.log("getMuslimClientsWithNoEid YERRRRRRRRR");
+                const clients = await getMuslimClientsWithNoEid(userId);
+                const queryId = uuidv4();
+                queryStore[queryId] = clients;
+                output = queryId;
               } else if (funcName === "bookAppointmentAdmin") {
                 output = await bookAppointmentAdmin(
                   args.clientId,
@@ -777,7 +795,7 @@ function getStoredQuery(id) {
 }
 
 // async function main() {
-//   const resp = await handleUserInputData("When is my next availability for an adult cut?", 1);
+//   const resp = await handleUserInputData("Yes", 1, 235);
 //   console.log(resp);
 // }
 
