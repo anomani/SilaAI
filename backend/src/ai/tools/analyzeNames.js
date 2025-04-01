@@ -63,29 +63,24 @@ async function getMuslimClientsWithNoEid(user_id) {
   console.log('[getMuslimClientsWithNoEid] Starting...');
   
   try {
-    const dbUtils = require('../../model/dbUtils');
-    const db = dbUtils.getDB();
-    
     // Get the SQL query for Muslim clients
     const muslimClientsQuery = await getMuslimClients();
     
-    // Modified query to get Muslim clients who don't have Eid messages in one go
+    // Create a query to find Muslim clients without Eid messages
     const query = `
-      WITH MuslimClients AS (${muslimClientsQuery.replace(';', '')})
-      SELECT DISTINCT mc.*
+      WITH MuslimClients AS (${muslimClientsQuery.replace(/;$/, '')})
+      SELECT mc.*
       FROM MuslimClients mc
       WHERE NOT EXISTS (
         SELECT 1 
         FROM Messages m 
         WHERE m.clientid = mc.id 
-        AND m.user_id = $1
+        AND m.user_id = ${user_id}
         AND m.body ILIKE '%eid mubarak%'
       )
     `;
     
-    const result = await db.query(query, [user_id]);
-    console.log('Found Muslim clients with no Eid messages:', result.rows.length);
-    return result.rows;
+    return query;
   } catch (err) {
     console.error('Error in getMuslimClientsWithNoEid:', err.message);
     console.error('Stack trace:', err.stack);

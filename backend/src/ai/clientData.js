@@ -669,10 +669,12 @@ async function handleUserInputData(userMessage, userId, threadId = null) {
                 console.log(listLink);
                 output = queryId;
               } else if (funcName === "getMuslimClientsWithNoEid") {
-                console.log("getMuslimClientsWithNoEid YERRRRRRRRR");
-                const clients = await getMuslimClientsWithNoEid(userId);
+                console.log("getMuslimClientsWithNoEid");
+                const query = await getMuslimClientsWithNoEid(userId);
                 const queryId = uuidv4();
-                queryStore[queryId] = clients;
+                queryStore[queryId] = query;
+                const listLink = `/custom-list?id=${queryId}`;
+                console.log(listLink);
                 output = queryId;
               } else if (funcName === "bookAppointmentAdmin") {
                 output = await bookAppointmentAdmin(

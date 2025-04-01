@@ -43,7 +43,7 @@ async function checkEndingAppointments(userId) {
     try {
         const now = new Date();
         const adjustedNow = new Date(now);
-        adjustedNow.setHours(adjustedNow.getHours() - 5); // Subtract 4 hours
+        adjustedNow.setHours(adjustedNow.getHours() - 4); // Subtract 4 hours
         const endingAppointments = await getEndingAppointments(adjustedNow, userId);
         for (const appointment of endingAppointments) {
             const message = `Appointment ended for ${appointment.firstname} ${appointment.lastname}. Click here to log the appointment`;
