@@ -135,7 +135,7 @@ async function handleIncomingMessage(req, res) {
     const localDate = new Date().toLocaleString();
     const adjustedDate = adjustDate(localDate);
 
-    
+
     if (!client || client.id === '') {
       // Create a new client if one doesn't exist
       clientId = await createClient('', '', Author, '', '', user.id);
@@ -144,6 +144,7 @@ async function handleIncomingMessage(req, res) {
       clientId = client.id;
     }
 
+    
     try {
       // Set isAI to true for incoming messages
       console.log("user.id: ", user.id)
