@@ -111,7 +111,7 @@ async function handleIncomingMessage(req, res) {
     Body = req.body.MessageBody;
     business_line = req.body['MessagingBinding.ProxyAddress']
     console.log("business_line: ", business_line)
-  } else if (EventType === 'onMessageAdded') {
+  } else if (EventType === 'onMessageAdd' || EventType === 'onMessageAdded') {
     Author = req.body.Author;
     Body = req.body.Body;
     ConversationSid = req.body.ConversationSid;
@@ -144,7 +144,7 @@ async function handleIncomingMessage(req, res) {
       clientId = client.id;
     }
 
-    
+
     try {
       // Set isAI to true for incoming messages
       console.log("user.id: ", user.id)
