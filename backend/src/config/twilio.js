@@ -111,7 +111,7 @@ async function handleIncomingMessage(req, res) {
     Body = req.body.MessageBody;
     business_line = req.body['MessagingBinding.ProxyAddress']
     console.log("business_line: ", business_line)
-  } else if (EventType === 'onMessageAdd') {
+  } else if (EventType === 'onMessageAdded') {
     Author = req.body.Author;
     Body = req.body.Body;
     ConversationSid = req.body.ConversationSid;
