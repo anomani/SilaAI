@@ -45,11 +45,31 @@ async function login() {
         await page.type("input[type='password']", acuity_password);
         // // Click the login button
         // Click the login button
-        await delay(1000)
+        await delay(1000);
         await page.waitForSelector("button#login-button", { visible: true, timeout: SELECTOR_TIMEOUT });
-        await page.click("button#login-button");
-        await delay(2000)
-        await page.click("button#login-button");
+        
+        // Get the current URL to check for page changes
+        const initialUrl = page.url();
+        let currentUrl = initialUrl;
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        // Keep clicking the login button until the page changes or max attempts reached
+        while (currentUrl === initialUrl && attempts < maxAttempts) {
+            await page.click("button#login-button");
+            console.log(`Login attempt ${attempts + 1}`);
+            await delay(1000); // Small delay between clicks
+            
+            // Check if URL has changed
+            currentUrl = page.url();
+            attempts++;
+        }
+        
+        if (currentUrl !== initialUrl) {
+            console.log("Page changed after login button clicks");
+        } else {
+            console.log(`Reached maximum login attempts (${maxAttempts})`);
+        }
 
         console.log("Login button clicked");
 
@@ -99,7 +119,7 @@ async function login() {
             await calendarFrame.waitForSelector(appointmentSelector, { visible: true, timeout: 30000 }); 
             const appointmentElements = await calendarFrame.$$(appointmentSelector);
             console.log(`Found ${appointmentElements.length} appointment elements inside the iframe.`);
-
+            console.log(appointmentElements)
             if (appointmentElements.length === 0) {
                 console.log("No appointment elements found within the iframe using selector: " + appointmentSelector);
             }
