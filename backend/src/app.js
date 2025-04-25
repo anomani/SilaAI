@@ -15,6 +15,7 @@ const mediaRoutes = require('./routes/mediaRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const userRoutes = require('./routes/userRoutes');
 const messageRoutes = require('./routes/messageRoutes');
+const fillMyCalendarRoutes = require('./routes/fillMyCalendarRoutes');
 const authenticateToken = require('./middleware/authMiddleware');
 const aiChatRoutes = require('./routes/aiChatRoutes');
 const app = express();
@@ -48,6 +49,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/ai-chat', aiChatRoutes);
+app.use('/api/fillMyCalendar', fillMyCalendarRoutes);
 
 // Initialize cron jobs
 cronJobs.initializeCronJobs();
