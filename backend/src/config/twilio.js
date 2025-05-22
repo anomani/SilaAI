@@ -102,57 +102,85 @@ async function handleIncomingMessage(req, res) {
   if (!req.body) {
     return res.status(400).send('No request body!');
   }
-  console.log(req.body)
+  console.log('=== START: New Incoming Message ===');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('Full Request Body:', JSON.stringify(req.body, null, 2));
+  
   const { EventType } = req.body;
+  console.log('Event Type:', EventType);
+  
   let Author, Body, ConversationSid, business_line;
 
   if (EventType === 'onConversationAdd') {
     Author = req.body['MessagingBinding.Address'];
     Body = req.body.MessageBody;
-    business_line = req.body['MessagingBinding.ProxyAddress']
-    console.log("business_line: ", business_line)
-  } else if (EventType === 'onMessageAdd') {
+    business_line = req.body['MessagingBinding.ProxyAddress'];
+    console.log('onConversationAdd Details:', {
+      Author,
+      Body,
+      business_line
+    });
+  } else if (EventType === 'onMessageAdd' || EventType === 'onMessageAdded') {
     Author = req.body.Author;
     Body = req.body.Body;
     ConversationSid = req.body.ConversationSid;
+    console.log('onMessageAdd/Added Details:', {
+      Author,
+      Body,
+      ConversationSid
+    });
   } else {
+    console.log('Unsupported EventType:', EventType);
     return res.status(400).send('Unsupported EventType');
   }
 
   try {
-    console.log(ConversationSid)
+    console.log('Processing message from:', Author);
     let business_number;
     if (ConversationSid) {
-      business_number = await getContactPhoneNumberFromConversation(ConversationSid)
+      business_number = await getContactPhoneNumberFromConversation(ConversationSid);
+      console.log('Retrieved business number from conversation:', business_number);
     } else {
-      business_number = business_line
+      business_number = business_line;
+      console.log('Using direct business line:', business_line);
     }
-    console.log("Business Number: ", business_number)
-    const user = await getUserByBusinessNumber(business_number)
-    console.log(user)
+    
+    const user = await getUserByBusinessNumber(business_number);
+    console.log('Found user:', { userId: user.id, businessNumber: user.business_number });
+    
     let client = await getClientByPhoneNumber(Author, user.id);
+    console.log('Client lookup result:', {
+      clientFound: !!client,
+      clientId: client ? client.id : 'none'
+    });
+    
     let clientId = '';
     const localDate = new Date().toLocaleString();
     const adjustedDate = adjustDate(localDate);
+    console.log('Message timestamp:', adjustedDate);
 
     if (!client || client.id === '') {
-      // Create a new client if one doesn't exist
+      console.log('Creating new client for:', Author);
       clientId = await createClient('', '', Author, '', '', user.id);
       client = await getClientByPhoneNumber(Author, user.id);
+      console.log('New client created:', { clientId });
     } else {
       clientId = client.id;
+      console.log('Using existing client:', { clientId });
     }
 
     try {
-      // Set isAI to true for incoming messages
-      console.log("user.id: ", user.id)
-      console.log("adjustedDateIncoming: ", adjustedDate)
+      console.log('Attempting to save message to database...');
       await saveMessage(Author, user.business_number, Body, adjustedDate, clientId, true, false, user.id);
+      console.log('Message saved successfully');
     } catch (saveError) {
-      if (saveError.code !== '23505') {
-        console.error('Error saving message:', saveError);
+      if (saveError.code === '23505') {
+        console.log('Duplicate message detected:', {
+          error: saveError.code,
+          constraint: saveError.constraint
+        });
       } else {
-        console.log('Duplicate message detected, skipping save');
+        console.error('Error saving message:', saveError);
       }
     }
 
@@ -195,7 +223,8 @@ async function handleIncomingMessage(req, res) {
     res.status(200).send('Message received');
 
   } catch (error) {
-    console.error('Error handling incoming message:', error);
+    console.error('=== ERROR: Message Processing Failed ===');
+    console.error('Error details:', error);
     res.status(500).send('Error processing message');
   }
 }
