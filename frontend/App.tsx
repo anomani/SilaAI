@@ -29,6 +29,7 @@ import MetricsScreen from './src/screens/MetricsScreen';
 import SettingsPage from './src/screens/SettingsPage';
 import AppointmentTypesScreen from './src/screens/AppointmentTypesScreen';
 import MessageTemplatesScreen from './src/screens/MessageTemplatesScreen';
+import FillMyCalendarScreen from './src/screens/FillMyCalendarScreen';
 
 // Import new login and register components
 import Login from './src/components/Login';
@@ -229,6 +230,7 @@ const AppContent: React.FC = () => {
           <Stack.Screen name="InitiateConversation" component={InitiateConversation} />
           <Stack.Screen name="Metrics" component={MetricsScreen} /> 
           <Stack.Screen name="DailyAppointments" component={DailyAppointments} />
+          <Stack.Screen name="FillMyCalendar" component={FillMyCalendarScreen} />
           <Stack.Screen 
             name="Settings" 
             component={SettingsPage}
