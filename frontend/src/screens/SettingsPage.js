@@ -57,7 +57,27 @@ const SettingsPage = ({ navigation }) => {
   if (error) {
     return (
       <View style={styles.container}>
-        <Text style={styles.error}>{error}</Text>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Account</Text>
+        </View>
+        
+        <ScrollView style={styles.scrollContent}>
+          <Text style={styles.error}>{error}</Text>
+          
+          {/* Always show logout button even when there's an error */}
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={20} color="#ff4444" />
+            <Text style={styles.logoutText}>Logout</Text>
+          </TouchableOpacity>
+        </ScrollView>
+        
+        <Footer navigation={navigation} />
       </View>
     );
   }
