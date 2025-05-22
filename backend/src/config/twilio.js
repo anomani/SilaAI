@@ -21,6 +21,8 @@ let expo = new Expo();
 const pendingMessages = new Map();
 const messageTimeouts = new Map();
 const DEBOUNCE_TIME = 1000; // Wait 1 second for potential follow-up messages
+const processedMessageSids = new Map(); // Store processed MessageSids
+const MESSAGE_SID_CLEANUP_INTERVAL = 1000 * 60 * 60; // Clean up after 1 hour
 
 function formatPhoneNumber(phoneNumber) {
   // Remove all non-digit characters
@@ -98,6 +100,19 @@ async function sendMessages(clients, message, userId) {
   };
 };
 
+// Add this cleanup function
+function cleanupOldMessageSids() {
+  const oneHourAgo = Date.now() - MESSAGE_SID_CLEANUP_INTERVAL;
+  for (const [sid, timestamp] of processedMessageSids.entries()) {
+    if (timestamp < oneHourAgo) {
+      processedMessageSids.delete(sid);
+    }
+  }
+}
+
+// Set up periodic cleanup
+setInterval(cleanupOldMessageSids, MESSAGE_SID_CLEANUP_INTERVAL);
+
 async function handleIncomingMessage(req, res) {
   if (!req.body) {
     return res.status(400).send('No request body!');
@@ -106,8 +121,14 @@ async function handleIncomingMessage(req, res) {
   console.log('Timestamp:', new Date().toISOString());
   console.log('Full Request Body:', JSON.stringify(req.body, null, 2));
   
-  const { EventType } = req.body;
+  const { EventType, MessageSid } = req.body;
   console.log('Event Type:', EventType);
+
+  // Check if we've already processed this message
+  if (MessageSid && processedMessageSids.has(MessageSid)) {
+    console.log(`Message ${MessageSid} already processed, skipping`);
+    return res.status(200).send('Message already processed');
+  }
   
   let Author, Body, ConversationSid, business_line;
 
@@ -118,16 +139,18 @@ async function handleIncomingMessage(req, res) {
     console.log('onConversationAdd Details:', {
       Author,
       Body,
-      business_line
+      business_line,
+      MessageSid
     });
   } else if (EventType === 'onMessageAdd' || EventType === 'onMessageAdded') {
     Author = req.body.Author;
     Body = req.body.Body;
     ConversationSid = req.body.ConversationSid;
-    console.log('onMessageAdd/Added Details:', {
+    console.log(`Processing ${EventType} event:`, {
       Author,
       Body,
-      ConversationSid
+      ConversationSid,
+      MessageSid
     });
   } else {
     console.log('Unsupported EventType:', EventType);
@@ -135,6 +158,11 @@ async function handleIncomingMessage(req, res) {
   }
 
   try {
+    // Mark this MessageSid as processed at the start of processing
+    if (MessageSid) {
+      processedMessageSids.set(MessageSid, Date.now());
+    }
+
     console.log('Processing message from:', Author);
     let business_number;
     if (ConversationSid) {
@@ -192,7 +220,7 @@ async function handleIncomingMessage(req, res) {
       await sendNotificationToUser(
         'New Message from ' + client.firstname,
         `${client.firstname} ${client.lastname}: "${Body.substring(0, 50)}${Body.length > 50 ? '...' : ''}"`,
-        clientId,
+        client.id,
         client.firstname + ' ' + client.lastname,
         Body,
         false,
