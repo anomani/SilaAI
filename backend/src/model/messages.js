@@ -330,6 +330,59 @@ async function getNumberOfSuggestedResponses(user_id) {
   }
 }
 
+async function getSuggestedResponsesByClient(userId) {
+  const db = dbUtils.getDB();
+  const sql = `
+    SELECT 
+      c.id, 
+      c.firstname AS "firstName", 
+      c.lastname AS "lastName", 
+      c.lastvisitdate AS "lastVisitDate",
+      c.group,
+      sr.response AS message
+    FROM 
+      SuggestedResponses sr
+    JOIN 
+      Client c ON sr.clientid = c.id
+    WHERE 
+      sr.user_id = $1
+    ORDER BY 
+      sr.updatedAt DESC
+  `;
+  const values = [userId];
+  
+  try {
+    const res = await db.query(sql, values);
+    return res.rows;
+  } catch (err) {
+    console.error('Error fetching suggested responses by client:', err.message);
+    throw err;
+  }
+}
+
+async function updateSuggestedResponse(clientId, response) {
+  const db = dbUtils.getDB();
+  const sql = `
+    UPDATE SuggestedResponses 
+    SET response = $2, updatedAt = CURRENT_TIMESTAMP
+    WHERE clientId = $1
+    RETURNING *
+  `;
+  const values = [clientId, response];
+  
+  try {
+    const res = await db.query(sql, values);
+    if (res.rows.length === 0) {
+      throw new Error(`No suggested response found for client ID: ${clientId}`);
+    }
+    console.log(`Suggested response updated for clientId: ${clientId}`);
+    return res.rows[0];
+  } catch (err) {
+    console.error('Error updating suggested response:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   saveMessage,
   getAllMessages,
@@ -344,5 +397,7 @@ module.exports = {
   getMessageMetrics,
   getMostRecentMessagePerClient,
   countSuggestedResponses,
-  getNumberOfSuggestedResponses
+  getNumberOfSuggestedResponses,
+  getSuggestedResponsesByClient,
+  updateSuggestedResponse
 };

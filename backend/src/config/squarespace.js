@@ -8,9 +8,8 @@ const moment = require('moment'); // Add moment library
 const {createAppointment} = require('../model/appointment')
 const {getClientByPhoneNumber} = require('../model/clients')
 const apiKey = process.env.BROWSERCLOUD_API_KEY;
-const acuity_email = "abfades.info@gmail.com"
-const acuity_password = "skinfade"
-
+const acuity_email = process.env.ACUITY_EMAIL;
+const acuity_password = process.env.ACUITY_PASSWORD;
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -18,179 +17,411 @@ const SELECTOR_TIMEOUT = 5000;
 
 const SELECTOR_TIMEOUT_2 = 500;
 
-async function login() {
-    const browserWSEndpoint = `wss://chrome-v2.browsercloud.io?token=${apiKey}`;
-    let browser;
+// Default price map for appointment types if not specified
+const DEFAULT_PRICES = {
+    'Adult Cut': 35.00,
+    'Kid Cut': 25.00,
+    'Beard Trim': 15.00,
+    'Fade': 40.00,
+    'Haircut & Beard': 45.00
+};
+
+// Default appointment duration in minutes if not specified
+const DEFAULT_DURATION = {
+    'Adult Cut': 30,
+    'Kid Cut': 30,
+    'Beard Trim': 15,
+    'Fade': 45,
+    'Haircut & Beard': 45
+};
+
+/**
+ * Launches Puppeteer and logs into Acuity Scheduling via Squarespace.
+ * @returns {Promise<{browser: object, page: object}>}
+ */
+async function launchAndLogin() {
+    if (!acuity_email || !acuity_password) {
+        throw new Error("ACUITY_EMAIL or ACUITY_PASSWORD not set in environment variables.");
+    }
+
+    const browser = await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
+    await page.goto("https://secure.acuityscheduling.com/login.php?redirect=1", {
+        waitUntil: 'domcontentloaded'
+    });
+
+    console.log("Entering email and clicking first login step...");
+    await page.waitForSelector("input[type='email']", { visible: true, timeout: SELECTOR_TIMEOUT });
+    await page.type("input[type='email']", acuity_email);
+    await page.click("input[name='login']"); // Initial Acuity login button
+
+    console.log("Clicking Squarespace continue button...");
+    await page.waitForSelector("button#squarespace-continue", { visible: true, timeout: SELECTOR_TIMEOUT });
+    await page.click("button#squarespace-continue");
+
+    console.log("Entering email on Squarespace login...");
+    await page.waitForSelector("input[type='email']", { visible: true, timeout: SELECTOR_TIMEOUT });
+    // Sometimes the email might already be filled, handle this gracefully
     try {
-        // Connect to BrowserCloud
-        browser = await puppeteer.launch({ headless: false });
-        const page = await browser.newPage();
+        await page.type("input[type='email']", acuity_email, { delay: 50 }); // Added small delay
+    } catch (e) {
+        console.log("Email field likely already filled, continuing...");
+    }
 
-        // Initial login to Squarespace
-        await page.goto("https://secure.acuityscheduling.com/login.php?redirect=1", {
-            waitUntil: 'domcontentloaded'
-        });
+    console.log("Entering password on Squarespace login...");
+    // Use the specific password selector from the Squarespace flow
+    await page.waitForSelector("input[type='password']", { visible: true, timeout: SELECTOR_TIMEOUT });
+    await page.type("input[type='password']", acuity_password);
+    await delay(500); // Brief pause before clicking login
 
-        await page.type("input[type='email']", acuity_email);
-        await page.click("input[name='login']");
-        await page.waitForSelector("button#squarespace-continue", { visible: true, timeout: SELECTOR_TIMEOUT });
-        await page.click("button#squarespace-continue");
-        // Wait for the email input field
-        await page.waitForSelector("input[type='email']", { visible: true, timeout: SELECTOR_TIMEOUT });
+    console.log("Clicking final Squarespace login button...");
+    // Use the specific login button selector from the Squarespace flow
+    await page.waitForSelector("button#login-button", { visible: true, timeout: SELECTOR_TIMEOUT });
+    
+    // Keep clicking the login button until the page changes
+    let currentUrl = page.url();
+    let attempts = 0;
+    const maxAttempts = 10; // Safety limit
+    
+    while (attempts < maxAttempts) {
+        await page.click("button#login-button");
+        console.log(`Login button click attempt ${attempts + 1}`);
+        await delay(1000); // One second delay between clicks
         
-        // Type the email into the input field
-        await page.type("input[type='email']", acuity_email);
-        // Wait for password input and type password
-        await page.waitForSelector("input[type='password']", { visible: true, timeout: SELECTOR_TIMEOUT });
-        await page.type("input[type='password']", acuity_password);
-        // // Click the login button
-        // Click the login button
-        await delay(1000)
-        await page.waitForSelector("button#login-button", { visible: true, timeout: SELECTOR_TIMEOUT });
-        await page.click("button#login-button");
-        await delay(2000)
-        await page.click("button#login-button");
-
-        console.log("Login button clicked");
-
-        // // Press the escape key to close any open modal or dialog
-        // Wait for and handle the updated client scheduling page popup
-        try {
-            await page.waitForSelector('.css-1q1n1n3', { visible: true, timeout: 15000 });
-            await delay(1000); // Brief delay to ensure popup is fully loaded
-        } catch (error) {
-            console.log("Popup not found, continuing...");
+        // Check if the page URL has changed
+        const newUrl = page.url();
+        if (newUrl !== currentUrl) {
+            console.log("Page changed after login button clicks");
+            break;
         }
-        await page.keyboard.press('Escape');
-        console.log("Escape key pressed");
-        await delay(2000)
-        // LOGIN SEQUENCE COMPLETE 
+        
+        attempts++;
+    }
 
-        // --- Start: Modified code to find iframe and click appointments ---
-        console.log(`Current page URL: ${page.url()}`);
-        console.log("Attempting to find the scheduling iframe...");
+    console.log("Waiting after login click...");
+    // Add a longer delay or wait for a specific element on the next page to ensure login completes
+    await delay(5000); // Wait 5 seconds for page transition
 
-        const iframeSelector = 'iframe[data-test="scheduling"]'; // Use data-test attribute for iframe selector
-        let calendarFrame;
 
-        try {
-            // Wait for the iframe element to be present and visible
-            await page.waitForSelector(iframeSelector, { visible: true, timeout: 30000 });
-            const iframeElementHandle = await page.$(iframeSelector);
-            
-            if (!iframeElementHandle) {
-                throw new Error("Could not find the iframe element handle using selector: " + iframeSelector);
-            }
 
-            // Get the content frame of the iframe
-            calendarFrame = await iframeElementHandle.contentFrame();
-            if (!calendarFrame) {
-                throw new Error("Could not get content frame for the iframe.");
-            }
-            console.log("Successfully found and accessed the iframe content frame.");
-            
-            // Allow a brief moment for frame content to potentially finish loading after access
-            await delay(1000); 
-
-            console.log("Attempting to find and click appointment elements within the iframe...");
-            const appointmentSelector = 'div.timeslot.appointment'; // Selector for appointments inside the iframe
-            
-            // IMPORTANT: Use calendarFrame for interactions inside the iframe
-            await calendarFrame.waitForSelector(appointmentSelector, { visible: true, timeout: 30000 }); 
-            const appointmentElements = await calendarFrame.$$(appointmentSelector);
-            console.log(`Found ${appointmentElements.length} appointment elements inside the iframe.`);
-
-            if (appointmentElements.length === 0) {
-                console.log("No appointment elements found within the iframe using selector: " + appointmentSelector);
-            }
-
-            for (const elementHandle of appointmentElements) {
-                console.log("Clicking an appointment element inside the iframe...");
-                // Click the element within the iframe's context
-                await elementHandle.click(); 
-                
-                // --- Start: Added logic to get phone and close details ---
-                try {
-                    // Wait for the appointment details section/modal to appear (using phone label as indicator)
-                    const phoneSelector = 'a[data-testid="phone-label"]';
-                    await calendarFrame.waitForSelector(phoneSelector, { visible: true, timeout: 10000 });
-                    
-                    // Get the phone number element
-                    const phoneElement = await calendarFrame.$(phoneSelector);
-                    if (phoneElement) {
-                        const phoneNumber = await phoneElement.evaluate(el => el.textContent);
-                        console.log(`Phone Number: ${phoneNumber.trim()}`);
-                    } else {
-                        console.log("Phone number element not found in details.");
-                    }
-
-                    // Find and click the close button
-                    const closeButtonSelector = 'a[data-testid="close-appointment-detail"]';
-                    const closeButton = await calendarFrame.$(closeButtonSelector);
-                    if (closeButton) {
-                        console.log("Clicking the close button...");
-                        await closeButton.click();
-                        // Wait a moment for the modal/details to close before next iteration
-                        await delay(1500); 
-                    } else {
-                        console.log("Close button not found.");
-                        // Optional: Press Escape as a fallback if the button isn't found
-                        // await calendarFrame.keyboard.press('Escape');
-                        // await delay(500);
-                    }
-                } catch (detailError) {
-                    console.error("Error processing appointment details or closing:", detailError);
-                    // Attempt to recover by pressing Escape if details interaction failed
-                    try {
-                         await page.keyboard.press('Escape'); // Try main page context first
-                         await delay(500);
-                    } catch (escapeError) {
-                         console.log("Failed to press Escape after detail error.");
-                    }
-                }
-                // --- End: Added logic ---
-
-                // await delay(1000); // Original delay after click is now handled after closing modal
-            }
-            console.log("Finished clicking appointment elements inside the iframe.");
-
-        } catch (error) {
-            console.error("Error finding/interacting with iframe or its contents:", error); // More specific error logging
+    console.log("Handling potential post-login popup...");
+    try {
+        // Use a more generic selector or wait for navigation if popup is inconsistent
+        await page.waitForSelector('body', { timeout: 10000 }); // Wait for body to be ready
+        
+        // Look for the close button and click it instead of pressing Escape
+        const closeButtonSelector = 'span.css-19p0dx4 span';
+        const closeButton = await page.$(closeButtonSelector);
+        if (closeButton) {
+            await closeButton.click();
+            console.log("Close button clicked to dismiss popup.");
+        } else {
+            console.log("Close button not found, popup may not be present.");
         }
-        // --- End: Modified code ---
-
+        
+        await delay(1000);
     } catch (error) {
-        console.error("Error during login or appointment interaction:", error); // Updated error message
-    } finally {
-        await delay(2000)
-        // await browser.close()
+        console.log("No popup detected or error handling popup:", error.message);
+    }
+
+    await delay(1000); // Final small delay
+    console.log("Login function finished.");
+    return { browser, page };
+}
+
+/**
+ * Finds the scheduling iframe and returns its content frame.
+ * @param {object} page
+ * @returns {Promise<object>} calendarFrame
+ */
+async function getCalendarFrame(page) {
+    const iframeSelector = 'iframe[data-test="scheduling"]';
+    await page.waitForSelector(iframeSelector, { visible: true, timeout: 30000 });
+    const iframeElementHandle = await page.$(iframeSelector);
+    
+    if (!iframeElementHandle) {
+        throw new Error("Could not find the iframe element handle using selector: " + iframeSelector);
+    }
+
+    const calendarFrame = await iframeElementHandle.contentFrame();
+    if (!calendarFrame) {
+        throw new Error("Could not get content frame for the iframe.");
+    }
+    console.log("Successfully found and accessed the iframe content frame.");
+    
+    await delay(1000); 
+
+    return calendarFrame;
+}
+
+/**
+ * Scrapes all appointment elements and processes them.
+ * @param {object} calendarFrame
+ * @param {number} userId
+ */
+async function scrapeAndProcessAppointments(calendarFrame, userId) {
+    const appointmentSelector = 'div.timeslot.appointment';
+    await calendarFrame.waitForSelector(appointmentSelector, { visible: true, timeout: 30000 });
+    const appointmentElements = await calendarFrame.$$(appointmentSelector);
+    console.log(`Found ${appointmentElements.length} appointment elements inside the iframe.`);
+    
+    if (appointmentElements.length === 0) {
+        console.log("No appointment elements found within the iframe using selector: " + appointmentSelector);
+    }
+
+    for (const elementHandle of appointmentElements) {
+        await processSingleAppointment(elementHandle, calendarFrame, userId);
     }
 }
 
-async function scrapeAppointments(page) {
-
+/**
+ * Processes a single appointment element: clicks, extracts, and creates DB record.
+ * @param {object} elementHandle
+ * @param {object} calendarFrame
+ * @param {number} userId
+ */
+async function processSingleAppointment(elementHandle, calendarFrame, userId) {
+    try {
+        await elementHandle.click();
+        await delay(1000);
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const isEntered = await calendarFrame.$('a[data-testid="phone-label"]');
+            if (isEntered) {
+                console.log("Successfully entered appointment details");
+                break;
+            }
+            
+            console.log(`Additional click attempt ${attempt + 1}...`);
+            await elementHandle.click();
+            await delay(1500);
+        }
+        await extractAndCreateAppointment(calendarFrame, userId);
+    } catch (error) {
+        console.error("Error processing single appointment:", error);
+    }
 }
 
-//Gets the CSV from my downloads folder and saves it locally in the program
-async function getCSV() {
-    const downloadsDir = path.resolve(os.homedir(), 'Downloads');
-    const targetDir = path.resolve(__dirname, '../../data');
-    const filename = 'list.csv';
-    const sourceFile = path.join(downloadsDir, filename);
-    const destFile = path.join(targetDir, filename);
+/**
+ * Extracts appointment details from the open details modal and creates the appointment in DB.
+ * @param {object} calendarFrame
+ * @param {number} userId
+ */
+async function extractAndCreateAppointment(calendarFrame, userId) {
+    try {
+        const phoneSelector = 'a[data-testid="phone-label"]';
+        await calendarFrame.waitForSelector(phoneSelector, { visible: true, timeout: 10000 });
+        
+        const phoneElement = await calendarFrame.$(phoneSelector);
+        let phoneNumber = '';
+        if (phoneElement) {
+            phoneNumber = await phoneElement.evaluate(el => el.textContent.trim());
+            console.log(`Phone Number: ${phoneNumber}`);
+        } else {
+            console.log("Phone number element not found in details.");
+            return;
+        }
+        
+        const { appointmentDate, appointmentStartTime, appointmentEndTime } = await extractDateTime(calendarFrame);
+        
+        const { appointmentType, barber } = await extractTypeAndBarber(calendarFrame);
+        
+        console.log("Looking up client by phone number:", phoneNumber);
+        const client = await getClientByPhoneNumber(phoneNumber, userId);
+        console.log("Client lookup result:", client);
+        
+        if (client && client.id) {
+            const clientId = client.id;
+            console.log(`Found client with ID: ${clientId}`);
+            
+            const price = DEFAULT_PRICES[appointmentType] || 35.00;
+            
+            console.log("Creating appointment with the following details:");
+            console.log({
+                appointmentType,
+                acuityId: 0,
+                date: appointmentDate,
+                startTime: appointmentStartTime,
+                endTime: appointmentEndTime,
+                clientId,
+                details: `${appointmentType} with ${barber}`,
+                price,
+                paid: false,
+                tipAmount: 0,
+                paymentMethod: null,
+                addOns: null,
+                userId
+            });
+            
+            await createAppointment(
+                appointmentType,
+                0,
+                appointmentDate,
+                appointmentStartTime,
+                appointmentEndTime,
+                clientId,
+                `${appointmentType} with ${barber}`,
+                price,
+                false,
+                0,
+                null,
+                null,
+                userId
+            );
+            console.log(`Successfully created appointment with ID: ${clientId}`);
+        } else {
+            console.log(`No client found with phone number: ${phoneNumber}`);
+        }
+        await closeAppointmentDetails(calendarFrame);
+    } catch (error) {
+        console.error("Error extracting/creating appointment:", error);
+        await closeAppointmentDetails(calendarFrame);
+    }
+}
 
-    if (fs.existsSync(sourceFile)) {
-        fs.renameSync(sourceFile, destFile);
-        console.log(`File moved to ${destFile}`);
+/**
+ * Extracts date, start time, and end time from the appointment details modal.
+ * @param {object} calendarFrame
+ * @returns {Promise<{appointmentDate: string, appointmentStartTime: string, appointmentEndTime: string}>}
+ */
+async function extractDateTime(calendarFrame) {
+    const timeElements = await calendarFrame.$$('div.appointment-details-date-time');
+    console.log(`Found ${timeElements.length} time-related elements`);
+    
+    let appointmentDate = '';
+    let appointmentStartTime = '';
+    let appointmentEndTime = '';
+    let appointmentDuration = '';
+    
+    for (let i = 0; i < timeElements.length; i++) {
+        const elementText = await timeElements[i].evaluate(el => el.textContent.trim());
+        console.log(`Time Element ${i + 1}: ${elementText}`);
+        
+        if (i === 0 && elementText.includes(',')) {
+            appointmentDate = moment(elementText, "dddd, MMMM D, YYYY").format("YYYY-MM-DD");
+            console.log(`Found Date: ${appointmentDate}`);
+        }
+        else if (elementText.includes('-') && elementText.includes('am') || elementText.includes('pm')) {
+            const timeRangeRegex = /(\d+:\d+[ap]m)\s*-\s*(\d+:\d+[ap]m)/;
+            const match = elementText.match(timeRangeRegex);
+            
+            if (match) {
+                appointmentStartTime = moment(match[1], "h:mma").format("HH:mm");
+                appointmentEndTime = moment(match[2], "h:mma").format("HH:mm");
+                console.log(`Found Time Range: ${appointmentStartTime} - ${appointmentEndTime}`);
+            }
+        }
+        else if (elementText.includes('min')) {
+            appointmentDuration = elementText;
+            console.log(`Found Duration: ${appointmentDuration}`);
+            
+            if (appointmentStartTime && !appointmentEndTime) {
+                const durationMinutes = parseInt(appointmentDuration.replace('min', '').trim());
+                if (!isNaN(durationMinutes) && durationMinutes > 0) {
+                    appointmentEndTime = moment(appointmentStartTime, "HH:mm")
+                        .add(durationMinutes, 'minutes')
+                        .format("HH:mm");
+                    console.log(`Calculated End Time from Duration: ${appointmentEndTime}`);
+                }
+            }
+        }
+    }
+    
+    if (!appointmentDate) {
+        const today = new Date();
+        appointmentDate = moment(today).format("YYYY-MM-DD");
+        console.log(`Using default date: ${appointmentDate}`);
+    }
+    
+    if (!appointmentStartTime) {
+        appointmentStartTime = "10:00";
+        console.log(`Using default start time: ${appointmentStartTime}`);
+    }
+    
+    if (!appointmentEndTime) {
+        appointmentEndTime = "10:30";
+        console.log(`Using default end time: ${appointmentEndTime}`);
+    }
+    
+    return { appointmentDate, appointmentStartTime, appointmentEndTime };
+}
+
+/**
+ * Extracts appointment type and barber from the details modal.
+ * @param {object} calendarFrame
+ * @returns {Promise<{appointmentType: string, barber: string}>}
+ */
+async function extractTypeAndBarber(calendarFrame) {
+    const typeSelector = 'div.appointment-details-name span.edit-hidden.edit-appointment';
+    const typeElement = await calendarFrame.$(typeSelector);
+    let appointmentType = '';
+    let barber = '';
+    
+    if (typeElement) {
+        const fullText = await typeElement.evaluate(el => el.textContent.trim());
+        const parts = fullText.split('with');
+        if (parts.length >= 2) {
+            appointmentType = parts[0].trim();
+            barber = parts[1].trim();
+            console.log(`Appointment Type: ${appointmentType}`);
+            console.log(`Barber: ${barber}`);
+        } else {
+            console.log(`Appointment Details: ${fullText}`);
+            appointmentType = fullText.trim();
+        }
     } else {
-        console.log('File not found');
+        console.log("Appointment type element not found in details.");
+        appointmentType = "Adult Cut";
+    }
+    
+    return { appointmentType, barber };
+}
+
+/**
+ * Closes the appointment details modal.
+ * @param {object} calendarFrame
+ */
+async function closeAppointmentDetails(calendarFrame) {
+    try {
+        const closeButtonSelector = 'a[data-testid="close-appointment-detail"]';
+        await calendarFrame.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 });
+        await calendarFrame.click(closeButtonSelector);
+        await delay(1000);
+    } catch (error) {
+        console.log("Failed to close appointment details with Close button, trying Escape key as fallback");
+        try {
+            await calendarFrame.page().keyboard.press('Escape');
+            await delay(1000);
+        } catch (escapeError) {
+            console.log("Failed to close appointment details with Escape key");
+        }
     }
 }
 
-
-async function main() {
-    await login()
+async function main(userId = 1) {
+    const { browser, page } = await launchAndLogin();
+    try {
+        const calendarFrame = await getCalendarFrame(page);
+        await scrapeAndProcessAppointments(calendarFrame, userId);
+    } catch (error) {
+        console.error("Error in main flow:", error);
+    } finally {
+        await delay(2000);
+        await browser.close();
+        console.log("Browser closed");
+    }
 }
 
-main()
-module.exports = {login, getCSV};
+if (require.main === module) {
+    main();
+}
+
+module.exports = {
+    launchAndLogin,
+    getCalendarFrame,
+    scrapeAndProcessAppointments,
+    processSingleAppointment,
+    extractAndCreateAppointment,
+    extractDateTime,
+    extractTypeAndBarber,
+    closeAppointmentDetails
+};

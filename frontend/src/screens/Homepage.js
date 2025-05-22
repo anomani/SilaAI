@@ -42,6 +42,13 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('FillMyCalendar')}>
+          <View style={styles.menuTextContainer}>
+            <Text style={styles.menuTitle}>Fill My Calendar</Text>
+            <Text style={styles.menuSubtitle}>Automatically reach out to clients to fill empty slots</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#fff" />
+        </TouchableOpacity>
         {/* <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Metrics')}>
           <View style={styles.menuTextContainer}>
             <Text style={styles.menuTitle}>Metrics</Text>
@@ -62,13 +69,6 @@ const Homepage = ({ navigation }) => {
             <Text style={styles.menuSubtitle}>Manage your account</Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-          <View style={styles.menuTextContainer}>
-            <Text style={styles.menuTitle}>Logout</Text>
-            <Text style={styles.menuSubtitle}>Sign out of your account</Text>
-          </View>
-          <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
       <Footer navigation={navigation} />

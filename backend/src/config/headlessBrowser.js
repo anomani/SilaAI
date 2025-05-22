@@ -7,7 +7,10 @@ const path = require('path')
 const moment = require('moment'); // Add moment library
 const {createAppointment} = require('../model/appointment')
 const {getClientByPhoneNumber} = require('../model/clients')
-const apiKey = process.env.BROWSERCLOUD_API_KEY;
+// Import the launchAndLogin function
+const { launchAndLogin } = require('./squarespace'); // Added import
+// Remove apiKey as it's handled within launchAndLogin now
+// const apiKey = process.env.BROWSERCLOUD_API_KEY;
 
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -15,7 +18,6 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function getClients() {
     userId = 67
-    const browserWSEndpoint = `wss://chrome-v2.browsercloud.io?token=${apiKey}`;
     let browser;
     try {
         // Connect to BrowserCloud
@@ -150,113 +152,198 @@ async function getCSV() {
 }
 
 async function getClientsSquarespace() {
-    userId = 67
+    let userId = 67 // Keep userId for getClientByPhoneNumber
     let browser;
+    let page; // Declare page variable
+
     try {
-        // Connect to BrowserCloud
-        browser = await puppeteer.launch({ headless: false });
-        const page = await browser.newPage();
+        // Call the imported launchAndLogin function
+        const loginResult = await launchAndLogin(); // Replaced login block
+        browser = loginResult.browser;
+        page = loginResult.page;
+        console.log("Login completed via imported function.");
 
-        // Set a realistic user agent
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+        // Removed the original login sequence:
+        // browser = await puppeteer.launch({ headless: false });
+        // const page = await browser.newPage();
+        // await page.setUserAgent(...)
+        // await page.goto(...)
+        // await page.waitForSelector(...)
+        // await page.type(...)
+        // await page.type(...)
+        // await page.click(...)
+        // await delay(...)
+        // let currentUrl = page.url();
+        // let attempts = 0;
+        // const maxAttempts = 10;
+        // while (...) { ... }
+        // if (...) { ... } else { ... }
+        // await delay(...)
+        // await page.keyboard.press('Escape');
+        // console.log("Escape key pressed");
+        // await delay(...)
 
-        // Initial login to Squarespace
-        await page.goto("https://shallot-lion-7exn.squarespace.com/config/scheduling/appointments.php", {
-            waitUntil: 'domcontentloaded'
+        // Navigate to the clients page after successful login
+        await page.goto("https://shallot-lion-7exn.squarespace.com/config/scheduling/admin/clients", { // Updated URL to Acuity
+            waitUntil: 'networkidle0' // Changed from domcontentloaded for potential stability
         });
-        await page.waitForSelector("input[type='email']", { visible: true });
-        await page.type("input[type='email']", 'abfades.info@gmail.com');
-        await page.type("input[type='password']", 'skinfade');
-        await page.click("button[type='submit']");
+        console.log("Navigated to Acuity clients page.");
+        await delay(5000); // Wait for page to potentially load within iframe
 
-        // Press the escape key to close any open modal or dialog
-        await delay(3000)
-        await page.keyboard.press('Escape');
-        console.log("Escape key pressed");
+        // --- Frame Handling Logic ---
+        // NOTE: Acuity's client page structure might be different from Squarespace's.
+        // The frame finding logic below might need significant adjustments
+        // if Acuity doesn't use an iframe in the same way, or if element selectors differ.
+        // It's possible Acuity loads clients directly on the page without an iframe.
 
-        await delay(5000)
-        await page.goto("https://shallot-lion-7exn.squarespace.com/config/scheduling/admin/clients", {
-            waitUntil: 'networkidle0'
-        });
-        await delay(2000); // Wait for 10 seconds to ensure everything is loaded
+        console.log("Attempting to find clients directly on the page first...");
+        let targetFrame = page; // Assume no iframe initially
+        let clientElementsDirect = await targetFrame.$$('td.lastName'); // Using Acuity's typical selector
 
-        const frames = await page.frames();
-        console.log(`Total frames: ${frames.length}`);
+        if (clientElementsDirect.length === 0) {
+            console.log("No clients found directly, checking for iframes...");
+            const frames = await page.frames();
+            console.log(`Total frames: ${frames.length}`);
 
-        let targetFrame;
-        for (let frame of frames) {
-            console.log(`Checking frame: ${frame.name() || 'Unnamed'}`);
-            try {
-                const clientElements = await frame.$$('td.lastName');
-                if (clientElements.length > 0) {
-                    targetFrame = frame;
-                    break;
+            for (let frame of frames) {
+                console.log(`Checking frame: ${frame.url()}`); // Log URL for better identification
+                try {
+                    // Use Acuity's client list selector
+                    const clientElements = await frame.$$('td.lastName');
+                    if (clientElements.length > 0) {
+                        console.log(`Found clients in frame: ${frame.url()}`);
+                        targetFrame = frame;
+                        break;
+                    }
+                } catch (error) {
+                    // Frame might be inaccessible (cross-origin) or detached
+                    if (!error.message.includes('Target closed') && !error.message.includes('frame was detached')) {
+                       console.log(`Non-critical error accessing frame ${frame.url()}: ${error.message}`);
+                    }
                 }
-            } catch (error) {
-                console.log(`Error accessing frame: ${error.message}`);
             }
+        } else {
+             console.log("Found clients directly on the page.");
         }
 
-        if (targetFrame) {
-            console.log('Found target frame, attempting to extract content');
+
+        if (targetFrame && targetFrame !== page) {
+             console.log('Working within identified iframe.');
+        } else if (targetFrame === page && clientElementsDirect.length > 0) {
+             console.log('Working directly on the main page.');
+        }
+         else {
+            console.log('Could not find client list container (neither directly nor in iframe). Aborting scrape.');
+            throw new Error('Client list container not found.'); // Throw error if no clients found anywhere
+        }
+
             try {
-                await targetFrame.waitForSelector('td.lastName', { timeout: 30000 });
-                
+                // Use Acuity selectors now
+                const clientSelector = 'td.lastName'; // Acuity selector
+                await targetFrame.waitForSelector(clientSelector, { timeout: 30000 });
+
                 // Scroll to load all clients
                 let previousHeight;
                 while (true) {
                     previousHeight = await targetFrame.evaluate('document.body.scrollHeight');
                     await targetFrame.evaluate('window.scrollTo(0, document.body.scrollHeight)');
-                    await delay(2000); // Wait for new clients to load
+                    await delay(3000); // Increased delay for potentially slower loading
                     const newHeight = await targetFrame.evaluate('document.body.scrollHeight');
                     if (newHeight === previousHeight) break;
+                    console.log("Scrolling to load more clients...");
                 }
-                
-                const clientLinksCount = await targetFrame.$$eval("td.lastName", links => links.length);
-                console.log(`Found ${clientLinksCount} clients`);
 
-                for (let i = 837; i < clientLinksCount; i++) {
+                const clientLinksCount = await targetFrame.$$eval(clientSelector, links => links.length);
+                console.log(`Found ${clientLinksCount} clients after scrolling.`);
+
+                if (clientLinksCount === 0) {
+                    console.log("No client links found even after scrolling.");
+                }
+
+
+                for (let i = 0; i < clientLinksCount; i++) {
                     try {
-                        await targetFrame.waitForSelector("td.lastName", { visible: true });
+                        await targetFrame.waitForSelector(clientSelector, { visible: true });
                         // Click on the client link by index
-                        await targetFrame.evaluate(index => {
-                            document.querySelectorAll("td.lastName")[index].click();
-                        }, i);
+                        // Ensure selector is still valid after potential DOM changes
+                        const clientLinks = await targetFrame.$$(clientSelector);
+                        if (clientLinks[i]) {
+                            await clientLinks[i].click();
+                             console.log(`Clicked client link ${i + 1}/${clientLinksCount}`);
+                        } else {
+                             console.log(`Client link at index ${i} not found, skipping.`);
+                             continue;
+                        }
 
-                        await targetFrame.waitForSelector(".start-time");
-                        const clientName = await targetFrame.$eval(".field-rendered.edit-client", el => el.innerText);
-                        const clientNumber = await targetFrame.$eval("a.real-link[data-testid='added-client-phone']", el => el.innerText);
 
-                        await targetFrame.waitForSelector(".appointment-item", { timeout: 10000 });
-                        const appointments = await targetFrame.$$(".appointment-item");
-                        console.log("Number of appointments: ", appointments.length)
+                        // Wait for details to load - Use selectors valid on Acuity client detail page
+                        await targetFrame.waitForSelector(".appointment-item", { timeout: 10000 }); // Example selector, adjust if needed
+
+                        const clientName = await targetFrame.$eval(".field-rendered.edit-client", el => el.innerText); // Check if selector is correct for Acuity
+                        const clientNumber = await targetFrame.$eval("a.real-link[data-testid='added-client-phone']", el => el.innerText); // Check if selector is correct for Acuity
+
+                        const appointments = await targetFrame.$$(".appointment-item"); // Check selector
+                        console.log(`Client: ${clientName}, Appointments found: ${appointments.length}`);
+
                         for (const appointmentElement of appointments) {
+                             // Use selectors valid within Acuity's appointment item structure
                             const startTime = await appointmentElement.$eval(".start-time", el => el.innerText);
                             const endTime = await appointmentElement.$eval(".end-time", el => el.innerText);
                             const dateOfAppointment = await appointmentElement.$eval("a[data-testid='docket-appointment-detail-link']", el => el.innerText);
                             const typeOfAppointment = await appointmentElement.$eval(".appointment-type-name", el => el.innerText);
-                            const cleanedTypeOfAppointment = typeOfAppointment.replace(/\\n\\t/g, '');
-                            // Convert times to HH:MM in military time
+                            // Clean type if needed (might not have \n\t in Acuity)
+                            const cleanedTypeOfAppointment = typeOfAppointment.replace(/[\n\t]/g, '').trim();
+
+                            // Date/Time Formatting
                             const startTimeMilitary = moment(startTime, ["h:mm A"]).format("HH:mm");
                             const endTimeMilitary = moment(endTime, ["h:mm A"]).format("HH:mm");
-                            // Convert date to YYYY-MM-DD
                             const dateOfAppointmentFormatted = moment(dateOfAppointment, "dddd, MMMM D, YYYY").format("YYYY-MM-DD");
-                            await targetFrame.click("a[data-testid='docket-appointment-detail-link']");
-                            console.log("Appointment detail link clicked")
-                            let paymentPriceNumeric;
-                            try {   
-                                await targetFrame.waitForSelector("span.payment-price[data-testid='payment-price-text']", { visible: true, timeout: 10000 });
-                                const paymentPrice = await targetFrame.$eval("span.payment-price[data-testid='payment-price-text']", el => el.innerText);
-                                paymentPriceNumeric = paymentPrice.replace(/[^0-9.]/g, '');
-                                await targetFrame.click("a.detail-nav-link.btn.btn-inverse.hidden-print.detail-nav-link[data-testid='appt-details-close-btn']");
-                                console.log("Payment price close button clicked")
-                            }
-                            catch(e) {
-                                await targetFrame.click("a.detail-nav-link.btn.btn-inverse.hidden-print.detail-nav-link[data-testid='appt-details-close-btn']");
-                                console.log("Payment price close button clicked")
-                            }   
 
-                            await targetFrame.waitForSelector(".start-time", { timeout: 10000 });
+                            // --- Price Extraction ---
+                            // Click into the appointment detail to get the price
+                             const detailLink = await appointmentElement.$("a[data-testid='docket-appointment-detail-link']");
+                             if (detailLink) {
+                                await detailLink.click();
+                                console.log("Clicked appointment detail link");
+                             } else {
+                                console.log("Could not find appointment detail link.");
+                                continue; // Skip if cannot get price
+                             }
+
+                            let paymentPriceNumeric = null; // Default to null
+                            try {
+                                // Wait for the price element within the details view (Acuity selector)
+                                const priceSelector = "span.payment-price[data-testid='payment-price-text']"; // Or appropriate Acuity selector
+                                await targetFrame.waitForSelector(priceSelector, { visible: true, timeout: 10000 });
+                                const paymentPrice = await targetFrame.$eval(priceSelector, el => el.innerText);
+                                paymentPriceNumeric = paymentPrice.replace(/[^0-9.]/g, '');
+                                console.log(`Found price: ${paymentPriceNumeric}`);
+
+                                // Close the detail view (Acuity close button selector)
+                                const closeButtonSelector = "a.detail-nav-link.btn.btn-inverse.hidden-print[data-testid='appt-details-close-btn']"; // Adjust if needed
+                                await targetFrame.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 });
+                                await targetFrame.click(closeButtonSelector);
+                                console.log("Closed appointment detail view");
+
+                            } catch (e) {
+                                console.log(`Could not extract price for this appointment: ${e.message}`);
+                                // Try to close the detail view even if price extraction failed
+                                try {
+                                    const closeButtonSelector = "a.detail-nav-link.btn.btn-inverse.hidden-print[data-testid='appt-details-close-btn']";
+                                     await targetFrame.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 });
+                                    await targetFrame.click(closeButtonSelector);
+                                    console.log("Closed appointment detail view after price error.");
+                                } catch (closeError) {
+                                    console.log("Failed to close detail view after price error. Attempting back navigation.");
+                                     await targetFrame.goBack({ waitUntil: 'networkidle0' }); // Fallback
+                                }
+                            }
+
+                             // Wait briefly after closing details before next iteration
+                            await targetFrame.waitForSelector(".appointment-item", { timeout: 10000 }); // Wait for list item again
+
+
+                            // Log extracted data
                             console.log({
                                 clientName,
                                 clientNumber,
@@ -264,44 +351,74 @@ async function getClientsSquarespace() {
                                 endTime: endTimeMilitary,
                                 dateOfAppointment: dateOfAppointmentFormatted,
                                 typeOfAppointment: cleanedTypeOfAppointment,
-                                paymentPrice: paymentPriceNumeric
+                                paymentPrice: paymentPriceNumeric // Will be null if not found/extracted
                             });
+                            // Get client and create appointment
                             const client = await getClientByPhoneNumber(clientNumber, userId);
-                            console.log(client)
+                            console.log("Client lookup result:", client ? `Found ID: ${client.id}` : "Not found");
                             if (client) {
+                                // Use extracted price, or null if not found
                                 const appointment = await createAppointment(cleanedTypeOfAppointment, null, dateOfAppointmentFormatted, startTimeMilitary, endTimeMilitary, client.id, "", paymentPriceNumeric, null, null, null, null, userId);
+                                console.log("Appointment creation attempted.");
                             }
                         }
+                         // Back to client list (Acuity selector)
+                        await targetFrame.waitForSelector("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print", { visible: true, timeout: 10000 }); // Ensure back button is ready
                         await targetFrame.click("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
-                        console.log("Back button clicked");
-                        
+                        console.log("Back button to client list clicked");
+                        await delay(2000); // Wait for list page to reload
+
                     } catch (e) {
                         console.log(`Error processing client at index ${i}: ${e.message}`);
-                        await targetFrame.click("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
-                        console.log("Back button clicked");
-                        await delay(2000);
+                         console.log("Attempting to navigate back to client list...");
+                        try {
+                             // Try clicking the main back button if available
+                            const backButton = await targetFrame.$("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
+                             if (backButton) {
+                                await backButton.click();
+                                console.log("Clicked main back button.");
+                             } else {
+                                console.log("Main back button not found, trying browser back.");
+                                await targetFrame.goBack({ waitUntil: 'networkidle0' });
+                             }
+                         } catch (navError) {
+                            console.log(`Navigation error after client processing error: ${navError.message}. Trying direct navigation.`);
+                             await page.goto("https://secure.acuityscheduling.com/admin/clients", { waitUntil: 'networkidle0' }); // Go back forcefully
+                         }
+                        await delay(3000); // Longer delay after error
                         continue;
                     }
                 }
             } catch (error) {
-                console.log(`Error accessing target frame: ${error.message}`);
+                console.log(`Error processing client list: ${error.message}`);
+                // Add screenshot on error for debugging
+                const screenshotPath = path.join(__dirname, `error_screenshot_${Date.now()}.png`);
+                await page.screenshot({ path: screenshotPath, fullPage: true });
+                console.log(`Screenshot saved to ${screenshotPath}`);
             }
-        } else {
-            console.log('Target frame not found');
-        }
+
 
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error in getClientsSquarespace:", error);
+         // Add screenshot on major error
+        if (page) {
+            const screenshotPath = path.join(__dirname, `major_error_screenshot_${Date.now()}.png`);
+            await page.screenshot({ path: screenshotPath, fullPage: true });
+            console.log(`Screenshot saved to ${screenshotPath}`);
+        }
     } finally {
         await delay(2000)
-        await browser.close()
+        if (browser) { // Check if browser exists before closing
+            await browser.close()
+             console.log("Browser closed.");
+        }
     }
 }
 
 async function main() {
-    await getClients()
+    await getClientsSquarespace()
 }
 
 main()
 
-module.exports = {getClients, getCSV};
+module.exports = {getClients, getCSV, getClientsSquarespace}; // Added getClientsSquarespace to exports if needed elsewhere

@@ -2,8 +2,8 @@ import axios from 'axios';
 import { getToken } from '../utils/auth';
 
 // Replace with your backend API URL
-const API_URL = 'https://lab-sweeping-typically.ngrok-free.app/api';
-// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+// const API_URL = 'https://759c-2607-f470-6-3001-2d62-c9de-bf24-7019.ngrok-free.app/api';
+const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -571,7 +571,39 @@ export const setFillMyCalendarStatus = async (status) => {
     console.error('Error setting fillMyCalendar status:', error);
     throw error;
   }
-  
+};
+
+// Add these new functions for Fill My Calendar dashboard
+export const getFillMyCalendarData = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.get('/fillMyCalendar/data')));
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching fillMyCalendar data:', error);
+    throw error;
+  }
+};
+
+export const runFillMyCalendar = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.post('/fillMyCalendar/run')));
+    return response.data;
+  } catch (error) {
+    console.error('Error running fillMyCalendar:', error);
+    throw error;
+  }
+};
+
+export const updateClientOutreachMessage = async (clientId, message) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => 
+      api.put(`/clients/${clientId}/outreach-message`, { message })
+    ));
+    return response.data;
+  } catch (error) {
+    console.error('Error updating client outreach message:', error);
+    throw error;
+  }
 };
 
 export const updateAppointmentDetails = async (appointmentId, appointmentData) => {
