@@ -1,0 +1,7 @@
+---
+description: Check schema before doing anything related to the database
+globs: 
+alwaysApply: true
+---
+@schema.md
+Before doing anything related to the database check the schema.md file which is attached and update it if there are any changes to the schema. 
