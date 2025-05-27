@@ -120,7 +120,7 @@ async function handleIncomingMessage(req, res) {
       Body,
       business_line
     });
-  } else if (EventType === 'onMessageAdd' || EventType === 'onMessageAdded') {
+  } else if (EventType === 'onMessageAdd') {
     Author = req.body.Author;
     Body = req.body.Body;
     ConversationSid = req.body.ConversationSid;

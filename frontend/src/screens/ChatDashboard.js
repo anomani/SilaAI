@@ -108,7 +108,7 @@ const ChatDashboard = ({ navigation }) => {
       );
     
     if (activeTab === 'pending') {
-      filtered = filtered.filter(message => message.hassuggestedresponse);
+      filtered = filtered.filter(message => message.hassuggestedresponse && message.responsetype !== 'OUTREACH');
     }
 
     return filtered.sort((a, b) => {
@@ -198,11 +198,12 @@ const ChatDashboard = ({ navigation }) => {
     }
     
     let displayMessage, displayDate, clientMessage;
+    let isOutreach = message.responsetype === 'OUTREACH';
 
-    if (message.hassuggestedresponse === true) {
-      // Show both the client's message and the suggested response
+    if (message.hassuggestedresponse === true && !isOutreach) {
+      // Show both the client's message and the suggested response (only for non-outreach)
       displayMessage = message.suggestedresponse;
-      clientMessage = message.body; // This will be the client's last message
+      clientMessage = message.body; // This will be the client's last message if any
       displayDate = null;
     } else {
       displayMessage = message.body;
@@ -217,7 +218,7 @@ const ChatDashboard = ({ navigation }) => {
             <Text style={styles.clientName}>{senderName}</Text>
             {displayDate && <Text style={styles.messageTime}>{displayDate}</Text>}
           </View>
-          {message.hassuggestedresponse === true && (
+          {message.hassuggestedresponse === true && message.responsetype !== 'OUTREACH' && (
             <View style={styles.suggestedResponseActions}>
               <TouchableOpacity
                 style={[styles.actionButton, disabledButtons.has(message.clientid) && styles.disabledButton]}
@@ -253,16 +254,19 @@ const ChatDashboard = ({ navigation }) => {
             numberOfLines={2}
             ellipsizeMode="tail"
           >
-            {senderName}: {clientMessage}
+            {isOutreach ? "Previous conversation: " : `${senderName}: `}{clientMessage}
           </Text>
         )}
         {displayMessage && (
           <Text 
-            style={[styles.messageText, message.hassuggestedresponse === true && styles.suggestedResponseText]}
+            style={[
+              styles.messageText, 
+              message.hassuggestedresponse === true && !isOutreach && styles.suggestedResponseText
+            ]}
             numberOfLines={2}
             ellipsizeMode="tail"
           >
-            {message.hassuggestedresponse === true ? "Suggested: " : ""}
+            {message.hassuggestedresponse === true && !isOutreach ? "Suggested: " : ""}
             {displayMessage}
           </Text>
         )}
@@ -304,11 +308,13 @@ const ChatDashboard = ({ navigation }) => {
         style={styles.flatList}
         extraData={dashboardData}
         ListEmptyComponent={() => (
-          activeTab === 'pending' && (
-            <View style={styles.emptyStateContainer}>
+          <View style={styles.emptyStateContainer}>
+            {activeTab === 'pending' ? (
               <Text style={styles.emptyStateText}>No Pending Messages</Text>
-            </View>
-          )
+            ) : (
+              <Text style={styles.emptyStateText}>No Messages</Text>
+            )}
+          </View>
         )}
       />
       <Footer navigation={navigation} /> 
@@ -460,6 +466,16 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  outreachBadge: {
+    color: '#FF9800',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  outreachResponseText: {
+    fontStyle: 'italic',
+    color: '#FF9800', // Orange color for outreach responses
   },
 });
 
