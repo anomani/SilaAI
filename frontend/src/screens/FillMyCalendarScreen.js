@@ -1,58 +1,88 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Switch, Alert, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
-import { getFillMyCalendarStatus, setFillMyCalendarStatus, runFillMyCalendar, getFillMyCalendarData } from '../services/api';
+import BlastCountdownTimer from '../components/BlastCountdownTimer';
+import MetricsGrid from '../components/MetricsGrid';
+import MessageApprovalCard from '../components/MessageApprovalCard';
+import { 
+  getFillMyCalendarStatus, 
+  setFillMyCalendarStatus, 
+  runFillMyCalendar, 
+  getFillMyCalendarData,
+  getFillMyCalendarSystemStatus,
+  approveOutreachMessage,
+  rejectOutreachMessage,
+  bulkApproveOutreachMessages,
+  updateOutreachMessage,
+  getClientById
+} from '../services/api';
 import ClientOutreachCard from '../components/ClientOutreachCard';
 
 const FillMyCalendarScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
-  const [featureEnabled, setFeatureEnabled] = useState(false);
-  const [strategy, setStrategy] = useState('');
-  const [emptySlots, setEmptySlots] = useState({});
-  const [totalEmptySlots, setTotalEmptySlots] = useState(0);
-  const [clientsToContact, setClientsToContact] = useState([]);
-  const [upcomingClients, setUpcomingClients] = useState([]);
-  const [recentResults, setRecentResults] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [timeframeDays, setTimeframeDays] = useState(7);
+  const [featureEnabled, setFeatureEnabled] = useState(false);
+  
+  // System status
+  const [systemStatus, setSystemStatus] = useState({
+    isEnabled: false,
+    isRunning: false,
+    nextBlastTime: null,
+    timeUntilNext: 0,
+    isNextBlastToday: false
+  });
+  
+  // Dashboard data
+  const [todayMetrics, setTodayMetrics] = useState({});
+  const [appointmentData, setAppointmentData] = useState({});
+  const [pendingMessages, setPendingMessages] = useState([]);
+  const [clientPipeline, setClientPipeline] = useState({});
+  
+  // UI state
+  const [processingClients, setProcessingClients] = useState(new Set());
+  const [selectedMessages, setSelectedMessages] = useState(new Set());
 
   useEffect(() => {
     fetchInitialData();
+    
+    // Set up polling for real-time updates
+    const interval = setInterval(fetchSystemStatus, 30000); // Every 30 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      // Fetch feature status
-      const statusResponse = await getFillMyCalendarStatus();
-      setFeatureEnabled(statusResponse.status);
-      
-      // If the feature is enabled, fetch data
-      if (statusResponse.status) {
-        await fetchDashboardData();
-      }
+      await Promise.all([
+        fetchSystemStatus(),
+        fetchDashboardData()
+      ]);
     } catch (error) {
       console.error('Error fetching initial data:', error);
+      Alert.alert('Error', 'Failed to load dashboard data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSystemStatus = async () => {
+    try {
+      const status = await getFillMyCalendarSystemStatus();
+      setSystemStatus(status);
+      setFeatureEnabled(status.isEnabled);
+    } catch (error) {
+      console.error('Error fetching system status:', error);
     }
   };
 
   const fetchDashboardData = async () => {
     try {
       const data = await getFillMyCalendarData();
-      
-      // Update state with fetched data
-      if (data) {
-        setStrategy(data.recommendedStrategy || 'No active strategy');
-        setEmptySlots(data.appointmentData?.slotsByGroup || {});
-        setTotalEmptySlots(data.appointmentData?.totalEmptySpots || 0);
-        setClientsToContact(data.clientsToContact || []);
-        setUpcomingClients(data.upcomingClients || []);
-        setRecentResults(data.recentResults || []);
-        setTimeframeDays(data.appointmentData?.timeframeDays || 7);
-      }
+      setTodayMetrics(data.todayMetrics || {});
+      setAppointmentData(data.appointmentData || {});
+      setPendingMessages(data.pendingMessages || []);
+      setClientPipeline(data.clientPipeline || {});
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     }
@@ -62,39 +92,224 @@ const FillMyCalendarScreen = ({ navigation }) => {
     try {
       setFeatureEnabled(value);
       await setFillMyCalendarStatus(value);
+      await fetchSystemStatus();
       
       if (value) {
-        // If enabling the feature, fetch data
         await fetchDashboardData();
       }
     } catch (error) {
       console.error('Error toggling feature:', error);
-      // Revert UI if there was an error
       setFeatureEnabled(!value);
+      Alert.alert('Error', 'Failed to update system status');
     }
   };
 
   const handleRunNow = async () => {
+    Alert.alert(
+      'Run Fill My Calendar',
+      'This will analyze your calendar and create outreach messages for eligible clients. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Run Now', 
+          onPress: async () => {
+            try {
+              setRefreshing(true);
+              await runFillMyCalendar();
+              await fetchDashboardData();
+              Alert.alert('Success', 'Fill My Calendar process completed');
+            } catch (error) {
+              console.error('Error running Fill My Calendar:', error);
+              Alert.alert('Error', 'Failed to run Fill My Calendar process');
+            } finally {
+              setRefreshing(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleApproveMessage = async (clientId) => {
     try {
-      setRefreshing(true);
-      await runFillMyCalendar();
-      await fetchDashboardData();
+      setProcessingClients(prev => new Set([...prev, clientId]));
+      const result = await approveOutreachMessage(clientId);
+      
+      // Remove from pending messages
+      setPendingMessages(prev => prev.filter(msg => msg.id !== clientId));
+      
+      Alert.alert('Success', `Message sent to ${result.clientName}`);
+      await fetchDashboardData(); // Refresh to update metrics
     } catch (error) {
-      console.error('Error running Fill My Calendar:', error);
+      console.error('Error approving message:', error);
+      Alert.alert('Error', 'Failed to send message');
     } finally {
-      setRefreshing(false);
+      setProcessingClients(prev => {
+        const next = new Set(prev);
+        next.delete(clientId);
+        return next;
+      });
     }
   };
 
+  const handleRejectMessage = async (clientId) => {
+    try {
+      await rejectOutreachMessage(clientId);
+      setPendingMessages(prev => prev.filter(msg => msg.id !== clientId));
+    } catch (error) {
+      console.error('Error rejecting message:', error);
+      Alert.alert('Error', 'Failed to reject message');
+    }
+  };
+
+  const handleEditMessage = async (clientId, newMessage) => {
+    try {
+      await updateOutreachMessage(clientId, newMessage);
+      setPendingMessages(prev => 
+        prev.map(msg => 
+          msg.id === clientId ? { ...msg, message: newMessage } : msg
+        )
+      );
+    } catch (error) {
+      console.error('Error updating message:', error);
+      Alert.alert('Error', 'Failed to update message');
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (selectedMessages.size === 0) {
+      Alert.alert('No Selection', 'Please select messages to approve');
+      return;
+    }
+
+    Alert.alert(
+      'Bulk Approve',
+      `Send ${selectedMessages.size} outreach messages?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send All',
+          onPress: async () => {
+            try {
+              const clientIds = Array.from(selectedMessages);
+              setProcessingClients(prev => new Set([...prev, ...clientIds]));
+              
+              const result = await bulkApproveOutreachMessages(clientIds);
+              
+              // Remove successful sends from pending messages
+              setPendingMessages(prev => 
+                prev.filter(msg => !result.results.some(r => r.clientId === msg.id && r.success))
+              );
+              
+              setSelectedMessages(new Set());
+              
+              Alert.alert(
+                'Bulk Approve Complete',
+                `Successfully sent ${result.successCount} messages. ${result.errorCount} failed.`
+              );
+              
+              await fetchDashboardData();
+            } catch (error) {
+              console.error('Error bulk approving:', error);
+              Alert.alert('Error', 'Failed to send bulk messages');
+            } finally {
+              setProcessingClients(new Set());
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const toggleMessageSelection = (clientId) => {
+    setSelectedMessages(prev => {
+      const next = new Set(prev);
+      if (next.has(clientId)) {
+        next.delete(clientId);
+      } else {
+        next.add(clientId);
+      }
+      return next;
+    });
+  };
+
+  const handleClientPress = async (clientId, firstName, lastName) => {
+    try {
+      // Fetch full client details before navigation
+      const clientDetails = await getClientById(clientId);
+      navigation.navigate('ClientDetails', { 
+        client: {
+          id: clientId,
+          firstname: firstName,
+          lastname: lastName,
+          phonenumber: clientDetails.phonenumber,
+          email: clientDetails.email,
+          notes: clientDetails.notes
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching client details:', error);
+      Alert.alert('Error', 'Failed to load client details');
+    }
+  };
+
+  const renderMessageApprovalCard = ({ item: client }) => (
+    <MessageApprovalCard
+      client={client}
+      onApprove={handleApproveMessage}
+      onReject={handleRejectMessage}
+      onEdit={handleEditMessage}
+      isProcessing={processingClients.has(client.id)}
+      onClientPress={() => handleClientPress(client.id, client.firstName, client.lastName)}
+      isSelected={selectedMessages.has(client.id)}
+      onToggleSelection={() => toggleMessageSelection(client.id)}
+    />
+  );
+
   const renderEmptySlotsBreakdown = () => {
+    const { slotsByGroup = {} } = appointmentData;
+    
     return (
-      <View style={styles.sectionContent}>
-        {Object.entries(emptySlots).map(([group, count]) => (
-          <View key={group} style={styles.slotGroup}>
-            <Text style={styles.slotGroupName}>Group {group}</Text>
-            <Text style={styles.slotGroupCount}>{count}</Text>
+      <View style={styles.slotsBreakdown}>
+        <Text style={styles.sectionTitle}>Available Slots</Text>
+        <View style={styles.slotsGrid}>
+          <View style={styles.totalSlotsCard}>
+            <Text style={styles.totalSlotsNumber}>{appointmentData.totalEmptySpots || 0}</Text>
+            <Text style={styles.totalSlotsLabel}>Empty Slots</Text>
           </View>
-        ))}
+          <View style={styles.slotsDetails}>
+            {Object.entries(slotsByGroup).map(([group, count]) => (
+              <View key={group} style={styles.slotGroup}>
+                <Text style={styles.slotGroupName}>Group {group}</Text>
+                <Text style={styles.slotGroupCount}>{count}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  const renderClientPipeline = () => {
+    const { readyForOutreach = 0, currentlyContacted = 0, totalEligible = 0 } = clientPipeline;
+    
+    return (
+      <View style={styles.pipelineContainer}>
+        <Text style={styles.sectionTitle}>Client Pipeline</Text>
+        <View style={styles.pipelineStats}>
+          <View style={styles.pipelineStat}>
+            <Text style={styles.pipelineNumber}>{totalEligible}</Text>
+            <Text style={styles.pipelineLabel}>Total Eligible</Text>
+          </View>
+          <View style={styles.pipelineStat}>
+            <Text style={[styles.pipelineNumber, { color: '#FF9800' }]}>{currentlyContacted}</Text>
+            <Text style={styles.pipelineLabel}>Being Contacted</Text>
+          </View>
+          <View style={styles.pipelineStat}>
+            <Text style={[styles.pipelineNumber, { color: '#4CAF50' }]}>{readyForOutreach}</Text>
+            <Text style={styles.pipelineLabel}>Ready for Outreach</Text>
+          </View>
+        </View>
       </View>
     );
   };
@@ -103,13 +318,14 @@ const FillMyCalendarScreen = ({ navigation }) => {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#ffffff" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>Loading Mission Control...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Fill My Calendar</Text>
         <View style={styles.headerControls}>
@@ -131,84 +347,100 @@ const FillMyCalendarScreen = ({ navigation }) => {
           </Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView}>
-          {/* Strategy Panel */}
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Blast Countdown Timer */}
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Current Strategy</Text>
-              <TouchableOpacity style={styles.refreshButton} onPress={handleRunNow} disabled={refreshing}>
+            <BlastCountdownTimer
+              nextBlastTime={systemStatus.nextBlastTime}
+              timeUntilNext={systemStatus.timeUntilNext}
+              isNextBlastToday={systemStatus.isNextBlastToday}
+              isEnabled={systemStatus.isEnabled}
+              isRunning={systemStatus.isRunning}
+            />
+          </View>
+
+          {/* Metrics Grid */}
+          <MetricsGrid todayMetrics={todayMetrics} />
+
+          {/* Manual Controls */}
+          <View style={styles.section}>
+            <View style={styles.controlsHeader}>
+              <Text style={styles.sectionTitle}>System Controls</Text>
+              <TouchableOpacity 
+                style={[styles.runButton, refreshing && styles.disabledButton]} 
+                onPress={handleRunNow} 
+                disabled={refreshing}
+              >
                 {refreshing ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Ionicons name="refresh" size={22} color="#ffffff" />
+                  <Ionicons name="play" size={18} color="#ffffff" />
                 )}
+                <Text style={styles.runButtonText}>
+                  {refreshing ? 'Running...' : 'Run Now'}
+                </Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.strategyBox}>
-              <Text style={styles.strategyText}>{strategy}</Text>
-              <Text style={styles.timeframeText}>Looking at the next {timeframeDays} days</Text>
-            </View>
           </View>
 
-          {/* Available Slots Panel */}
+          {/* Available Slots */}
+          {renderEmptySlotsBreakdown()}
+
+          {/* Client Pipeline */}
+          {renderClientPipeline()}
+
+          {/* Message Approval Center */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Available Slots</Text>
-            <View style={styles.slotsOverview}>
-              <View style={styles.totalSlotsBox}>
-                <Text style={styles.totalSlotsCount}>{totalEmptySlots}</Text>
-                <Text style={styles.totalSlotsLabel}>Empty Slots</Text>
+            <Text style={styles.sectionTitle}>
+              Pending Messages ({pendingMessages.length})
+            </Text>
+            
+            {pendingMessages.length > 0 && (
+              <View style={styles.bulkControlsContainer}>
+                <TouchableOpacity
+                  style={styles.selectAllButton}
+                  onPress={() => {
+                    if (selectedMessages.size === pendingMessages.length) {
+                      setSelectedMessages(new Set());
+                    } else {
+                      setSelectedMessages(new Set(pendingMessages.map(m => m.id)));
+                    }
+                  }}
+                >
+                  <Text style={styles.selectAllText}>
+                    {selectedMessages.size === pendingMessages.length ? 'Deselect All' : 'Select All'}
+                  </Text>
+                </TouchableOpacity>
+                {selectedMessages.size > 0 && (
+                  <TouchableOpacity
+                    style={styles.bulkApproveButton}
+                    onPress={handleBulkApprove}
+                  >
+                    <Ionicons name="send" size={16} color="#ffffff" />
+                    <Text style={styles.bulkApproveText}>
+                      Send {selectedMessages.size}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              {renderEmptySlotsBreakdown()}
-            </View>
-          </View>
-
-          {/* Clients Being Contacted */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Clients Being Contacted</Text>
-            {clientsToContact.length > 0 ? (
-              clientsToContact.map((client) => (
-                <ClientOutreachCard
-                  key={client.id}
-                  client={client}
-                  onEdit={() => navigation.navigate('ClientMessages', { clientId: client.id })}
-                />
-              ))
-            ) : (
-              <Text style={styles.emptyStateText}>No clients currently selected for outreach</Text>
             )}
-          </View>
 
-          {/* Next Up Clients */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Next Up</Text>
-            {upcomingClients.length > 0 ? (
-              upcomingClients.map((client) => (
-                <ClientOutreachCard 
-                  key={client.id} 
-                  client={client} 
-                  isUpcoming={true}
-                />
-              ))
-            ) : (
-              <Text style={styles.emptyStateText}>No clients in the queue</Text>
-            )}
-          </View>
-
-          {/* Results & Feedback */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recent Results</Text>
-            {recentResults.length > 0 ? (
-              <View style={styles.resultsContainer}>
-                {recentResults.map((result, index) => (
-                  <View key={index} style={styles.resultItem}>
-                    <Text style={styles.resultName}>{result.clientName}</Text>
-                    <Text style={styles.resultStatus}>{result.outcome}</Text>
-                    <Text style={styles.resultDate}>{result.date}</Text>
-                  </View>
-                ))}
+            {pendingMessages.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
+                <Text style={styles.emptyStateText}>No pending messages</Text>
+                <Text style={styles.emptyStateSubtext}>
+                  All outreach messages have been processed
+                </Text>
               </View>
             ) : (
-              <Text style={styles.emptyStateText}>No recent results to display</Text>
+              <FlatList
+                data={pendingMessages}
+                renderItem={renderMessageApprovalCard}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={false}
+                showsVerticalScrollIndicator={false}
+              />
             )}
           </View>
         </ScrollView>
@@ -275,17 +507,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   section: {
-    marginBottom: 20,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sectionTitle: {
     color: '#fff',
@@ -293,42 +516,46 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
   },
-  refreshButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#3498db',
-  },
-  strategyBox: {
-    backgroundColor: '#2a2a2c',
-    borderRadius: 8,
-    padding: 16,
-  },
-  strategyText: {
-    color: '#fff',
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  timeframeText: {
-    color: '#aaa',
-    fontSize: 14,
-    marginTop: 8,
-  },
-  slotsOverview: {
+  controlsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  runButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3498db',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  runButtonText: {
+    color: '#ffffff',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  disabledButton: {
+    backgroundColor: '#666',
+  },
+  slotsBreakdown: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  slotsGrid: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
   },
-  totalSlotsBox: {
+  totalSlotsCard: {
     backgroundColor: '#2a2a2c',
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 12,
+    padding: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '30%',
+    marginRight: 16,
+    minWidth: 100,
   },
-  totalSlotsCount: {
+  totalSlotsNumber: {
     color: '#3498db',
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
   },
   totalSlotsLabel: {
@@ -336,17 +563,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
-  sectionContent: {
+  slotsDetails: {
     flex: 1,
-    marginLeft: 16,
     backgroundColor: '#2a2a2c',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
   },
   slotGroup: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#444',
   },
@@ -359,39 +585,87 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  emptyStateText: {
-    color: '#aaa',
-    textAlign: 'center',
-    marginVertical: 20,
-    fontSize: 14,
+  pipelineContainer: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
   },
-  resultsContainer: {
-    backgroundColor: '#2a2a2c',
-    borderRadius: 8,
-    padding: 8,
-  },
-  resultItem: {
+  pipelineStats: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    backgroundColor: '#2a2a2c',
+    borderRadius: 12,
+    padding: 20,
+  },
+  pipelineStat: {
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#444',
   },
-  resultName: {
-    color: '#fff',
-    fontSize: 14,
-    flex: 1,
-  },
-  resultStatus: {
+  pipelineNumber: {
     color: '#3498db',
-    fontSize: 14,
-    marginHorizontal: 8,
+    fontSize: 24,
+    fontWeight: 'bold',
   },
-  resultDate: {
+  pipelineLabel: {
     color: '#aaa',
     fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  pipelineDescription: {
+    color: '#666',
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  bulkControlsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  selectAllButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#444',
+  },
+  selectAllText: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  bulkApproveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
+  },
+  bulkApproveText: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    backgroundColor: '#2a2a2c',
+    borderRadius: 12,
+    marginHorizontal: 16,
+  },
+  emptyStateText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 12,
+  },
+  emptyStateSubtext: {
+    color: '#aaa',
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
 

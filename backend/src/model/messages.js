@@ -153,16 +153,16 @@ async function getAllMessagesGroupedByClient(user_id) {
   }
 }
 
-async function saveSuggestedResponse(clientId, response, user_id) {
+async function saveSuggestedResponse(clientId, response, user_id, type = 'INBOUND') {
   const db = dbUtils.getDB();
   const sql = `
-    INSERT INTO SuggestedResponses (clientId, response, user_id)
-    VALUES ($1, $2, $3)
+    INSERT INTO SuggestedResponses (clientId, response, user_id, type)
+    VALUES ($1, $2, $3, $4)
     ON CONFLICT (clientId) DO UPDATE
-    SET response = EXCLUDED.response, updatedAt = CURRENT_TIMESTAMP
+    SET response = EXCLUDED.response, type = EXCLUDED.type, updatedAt = CURRENT_TIMESTAMP
     RETURNING *
   `;
-  const values = [clientId, response, user_id];
+  const values = [clientId, response, user_id, type];
   try {
     const res = await db.query(sql, values);
     console.log(`Suggested response saved for clientId: ${clientId}`);
@@ -270,6 +270,7 @@ async function getMostRecentMessagePerClient(user_id) {
         c.lastname,
         c.phonenumber,
         sr.response as suggestedResponse,
+        sr.type as responseType,
         ROW_NUMBER() OVER (PARTITION BY m.clientid ORDER BY m.id DESC) as rn
       FROM Messages m
       LEFT JOIN Client c ON m.clientid = c.id
@@ -289,7 +290,8 @@ async function getMostRecentMessagePerClient(user_id) {
       lastname,
       phonenumber,
       CASE WHEN suggestedResponse IS NOT NULL THEN true ELSE false END as hasSuggestedResponse,
-      suggestedResponse
+      suggestedResponse,
+      responseType
     FROM RankedMessages
     WHERE rn = 1
     ORDER BY id DESC
@@ -330,15 +332,18 @@ async function getNumberOfSuggestedResponses(user_id) {
   }
 }
 
-async function getSuggestedResponsesByClient(userId) {
+async function getSuggestedResponsesByClient(userId, type = null) {
   const db = dbUtils.getDB();
-  const sql = `
+  let sql = `
     SELECT 
       c.id, 
       c.firstname AS "firstName", 
       c.lastname AS "lastName", 
-      c.lastvisitdate AS "lastVisitDate",
-      c.group,
+      (
+        SELECT MAX(date)
+        FROM Appointment a
+        WHERE a.clientid = c.id
+      ) AS "lastVisitDate",
       sr.response AS message
     FROM 
       SuggestedResponses sr
@@ -346,10 +351,16 @@ async function getSuggestedResponsesByClient(userId) {
       Client c ON sr.clientid = c.id
     WHERE 
       sr.user_id = $1
-    ORDER BY 
-      sr.updatedAt DESC
   `;
+  
   const values = [userId];
+  
+  if (type) {
+    sql += ' AND sr.type = $2';
+    values.push(type);
+  }
+  
+  sql += ' ORDER BY sr.updatedAt DESC';
   
   try {
     const res = await db.query(sql, values);
@@ -360,15 +371,29 @@ async function getSuggestedResponsesByClient(userId) {
   }
 }
 
-async function updateSuggestedResponse(clientId, response) {
+async function updateSuggestedResponse(clientId, response, type = null) {
   const db = dbUtils.getDB();
-  const sql = `
-    UPDATE SuggestedResponses 
-    SET response = $2, updatedAt = CURRENT_TIMESTAMP
-    WHERE clientId = $1
-    RETURNING *
-  `;
-  const values = [clientId, response];
+  let sql, values;
+  
+  if (type) {
+    // If type is provided, update both the response and type
+    sql = `
+      UPDATE SuggestedResponses 
+      SET response = $2, type = $3, updatedAt = CURRENT_TIMESTAMP
+      WHERE clientId = $1
+      RETURNING *
+    `;
+    values = [clientId, response, type];
+  } else {
+    // If no type is provided, update only the response
+    sql = `
+      UPDATE SuggestedResponses 
+      SET response = $2, updatedAt = CURRENT_TIMESTAMP
+      WHERE clientId = $1
+      RETURNING *
+    `;
+    values = [clientId, response];
+  }
   
   try {
     const res = await db.query(sql, values);

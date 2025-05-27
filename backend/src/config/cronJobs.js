@@ -31,14 +31,15 @@ async function initializeCronJobs() {
         }
     });
 
-    // Updated cron job for fillMyCalendar, runs every minute
-    cron.schedule('* * * * *', async () => {
+    // Updated cron job for fillMyCalendar, runs at 9 AM and 2 PM daily
+    cron.schedule('0 9,14 * * *', async () => {
         try {
             const users = await getAllUsers();
             for (const user of users) {
                 const fillMyCalendarEnabled = await getFillMyCalendarStatus(user.id);
                 
                 if (fillMyCalendarEnabled) {
+                    console.log(`Running fillMyCalendar for user ${user.id} at:`, new Date().toISOString());
                     await fillMyCalendar(user.id);
                 }
             }

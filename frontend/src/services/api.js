@@ -2,8 +2,8 @@ import axios from 'axios';
 import { getToken } from '../utils/auth';
 
 // Replace with your backend API URL
-// const API_URL = 'https://759c-2607-f470-6-3001-2d62-c9de-bf24-7019.ngrok-free.app/api';
-const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
+const API_URL = 'https://cf50-24-47-16-140.ngrok-free.app/api';
+// const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,
 });
@@ -590,6 +590,57 @@ export const runFillMyCalendar = async () => {
     return response.data;
   } catch (error) {
     console.error('Error running fillMyCalendar:', error);
+    throw error;
+  }
+};
+
+// New enhanced API functions for Phase 1
+export const getFillMyCalendarSystemStatus = async () => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.get('/fillMyCalendar/status')));
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching fillMyCalendar system status:', error);
+    throw error;
+  }
+};
+
+export const approveOutreachMessage = async (clientId) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.post(`/fillMyCalendar/approve/${clientId}`)));
+    return response.data;
+  } catch (error) {
+    console.error('Error approving outreach message:', error);
+    throw error;
+  }
+};
+
+export const rejectOutreachMessage = async (clientId) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.delete(`/fillMyCalendar/reject/${clientId}`)));
+    return response.data;
+  } catch (error) {
+    console.error('Error rejecting outreach message:', error);
+    throw error;
+  }
+};
+
+export const bulkApproveOutreachMessages = async (clientIds) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.post('/fillMyCalendar/bulk-approve', { clientIds })));
+    return response.data;
+  } catch (error) {
+    console.error('Error bulk approving outreach messages:', error);
+    throw error;
+  }
+};
+
+export const updateOutreachMessage = async (clientId, message) => {
+  try {
+    const response = await retryRequest(() => throttledRequest(() => api.put(`/fillMyCalendar/message/${clientId}`, { message })));
+    return response.data;
+  } catch (error) {
+    console.error('Error updating outreach message:', error);
     throw error;
   }
 };
