@@ -3,7 +3,7 @@ const { getAvailableSlots } = require('./tools/getAvailableSlots');
 const { OpenAI } = require('openai');
 const { zodResponseFormat } = require("openai/helpers/zod");
 const { z } = require("zod");
-const { saveSuggestedResponse, getNumberOfSuggestedResponses } = require('../model/messages');
+const { saveSuggestedResponse, getNumberOfSuggestedResponses, getMessagesByClientId } = require('../model/messages');
 const { storeAIPrompt } = require('../model/aiPrompt');
 
 const openai = new OpenAI({
@@ -291,7 +291,7 @@ Adjust your approach based on their response history - if they're a good respond
       let personalizedMessage;
       if (!messageHistory || messageHistory.length === 0) {
         // First time message - introduce yourself and the new business number
-        personalizedMessage = "Hey {name}, this is Uzi from Uzi Cuts reaching out from my new business number. Please save it to your contacts. How's everything going bro?"
+        personalizedMessage = "Hey {name}, this is Uzi from Uzi Cuts reaching out from my new business number. How's everything going bro?"
           .replace("{name}", clientData.firstname);
       } else {
         // Regular outreach message - more casual since they know you
