@@ -404,7 +404,7 @@ async function main(userId) {
     const { browser, page } = await launchAndLogin();
     try {
         const calendarFrame = await getCalendarFrame(page);
-        await scrapeAndProcessAppointments(calendarFrame,w userId);
+        await scrapeAndProcessAppointments(calendarFrame, userId);
     } catch (error) {
         console.error("Error in main flow:", error);
     } finally {
