@@ -1,0 +1,188 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: when asked to create a puppeteer or browserless script
+globs: 
+alwaysApply: false
+---
+When asked to create a puppeteer script, prioritize an iterative development process using a persistent browser session to avoid repeated logins and potential lockouts.
+
+**Iterative Development Workflow:**
+
+1.  **Launch Persistent Browser (Choose one method):**
+
+    *   **Method A: Dedicated Development Profile (Recommended for isolation)**
+        1.  Create a dedicated directory for this profile (if it doesn't exist):
+            ```bash
+            mkdir -p ~/chrome-dev-profile
+            ```
+        2.  Launch Chrome from your terminal, telling it to use this directory and enable remote debugging on a specific port (e.g., 9222).
+            *   **macOS Example:**
+                ```bash
+                /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --user-data-dir=~/chrome-dev-profile
+                ```
+            *   **Windows Example (adjust path to chrome.exe):**
+                ```cmd
+                "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="%USERPROFILE%\chrome-dev-profile"
+                ```
+            *   **Linux Example:**
+                ```bash
+                google-chrome --remote-debugging-port=9222 --user-data-dir=~/chrome-dev-profile
+                ```
+        3.  Keep this terminal window open. This browser instance will have its own cookies, extensions, and sessions, separate from your main Chrome profile.
+
+    *   **Method B: Main Existing Chrome Profile (Use with caution)**
+        1.  **CRITICAL:** Close **ALL** other running instances of Google Chrome that are using your main profile. Puppeteer needs exclusive access to the debugging port for that profile session. Failure to do so will likely result in connection errors or attaching to an unintended Chrome process.
+        2.  Launch Chrome from your terminal, enabling remote debugging. You'll point it to your default Chrome profile directory.
+            *   **macOS Example (Default Profile Path):**
+                ```bash
+                /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222 --user-data-dir="$HOME/Library/Application Support/Google/Chrome/"
+                ```
+                *(Note: If you use multiple Chrome profiles, you might need to specify a different profile sub-directory like "Profile 1", e.g., `"$HOME/Library/Application Support/Google/Chrome/Profile 1"`. The default is often just `Default` or the root Chrome folder as above.)*
+            *   **Windows Example (Default Profile Path - adjust if necessary):**
+                ```cmd
+                "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir="%LOCALAPPDATA%\Google\Chrome\User Data"
+                ```
+            *   **Linux Example (Default Profile Path):**
+                ```bash
+                google-chrome --remote-debugging-port=9222 --user-data-dir=~/.config/google-chrome/
+                ```
+        3.  Keep this terminal window open.
+        4.  **Caveats:** Your script will be operating with your live browser data (cookies, sessions, history). Be mindful of unintended consequences. For most development, Method A is safer.
+
+2.  **Initial Script Setup (`puppeteer.connect`):**
+    *   Create the initial script using `require('puppeteer')`.
+    *   Instead of `puppeteer.launch()`, use `puppeteer.connect({ browserURL: 'http://127.0.0.1:9222', defaultViewport: null })` to connect to the already running browser instance. Setting `defaultViewport: null` is often useful to match the launched browser's window size.
+    *   Find a suitable page:
+        ```javascript
+        const pages = await browser.pages();
+        let page = pages.find(p => p.url().startsWith('YOUR_TARGET_URL_PREFIX'));
+        if (!page) {
+            // Fallback to a non-extension, non-blank page or open a new one
+            page = pages.find(p => p.url() !== 'about:blank' && !p.url().startsWith('chrome-extension://'));
+            if (page) {
+                console.log(`Found existing page: ${page.url()}. Navigating to login.`);
+                await page.goto('YOUR_LOGIN_URL', { waitUntil: 'domcontentloaded' });
+            } else {
+                console.log('No suitable existing page. Opening new page for login.');
+                page = await browser.newPage();
+                await page.goto('YOUR_LOGIN_URL', { waitUntil: 'domcontentloaded' });
+            }
+        }
+        await page.bringToFront();
+        ```
+    *   Include a `try...finally` block where the `finally` block calls `await browser.disconnect()` instead of `await browser.close()` to detach without closing the persistent browser.
+3.  **Login State Check (Crucial for Persistence):**
+    *   **Before** attempting any login steps, check if the user is already logged in on the connected page.
+    *   Identify a reliable element that *only* appears when logged in (e.g., a "Logout" button, a user profile element). This can also use the Multi-Selector Strategy described below.
+    *   Use `page.waitForSelector(loggedInSelector, { visible: true, timeout: 5000 })` (or the multi-selector helper) within a `try...catch` block.
+    *   If the element is found, set a flag `isLoggedIn = true`. If it times out, assume not logged in (`isLoggedIn = false`).
+    *   If not logged in, ensure the page is at the login URL before proceeding with login steps.
+
+4.  **Conditional Login/Actions:**
+    *   Wrap the entire login sequence (entering credentials, clicking login, handling 2FA) inside an `if (!isLoggedIn)` block.
+    *   **If `isLoggedIn` is true:** Skip the login block entirely and proceed directly to the next action needed for the task.
+    *   **If `isLoggedIn` is false:** Execute the login block. Handle 2FA manually by pausing the script (`await new Promise(resolve => setTimeout(resolve, 60000));`) and prompting the user to enter the code in the persistent browser window.
+    *   **Username Field Optionality:** If a username/access card field might sometimes be pre-filled (common when using existing profiles), attempt to find it with a short timeout (or use the multi-selector strategy). If not found, assume it's pre-filled and proceed to the password field.
+        ```javascript
+        // Example using a simple try/catch, but could be expanded with multi-selector
+        try {
+            await page.waitForSelector(usernameSelector, { visible: true, timeout: 3000 });
+            // ... fill username ...
+        } catch (e) {
+            console.log('Username field not found, assuming pre-filled.');
+        }
+        // ... proceed to password ...
+        ```
+
+5.  **Iterate Action by Action:**
+    *   Add **one** specific action (e.g., find element, click button, navigate).
+    *   **Log Output:** After the action (or if it fails), log relevant information like `page.url()`, `page.title()`, or `page.content()` (sparingly for large content) to understand the current state.
+    *   **Run Script:** Execute the script using `node your_script.js | cat`.
+    *   **Analyze & Update:** Examine the output/errors. Refine selectors or logic for the *next* step. Add the next single action.
+    *   **Repeat:** Continue this loop (Log -> Run -> Analyze -> Update) until the script completes the entire task.
+
+**General Guidelines:**
+
+*   **Logging:** Add detailed `console.log` statements before and after major steps (connecting, checking login state, clicking buttons, waiting for elements/navigation) to track progress. Log errors clearly.
+*   **Selectors - Default to Multi-Selector Strategy:**
+    *   To speed up iteration and improve robustness, adopt a **Multi-Selector Strategy by default** for most element interactions (`page.waitForSelector`, `page.click`, `page.type`, etc.).
+    *   Define a list of 2-3 potential selectors for the target element, ordered from most specific/reliable to more general or alternative structures.
+    *   **Crucially:** Use the persistent browser's developer tools ("Inspect Element") to examine the HTML *at the exact point the script might interact with an element* to identify good candidates for your selector list.
+    *   **Generic Multi-Selector Interaction Function (Example):**
+        Consider creating a helper function to encapsulate this logic:
+        ```javascript
+        async function interactWithElement(page, selectors, actionType, actionValue = null, options = {}) {
+            const { visible = true, timeout = 3000, postActionDelay = 0 } = options;
+            for (const selector of selectors) {
+                try {
+                    console.log(`Attempting to find element with selector: ${selector}`);
+                    await page.waitForSelector(selector, { visible, timeout });
+                    console.log(`Element found with selector: ${selector}. Performing action: ${actionType}`);
+                    if (actionType === 'click') {
+                        await page.click(selector);
+                    } else if (actionType === 'type' && actionValue !== null) {
+                        await page.type(selector, actionValue);
+                    } // Add other action types as needed (e.g., 'hover', 'select')
+                    
+                    if (postActionDelay > 0) {
+                         console.log(`Pausing ${postActionDelay}ms after action.`);
+                         await new Promise(resolve => setTimeout(resolve, postActionDelay));
+                    }
+                    return true; // Action successful
+                } catch (e) {
+                    console.log(`Selector ${selector} failed or timed out for action ${actionType}.`);
+                }
+            }
+            console.error(`All selectors failed for action ${actionType} on selectors: ${selectors.join(', ')}`);
+            return false; // All selectors failed
+        }
+
+        // Usage Example:
+        const submitButtonSelectors = [
+            'button#submit-btn[data-testid="primary-submit"]', // Most specific
+            'button#submit-btn',                               // ID only
+            'form button[type="submit"]:has-text("Submit")'      // More general
+        ];
+        const clickSuccessful = await interactWithElement(page, submitButtonSelectors, 'click', null, { postActionDelay: 500 });
+        if (!clickSuccessful) {
+            // Handle failure to click the submit button
+        }
+        ```
+    *   **Selector Types to Consider for your list (in rough order of preference):**
+        1.  Unique IDs with specific attributes: `#my-unique-id[data-custom-attribute="value"]`
+        2.  Unique IDs: `#my-unique-id`
+        3.  `data-testid` or other stable test-specific attributes: `[data-testid="my-element"]`
+        4.  Specific class combinations that are unlikely to change: `.class-a.class-b > .child-class`
+        5.  Structural selectors (e.g., child/sibling relationships): `div.parent-class > ul > li:nth-child(2) > a`
+        6.  Text-based selectors (use with caution as text can change): `button:has-text("Exact Button Text")`
+        7.  XPath (powerful but can be less readable): `xpath//div[@class="some-class"]//a[contains(., "Link Text")]`
+*   **Handling Single Page Applications (SPAs):**
+    *   Many modern sites update content dynamically without full page reloads. In these cases, `page.waitForNavigation()` after a click will often **fail** (timeout).
+    *   Instead of `waitForNavigation`, use `page.waitForSelector()` (ideally with the multi-selector strategy) to wait for an element that is specific to the *new* view/state after the click.
+    *   A common pattern for SPA clicks (using the conceptual `interactWithElement` helper):
+        ```javascript
+        await interactWithElement(page, clickTriggerSelectors, 'click');
+        // DON'T use waitForNavigation here for SPAs
+        const elementExpectedAfterClickSelectors = [ /* ... */ ];
+        await interactWithElement(page, elementExpectedAfterClickSelectors, 'waitFor'); // 'waitFor' would be a conceptual action in the helper
+        ```
+    *   In rare cases where content loads slightly after the click event but before the new selector is ready, a short fixed pause (`await new Promise(resolve => setTimeout(resolve, 500));`) *before* the next `waitForSelector` might be necessary, but strongly prefer waiting for specific selectors over fixed pauses.
+*   **Managing State in Persistent Sessions:**
+    *   When re-running iteratively, the browser tab might already be on a later page from the previous run.
+    *   **Check `page.url()`** before attempting major navigation steps.
+    *   Use conditional logic to skip navigation clicks if the browser is already on the target page. Example: `if (!page.url().startsWith(targetUrlPrefix)) { await interactWithElement(page, navigationSelectors, 'click'); /* ... then wait for next element ... */ }`
+*   **Timeouts:**
+    *   When using the multi-selector strategy, each individual selector attempt should have a shorter timeout (e.g., 2-3 seconds).
+    *   The overall timeout for an action might be slightly longer due to trying multiple selectors.
+    *   General `waitForNavigation` timeouts (if used for non-SPA full loads) can be 10-15 seconds.
+*   **Credentials:** Hardcode necessary usernames, passwords, and API keys directly into the script for development ease, but add comments about security implications for production.
+*   **Final Deployment (Browserless):** Once the script works reliably with the persistent browser:
+    *   Switch back from `puppeteer.connect` to `puppeteer.launch({ headless: 'new' })` (the new headless mode is recommended) or `puppeteer.connect({ browserWSEndpoint: 'wss://chrome.browserless.io?token=YOUR_API_KEY' })`.
+    *   Remove the manual OTP pause and implement a robust way to handle OTPs if needed for the final version (e.g., reading from input, environment variable - *do not hardcode OTPs*).
+    *   The login state check (`isLoggedIn`) logic is generally not needed for fresh Browserless sessions but can be kept if there's a possibility of landing on a logged-in page due to how Browserless reuses instances (though less common).
+    *   The URL check logic for persistent session state management can often be simplified or removed for Browserless.
+    *   Replace `await browser.disconnect()` with `await browser.close()`.

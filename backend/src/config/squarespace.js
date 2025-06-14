@@ -17,6 +17,9 @@ const SELECTOR_TIMEOUT = 5000;
 
 const SELECTOR_TIMEOUT_2 = 500;
 
+
+// This scrapes the appointments from the calendar and creates the appointments in the database
+
 // Default price map for appointment types if not specified
 const DEFAULT_PRICES = {
     'Adult Cut': 35.00,
@@ -397,11 +400,11 @@ async function closeAppointmentDetails(calendarFrame) {
     }
 }
 
-async function main(userId = 1) {
+async function main(userId) {
     const { browser, page } = await launchAndLogin();
     try {
         const calendarFrame = await getCalendarFrame(page);
-        await scrapeAndProcessAppointments(calendarFrame, userId);
+        await scrapeAndProcessAppointments(calendarFrame,w userId);
     } catch (error) {
         console.error("Error in main flow:", error);
     } finally {
@@ -412,7 +415,7 @@ async function main(userId = 1) {
 }
 
 if (require.main === module) {
-    main();
+    main(67);
 }
 
 module.exports = {

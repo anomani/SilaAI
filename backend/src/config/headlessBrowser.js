@@ -15,6 +15,27 @@ const { launchAndLogin } = require('./squarespace'); // Added import
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Helper function to retry clicking with multiple attempts
+async function retryClick(element, maxAttempts = 3, delayMs = 1000) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            await element.click();
+            console.log(`Click successful on attempt ${attempt}`);
+            return true; // Success
+        } catch (error) {
+            console.log(`Click attempt ${attempt} failed: ${error.message}`);
+            if (attempt < maxAttempts) {
+                console.log(`Retrying click in ${delayMs}ms...`);
+                await delay(delayMs);
+            } else {
+                console.log(`All ${maxAttempts} click attempts failed`);
+                throw error; // Re-throw the error after all attempts failed
+            }
+        }
+    }
+    return false;
+}
+
 
 async function getClients() {
     userId = 67
@@ -184,9 +205,7 @@ async function getClientsSquarespace() {
         // await delay(...)
 
         // Navigate to the clients page after successful login
-        await page.goto("https://shallot-lion-7exn.squarespace.com/config/scheduling/admin/clients", { // Updated URL to Acuity
-            waitUntil: 'networkidle0' // Changed from domcontentloaded for potential stability
-        });
+        await page.goto("https://shallot-lion-7exn.squarespace.com/config/scheduling/admin/clients"); // Updated URL to Acuity
         console.log("Navigated to Acuity clients page.");
         await delay(5000); // Wait for page to potentially load within iframe
 
@@ -237,6 +256,7 @@ async function getClientsSquarespace() {
             throw new Error('Client list container not found.'); // Throw error if no clients found anywhere
         }
 
+
             try {
                 // Use Acuity selectors now
                 const clientSelector = 'td.lastName'; // Acuity selector
@@ -260,7 +280,7 @@ async function getClientsSquarespace() {
                     console.log("No client links found even after scrolling.");
                 }
 
-
+                
                 for (let i = 0; i < clientLinksCount; i++) {
                     try {
                         await targetFrame.waitForSelector(clientSelector, { visible: true });
@@ -268,8 +288,10 @@ async function getClientsSquarespace() {
                         // Ensure selector is still valid after potential DOM changes
                         const clientLinks = await targetFrame.$$(clientSelector);
                         if (clientLinks[i]) {
-                            await clientLinks[i].click();
-                             console.log(`Clicked client link ${i + 1}/${clientLinksCount}`);
+                            // Use retry logic for clicking client links
+                            console.log(`Attempting to click client link ${i + 1}/${clientLinksCount}`);
+                            await retryClick(clientLinks[i], 3, 1500); // 3 attempts with 1.5s delay
+                            console.log(`Successfully clicked client link ${i + 1}/${clientLinksCount}`);
                         } else {
                              console.log(`Client link at index ${i} not found, skipping.`);
                              continue;
@@ -303,8 +325,9 @@ async function getClientsSquarespace() {
                             // Click into the appointment detail to get the price
                              const detailLink = await appointmentElement.$("a[data-testid='docket-appointment-detail-link']");
                              if (detailLink) {
-                                await detailLink.click();
-                                console.log("Clicked appointment detail link");
+                                console.log("Attempting to click appointment detail link");
+                                await retryClick(detailLink, 3, 1000); // 3 attempts with 1s delay
+                                console.log("Successfully clicked appointment detail link");
                              } else {
                                 console.log("Could not find appointment detail link.");
                                 continue; // Skip if cannot get price
@@ -322,17 +345,31 @@ async function getClientsSquarespace() {
                                 // Close the detail view (Acuity close button selector)
                                 const closeButtonSelector = "a.detail-nav-link.btn.btn-inverse.hidden-print[data-testid='appt-details-close-btn']"; // Adjust if needed
                                 await targetFrame.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 });
-                                await targetFrame.click(closeButtonSelector);
-                                console.log("Closed appointment detail view");
+                                const closeButton = await targetFrame.$(closeButtonSelector);
+                                if (closeButton) {
+                                    console.log("Attempting to close appointment detail view");
+                                    await retryClick(closeButton, 3, 1000);
+                                    console.log("Successfully closed appointment detail view");
+                                } else {
+                                    console.log("Close button not found, trying direct click");
+                                    await targetFrame.click(closeButtonSelector);
+                                }
 
                             } catch (e) {
                                 console.log(`Could not extract price for this appointment: ${e.message}`);
                                 // Try to close the detail view even if price extraction failed
                                 try {
                                     const closeButtonSelector = "a.detail-nav-link.btn.btn-inverse.hidden-print[data-testid='appt-details-close-btn']";
-                                     await targetFrame.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 });
-                                    await targetFrame.click(closeButtonSelector);
-                                    console.log("Closed appointment detail view after price error.");
+                                    await targetFrame.waitForSelector(closeButtonSelector, { visible: true, timeout: 5000 });
+                                    const closeButton = await targetFrame.$(closeButtonSelector);
+                                    if (closeButton) {
+                                        console.log("Attempting to close appointment detail view after price error");
+                                        await retryClick(closeButton, 3, 1000);
+                                        console.log("Successfully closed appointment detail view after price error");
+                                    } else {
+                                        console.log("Close button not found, trying direct click");
+                                        await targetFrame.click(closeButtonSelector);
+                                    }
                                 } catch (closeError) {
                                     console.log("Failed to close detail view after price error. Attempting back navigation.");
                                      await targetFrame.goBack({ waitUntil: 'networkidle0' }); // Fallback
@@ -364,8 +401,15 @@ async function getClientsSquarespace() {
                         }
                          // Back to client list (Acuity selector)
                         await targetFrame.waitForSelector("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print", { visible: true, timeout: 10000 }); // Ensure back button is ready
-                        await targetFrame.click("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
-                        console.log("Back button to client list clicked");
+                        const backButton = await targetFrame.$("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
+                        if (backButton) {
+                            console.log("Attempting to click back button to client list");
+                            await retryClick(backButton, 3, 1000);
+                            console.log("Successfully clicked back button to client list");
+                        } else {
+                            console.log("Back button not found, trying direct click");
+                            await targetFrame.click("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
+                        }
                         await delay(2000); // Wait for list page to reload
 
                     } catch (e) {
@@ -375,15 +419,15 @@ async function getClientsSquarespace() {
                              // Try clicking the main back button if available
                             const backButton = await targetFrame.$("a.btn.btn-inverse.btn-top.btn-detail-back.hidden-print");
                              if (backButton) {
-                                await backButton.click();
-                                console.log("Clicked main back button.");
+                                console.log("Attempting to click main back button after error");
+                                await retryClick(backButton, 3, 1000);
+                                console.log("Successfully clicked main back button after error");
                              } else {
                                 console.log("Main back button not found, trying browser back.");
                                 await targetFrame.goBack({ waitUntil: 'networkidle0' });
                              }
                          } catch (navError) {
                             console.log(`Navigation error after client processing error: ${navError.message}. Trying direct navigation.`);
-                             await page.goto("https://secure.acuityscheduling.com/admin/clients", { waitUntil: 'networkidle0' }); // Go back forcefully
                          }
                         await delay(3000); // Longer delay after error
                         continue;
