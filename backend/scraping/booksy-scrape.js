@@ -1,6 +1,69 @@
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 
+// Global variable to store scraped data for emergency saves
+let globalScrapedData = [];
+
+// Function to save data to CSV with error handling
+function saveToCSV(data, filename) {
+    try {
+        const headers = ['Name', 'Phone', 'Social Media'];
+        const csvContent = [
+            headers.join(','),
+            ...data.map(row => [
+                `"${(row.name || '').replace(/"/g, '""')}"`,
+                `"${(row.phone || '').replace(/"/g, '""')}"`,
+                `"${(row.socialMedia || '').replace(/"/g, '""')}"`
+            ].join(','))
+        ].join('\n');
+        
+        fs.writeFileSync(filename, csvContent);
+        console.log(`✅ Data saved to ${filename} (${data.length} entries)`);
+        return true;
+    } catch (error) {
+        console.error(`❌ Error saving CSV: ${error.message}`);
+        return false;
+    }
+}
+
+// Emergency save function
+function emergencySave(reason = 'unknown') {
+    console.log(`\n🚨 Emergency save triggered due to: ${reason}`);
+    if (globalScrapedData.length > 0) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const emergencyFilename = `barbershop-data-emergency-${timestamp}.csv`;
+        const success = saveToCSV(globalScrapedData, emergencyFilename);
+        if (success) {
+            console.log(`💾 Emergency save completed: ${emergencyFilename}`);
+        }
+    } else {
+        console.log('No data to save in emergency.');
+    }
+}
+
+// Set up signal handlers for graceful shutdown
+process.on('SIGINT', () => {
+    console.log('\n👋 Received Ctrl+C (SIGINT). Saving data and exiting gracefully...');
+    emergencySave('SIGINT (Ctrl+C)');
+    process.exit(0);
+});
+
+// Remove emergency saves from other error handlers - just log and exit
+process.on('SIGTERM', () => {
+    console.log('\n👋 Received SIGTERM. Exiting...');
+    process.exit(0);
+});
+
+process.on('uncaughtException', (error) => {
+    console.log('\n💥 Uncaught exception occurred:', error.message);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.log('\n💥 Unhandled promise rejection:', reason);
+    process.exit(1);
+});
+
 // Multi-selector helper function for robust element interaction
 async function interactWithElement(page, selectors, actionType, actionValue = null, options = {}) {
     const { visible = true, timeout = 3000, postActionDelay = 500 } = options;
@@ -32,42 +95,30 @@ async function interactWithElement(page, selectors, actionType, actionValue = nu
     return false; // All selectors failed
 }
 
-// Function to save data to CSV
-function saveToCSV(data, filename) {
-    const headers = ['Name', 'Phone', 'Social Media'];
-    const csvContent = [
-        headers.join(','),
-        ...data.map(row => [
-            `"${(row.name || '').replace(/"/g, '""')}"`,
-            `"${(row.phone || '').replace(/"/g, '""')}"`,
-            `"${(row.socialMedia || '').replace(/"/g, '""')}"`
-        ].join(','))
-    ].join('\n');
-    
-    fs.writeFileSync(filename, csvContent);
-    console.log(`Data saved to ${filename}`);
-}
-
-// Function to scrape a single business by clicking on it in a new tab
-async function scrapeBusinessInParallelTab(browser, business, listingPageUrl, tabIndex) {
-    let businessTab = null;
+// Function to scrape a single business by clicking on it on the same page
+async function scrapeBusinessSequentially(page, business, listingPageUrl) {
     try {
-        console.log(`   Tab ${tabIndex}: Opening new tab for ${business.name} (index ${business.index})`);
-        businessTab = await browser.newPage();
+        console.log(`   📋 Processing: ${business.name} (index ${business.index})`);
         
-        // Navigate to the listing page first
-        console.log(`   Tab ${tabIndex}: Navigating to listing page...`);
-        await businessTab.goto(listingPageUrl, { 
-            waitUntil: 'domcontentloaded',
-            timeout: 15000 
-        });
-        
-        // Wait for page to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Navigate back to listing page if we're not there already
+        const currentUrl = page.url();
+        if (!currentUrl.includes('male-haircut/134623_newark')) {
+            console.log(`   🔄 Navigating back to listing page...`);
+            await page.goto(listingPageUrl, { 
+                waitUntil: 'domcontentloaded',
+                timeout: 15000 
+            });
+            
+            // Wait for business cards to load instead of arbitrary delay
+            await page.waitForSelector('[data-testid="business-name"]', { 
+                visible: true, 
+                timeout: 10000 
+            });
+        }
         
         // Find and click on the specific business using its index
-        console.log(`   Tab ${tabIndex}: Looking for business at index ${business.index}: ${business.name}`);
-        const clickedSuccessfully = await businessTab.evaluate((businessIndex, businessName) => {
+        console.log(`   🎯 Looking for business at index ${business.index}: ${business.name}`);
+        const clickedSuccessfully = await page.evaluate((businessIndex, businessName) => {
             // Get all business name elements
             const businessNameElements = document.querySelectorAll('[data-testid="business-name"]');
             
@@ -105,7 +156,7 @@ async function scrapeBusinessInParallelTab(browser, business, listingPageUrl, ta
         }, business.index, business.name);
         
         if (!clickedSuccessfully) {
-            console.log(`   Tab ${tabIndex}: ⚠️  Could not click on business at index ${business.index}: ${business.name}`);
+            console.log(`   ⚠️  Could not click on business at index ${business.index}: ${business.name}`);
             return {
                 name: business.name,
                 phone: '',
@@ -113,101 +164,177 @@ async function scrapeBusinessInParallelTab(browser, business, listingPageUrl, ta
             };
         }
         
-        console.log(`   Tab ${tabIndex}: ✅ Clicked on ${business.name} (index ${business.index}), waiting for page to load...`);
+        console.log(`   ✅ Clicked on ${business.name} (index ${business.index}), waiting for page to load...`);
         
-        // Wait for business page to load
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait for business page to load properly
+        try {
+            await page.waitForFunction(
+                (originalUrl) => window.location.href !== originalUrl,
+                { timeout: 10000 },
+                listingPageUrl
+            );
+            
+            // Wait for page content to fully load including tel links
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+        } catch (e) {
+            console.log(`   ⚠️  Page might not have changed URL, waiting anyway...`);
+            await new Promise(resolve => setTimeout(resolve, 3000));
+        }
         
         // Extract detailed info from business page
-        const businessDetails = await businessTab.evaluate(() => {
-            // Get both text content and HTML for comprehensive search
+        const businessDetails = await page.evaluate(() => {
+            // Use the EXACT working logic from test script
             const pageText = document.body.innerText;
-            const pageHTML = document.body.innerHTML;
             
-            // Extract phone number with various patterns from both text and HTML
+            // Method 1: Tel links (most reliable)
+            const telLinks = document.querySelectorAll('a[href^="tel:"]');
             let phone = '';
-            const phonePatterns = [
-                /(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g,  // Standard US format
-                /(\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/g,       // Without parentheses
-                /(\+1[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{4})/g, // With country code
-                /tel:(\+?\d{1,3}[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})/g // Tel links
-            ];
             
-            // Search in both text and HTML
-            const searchTexts = [pageText, pageHTML];
-            
-            for (const text of searchTexts) {
-                for (const pattern of phonePatterns) {
-                    const matches = text.match(pattern);
-                    if (matches) {
-                        // Filter out obviously wrong numbers (like years, IDs, etc.)
-                        for (const match of matches) {
-                            const cleanMatch = match.replace(/tel:/, '').replace(/[^\d\(\)\-\.\s\+]/g, '');
-                            if (cleanMatch.length >= 10 && cleanMatch.length <= 15) {
-                                phone = cleanMatch;
-                                break;
-                            }
-                        }
-                        if (phone) break;
-                    }
+            if (telLinks.length > 0) {
+                phone = telLinks[0].getAttribute('href').replace('tel:', '').trim();
+                
+                // Validate phone length
+                const digitsOnly = phone.replace(/[^\d]/g, '');
+                if (digitsOnly.length < 10 || ['1234567890', '1234567891', '0123456789'].includes(digitsOnly)) {
+                    phone = '';
                 }
-                if (phone) break;
             }
             
-            // Extract social media links from HTML and href attributes
+            // Method 2: SVG search (fallback)
+            if (!phone) {
+                const svgs = document.querySelectorAll('svg[viewBox="0 0 24 24"]');
+                const candidates = [];
+                
+                svgs.forEach((svg, index) => {
+                    let currentElement = svg.parentElement;
+                    let levels = 0;
+                    
+                    while (currentElement && levels < 5) {
+                        const elementText = currentElement.textContent;
+                        const phoneMatch = elementText.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/);
+                        
+                        if (phoneMatch) {
+                            const candidate = phoneMatch[0].trim();
+                            const digitsOnly = candidate.replace(/[^\d]/g, '');
+                            
+                            const isValid = digitsOnly.length >= 10 && 
+                                          !['1234567890', '1234567891', '0123456789'].includes(digitsOnly) &&
+                                          !/^0123456789|1234567890/.test(digitsOnly) &&
+                                          !/^(\d)\1{9,}$/.test(digitsOnly);
+                            
+                            if (isValid) {
+                                candidates.push({
+                                    phone: candidate,
+                                    priority: elementText.includes('Call') || elementText.includes('Contact') ? 1 : 0
+                                });
+                            }
+                            break;
+                        }
+                        
+                        currentElement = currentElement.parentElement;
+                        levels++;
+                    }
+                });
+                
+                if (candidates.length > 0) {
+                    candidates.sort((a, b) => b.priority - a.priority);
+                    phone = candidates[0].phone;
+                }
+            }
+            
+            // Method 3: Text search (last resort)
+            if (!phone) {
+                const pageText = document.body.innerText;
+                const phonePattern = /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+                const textMatches = pageText.match(phonePattern);
+                
+                if (textMatches) {
+                    for (const match of textMatches) {
+                        const candidate = match.trim();
+                        const digitsOnly = candidate.replace(/[^\d]/g, '');
+                        
+                        const isValid = digitsOnly.length >= 10 && 
+                                      !['1234567890', '1234567891', '0123456789', '0154220315'].includes(digitsOnly) &&
+                                      !/^0123456789|1234567890/.test(digitsOnly) &&
+                                      !/^(\d)\1{9,}$/.test(digitsOnly);
+                        
+                        if (isValid) {
+                            phone = candidate;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Extract social media links
             const socialLinks = [];
-            const socialPatterns = [
-                /https?:\/\/(?:www\.)?facebook\.com\/[^\s"'<>]+/gi,
-                /https?:\/\/(?:www\.)?instagram\.com\/[^\s"'<>]+/gi,
-                /https?:\/\/(?:www\.)?twitter\.com\/[^\s"'<>]+/gi,
-                /https?:\/\/(?:www\.)?tiktok\.com\/[^\s"'<>]+/gi,
-                /https?:\/\/(?:www\.)?linkedin\.com\/[^\s"'<>]+/gi,
-                /https?:\/\/(?:www\.)?youtube\.com\/[^\s"'<>]+/gi,
-                /@[a-zA-Z0-9_]+/g // Handle @username patterns
+            
+            // Method 1: Look for actual social media anchor tags
+            const socialSelectors = [
+                'a[href*="facebook.com/"]:not([href*="booksypolska"])',
+                'a[href*="instagram.com/"]:not([href*="booksybiz"])',
+                'a[href*="twitter.com/"]:not([href*="BooksyApp"])',
+                'a[href*="tiktok.com/"]',
+                'a[href*="linkedin.com/"]',
+                'a[href*="youtube.com/"]'
             ];
             
-            // Search in HTML for social media patterns
+            socialSelectors.forEach(selector => {
+                const links = document.querySelectorAll(selector);
+                
+                links.forEach(link => {
+                    if (link.href && link.href.length > 20) {
+                        const cleanHref = link.href.split('?')[0];
+                        if (!socialLinks.includes(cleanHref)) {
+                            socialLinks.push(cleanHref);
+                        }
+                    }
+                });
+            });
+            
+            // Method 2: Look for social media patterns in text
+            const socialPatterns = [
+                /https?:\/\/(?:www\.)?facebook\.com\/[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]*)?/gi,
+                /https?:\/\/(?:www\.)?instagram\.com\/[a-zA-Z0-9._-]+(?:\/[a-zA-Z0-9._-]*)?/gi,
+                /https?:\/\/(?:www\.)?twitter\.com\/[a-zA-Z0-9._-]+/gi,
+                /https?:\/\/(?:www\.)?tiktok\.com\/@[a-zA-Z0-9._-]+/gi,
+                /https?:\/\/(?:www\.)?linkedin\.com\/in\/[a-zA-Z0-9._-]+/gi,
+                /https?:\/\/(?:www\.)?youtube\.com\/[a-zA-Z0-9._-]+/gi
+            ];
+            
             for (const pattern of socialPatterns) {
-                const matches = pageHTML.match(pattern);
+                const matches = pageText.match(pattern);
                 if (matches) {
                     matches.forEach(match => {
-                        const cleanMatch = match.replace(/["'<>]/g, '');
-                        if (!socialLinks.includes(cleanMatch) && cleanMatch.length > 5) {
+                        const cleanMatch = match.trim();
+                        const excludePatterns = [
+                            'booksypolska',
+                            'booksybiz', 
+                            'BooksyApp',
+                            'facebook.com/sharer',
+                            'twitter.com/share'
+                        ];
+                        
+                        const shouldExclude = excludePatterns.some(exclude => 
+                            cleanMatch.toLowerCase().includes(exclude.toLowerCase())
+                        );
+                        
+                        if (!shouldExclude && !socialLinks.includes(cleanMatch) && cleanMatch.length > 20) {
                             socialLinks.push(cleanMatch);
                         }
                     });
                 }
             }
             
-            // Also check for social media links in anchor tags
-            const socialSelectors = [
-                'a[href*="facebook.com"]',
-                'a[href*="instagram.com"]',
-                'a[href*="twitter.com"]',
-                'a[href*="tiktok.com"]',
-                'a[href*="linkedin.com"]',
-                'a[href*="youtube.com"]'
-            ];
-            
-            socialSelectors.forEach(selector => {
-                const links = document.querySelectorAll(selector);
-                links.forEach(link => {
-                    if (link.href && !socialLinks.includes(link.href)) {
-                        socialLinks.push(link.href);
-                    }
-                });
-            });
-            
             // Try to get business name from various sources
             let cleanName = '';
             
-            // Try data-testid business-name first
             const businessNameElement = document.querySelector('[data-testid="business-name"]');
             if (businessNameElement) {
                 cleanName = businessNameElement.textContent.trim();
             }
             
-            // Fallback to h1
             if (!cleanName) {
                 const titleElement = document.querySelector('h1');
                 if (titleElement) {
@@ -215,7 +342,6 @@ async function scrapeBusinessInParallelTab(browser, business, listingPageUrl, ta
                 }
             }
             
-            // Fallback to page title
             if (!cleanName) {
                 const pageTitle = document.title;
                 if (pageTitle && !pageTitle.includes('Booksy')) {
@@ -225,8 +351,8 @@ async function scrapeBusinessInParallelTab(browser, business, listingPageUrl, ta
             
             return {
                 name: cleanName,
-                phone: phone,
-                socialMedia: socialLinks.join('; '),
+                phone: phone || '',
+                socialMedia: socialLinks.length > 0 ? socialLinks.join('; ') : '',
                 url: window.location.href
             };
         });
@@ -234,9 +360,9 @@ async function scrapeBusinessInParallelTab(browser, business, listingPageUrl, ta
         // Use the original name if we couldn't get a better one
         const finalName = businessDetails.name || business.name;
         
-        console.log(`   Tab ${tabIndex}: 📝 Name: ${finalName}`);
-        console.log(`   Tab ${tabIndex}: 📞 Phone: ${businessDetails.phone || 'Not found'}`);
-        console.log(`   Tab ${tabIndex}: 📱 Social: ${businessDetails.socialMedia || 'Not found'}`);
+        console.log(`   📝 Name: ${finalName}`);
+        console.log(`   📞 Phone: ${businessDetails.phone || 'Not found'}`);
+        console.log(`   📱 Social: ${businessDetails.socialMedia || 'Not found'}`);
         
         return {
             name: finalName,
@@ -245,42 +371,34 @@ async function scrapeBusinessInParallelTab(browser, business, listingPageUrl, ta
         };
         
     } catch (error) {
-        console.log(`   Tab ${tabIndex}: ❌ Error scraping business ${business.name}: ${error.message}`);
+        console.log(`   ❌ Error scraping business ${business.name}: ${error.message}`);
         return {
             name: business.name,
             phone: '',
             socialMedia: ''
         };
-    } finally {
-        if (businessTab) {
-            await businessTab.close();
-        }
     }
 }
 
-// Function to process businesses in parallel batches using multiple tabs
-async function processBatchInParallel(browser, businesses, listingPageUrl, batchSize = 5) {
+// Function to process businesses sequentially on the same tab
+async function processBusinessesSequentially(page, businesses, listingPageUrl) {
     const results = [];
     
-    for (let i = 0; i < businesses.length; i += batchSize) {
-        const batch = businesses.slice(i, i + batchSize);
-        console.log(`   🚀 Processing batch ${Math.floor(i/batchSize) + 1}: businesses ${i + 1}-${Math.min(i + batchSize, businesses.length)} in parallel`);
+    console.log(`   🔄 Processing ${businesses.length} businesses sequentially...`);
+    
+    for (let i = 0; i < businesses.length; i++) {
+        const business = businesses[i];
+        console.log(`   📍 Processing ${i + 1}/${businesses.length}: ${business.name}`);
         
-        // Process batch in parallel - each business gets its own tab
-        const batchPromises = batch.map((business, index) => 
-            scrapeBusinessInParallelTab(browser, business, listingPageUrl, i + index + 1)
-        );
+        const businessData = await scrapeBusinessSequentially(page, business, listingPageUrl);
+        results.push(businessData);
         
-        const batchResults = await Promise.all(batchPromises);
-        results.push(...batchResults);
+        // Update global data after each business for emergency saves
+        globalScrapedData = [...globalScrapedData.slice(0, -businesses.length + i), ...results, ...globalScrapedData.slice(-businesses.length + i + 1)];
         
-        console.log(`   ✅ Batch ${Math.floor(i/batchSize) + 1} complete! Processed ${batch.length} businesses.`);
+        console.log(`   ✅ Completed ${i + 1}/${businesses.length}: ${business.name}`);
         
-        // Small delay between batches to be respectful
-        if (i + batchSize < businesses.length) {
-            console.log(`   ⏳ Waiting 2 seconds before next batch...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-        }
+        // No delay needed between businesses - let it run as fast as possible
     }
     
     return results;
@@ -289,6 +407,7 @@ async function processBatchInParallel(browser, businesses, listingPageUrl, batch
 async function scrapeBooksy() {
     let browser;
     let scrapedData = [];
+    let finalSaveCompleted = false; // Flag to prevent double saving
     
     try {
         console.log('Connecting to persistent browser...');
@@ -321,7 +440,7 @@ async function scrapeBooksy() {
         const totalPagesToScrape = 20;
         const allBarberData = [];
         
-        console.log(`Starting to scrape ${totalPagesToScrape} pages of Chicago barbershops...`);
+        console.log(`Starting to scrape ${totalPagesToScrape} pages of Newark male haircut services...`);
         
         for (let currentPage = 1; currentPage <= totalPagesToScrape; currentPage++) {
             // Add error handling and retry logic for each page
@@ -333,10 +452,11 @@ async function scrapeBooksy() {
                 try {
                     console.log(`\n🔄 ===== SCRAPING PAGE ${currentPage}/${totalPagesToScrape} =====`);
                     
-                    // Navigate to specific page using URL parameter
+                    // Navigate to specific page using the Newark URL
+                    const baseUrl = 'https://booksy.com/en-us/s/male-haircut/134623_newark?locationHash=here%253Acm%253Anamedplace%253A21017964';
                     const pageUrl = currentPage === 1 
-                        ? 'https://booksy.com/en-us/s/barber-shop/18229_chicago'
-                        : `https://booksy.com/en-us/s/barber-shop/18229_chicago?businessesPage=${currentPage}`;
+                        ? baseUrl
+                        : `${baseUrl}&businessesPage=${currentPage}`;
                     
                     console.log(`Navigating to: ${pageUrl}`);
                     await page.goto(pageUrl, { 
@@ -344,8 +464,12 @@ async function scrapeBooksy() {
                         timeout: 15000 
                     });
                     
-                    // Reduced wait time for page to load
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    // Wait for business cards to load instead of arbitrary delay
+                    await page.waitForSelector('[data-testid="business-name"]', { 
+                        visible: true, 
+                        timeout: 10000 
+                    });
+                    
                     console.log(`Current URL: ${page.url()}`);
                     
                     // REMOVED SCROLLING - Extract business information directly from DOM elements
@@ -410,29 +534,20 @@ async function scrapeBooksy() {
                         break;
                     }
                     
-                    // Process businesses in parallel batches using multiple tabs
-                    console.log(`\n🚀 Processing ${businessCards.length} businesses on page ${currentPage} in parallel batches...\n`);
+                    // Process businesses sequentially on the same tab
+                    console.log(`\n🚀 Processing ${businessCards.length} businesses on page ${currentPage} sequentially...\n`);
                     
-                    const pageBarberData = await processBatchInParallel(browser, businessCards, pageUrl, 5);
+                    const pageBarberData = await processBusinessesSequentially(page, businessCards, pageUrl);
                     
                     // Add this page's data to the overall collection
                     allBarberData.push(...pageBarberData);
+                    globalScrapedData = allBarberData; // Update global data
                     console.log(`✅ Page ${currentPage} complete! Extracted ${pageBarberData.length} businesses. Total so far: ${allBarberData.length}`);
                     
                     // Save progress after each page
                     if (allBarberData.length > 0) {
-                        const progressFilename = `chicago-barbers-progress-${currentPage}pages.csv`;
-                        const csvContent = [
-                            ['Name', 'Phone', 'Social Media'].join(','),
-                            ...allBarberData.map(row => [
-                                `"${(row.name || '').replace(/"/g, '""')}"`,
-                                `"${(row.phone || '').replace(/"/g, '""')}"`,
-                                `"${(row.socialMedia || '').replace(/"/g, '""')}"`
-                            ].join(','))
-                        ].join('\n');
-                        
-                        fs.writeFileSync(progressFilename, csvContent);
-                        console.log(`💾 Progress saved to ${progressFilename}`);
+                        const progressFilename = `barbershop-data-progress-${currentPage}pages.csv`;
+                        saveToCSV(allBarberData, progressFilename);
                     }
                     
                     pageSuccess = true;
@@ -462,33 +577,38 @@ async function scrapeBooksy() {
         console.log(`\n🎉 ===== SCRAPING COMPLETE! =====`);
         console.log(`Successfully scraped ${totalPagesToScrape} pages and found details for ${allBarberData.length} barbershops.`);
         
-        // Save to simplified CSV with only the requested fields
-        if (allBarberData.length > 0) {
-            const simplifiedHeaders = ['Name', 'Phone', 'Social Media'];
-            const csvContent = [
-                simplifiedHeaders.join(','),
-                ...allBarberData.map(row => [
-                    `"${(row.name || '').replace(/"/g, '""')}"`,
-                    `"${(row.phone || '').replace(/"/g, '""')}"`,
-                    `"${(row.socialMedia || '').replace(/"/g, '""')}"`
-                ].join(','))
-            ].join('\n');
+        // Save final CSV with generic name (ONLY ONCE)
+        if (allBarberData.length > 0 && !finalSaveCompleted) {
+            const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+            const filename = `barbershop-data-${timestamp}.csv`;
+            const success = saveToCSV(allBarberData, filename);
             
-            const filename = `chicago-barbers-${totalPagesToScrape}pages-parallel.csv`;
-            fs.writeFileSync(filename, csvContent);
-            console.log(`\n📁 Data saved to ${filename}`);
-            
-            scrapedData = allBarberData;
+            if (success) {
+                scrapedData = allBarberData;
+                finalSaveCompleted = true; // Mark as completed to prevent double save
+            }
         }
         
-        console.log(`Script completed. Found ${scrapedData.length} barber listings across ${totalPagesToScrape} pages.`);
+        console.log(`Script completed. Found ${scrapedData.length} barbershop listings across ${totalPagesToScrape} pages.`);
         
     } catch (error) {
-        console.error('Error during scraping:', error);
+        console.error('❌ Critical error during scraping:', error);
     } finally {
         if (browser) {
             console.log('Disconnecting from browser...');
-            await browser.disconnect();
+            try {
+                await browser.disconnect();
+            } catch (disconnectError) {
+                console.log('Error disconnecting from browser:', disconnectError.message);
+            }
+        }
+        
+        // Final save attempt ONLY if no previous final save was completed
+        if (globalScrapedData.length > 0 && !finalSaveCompleted) {
+            console.log('Performing final save check...');
+            const timestamp = new Date().toISOString().split('T')[0];
+            const finalFilename = `barbershop-data-final-${timestamp}.csv`;
+            saveToCSV(globalScrapedData, finalFilename);
         }
     }
 }
