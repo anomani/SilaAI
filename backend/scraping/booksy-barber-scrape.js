@@ -100,63 +100,111 @@ async function scrapeBusinessSequentially(page, business, listingPageUrl) {
     try {
         console.log(`   📋 Processing: ${business.name} (index ${business.index})`);
         
-        // Navigate back to listing page if we're not there already
+        // Always navigate back to listing page to ensure fresh state
         const currentUrl = page.url();
-        if (!currentUrl.includes('male-haircut/134623_newark')) {
+        if (!currentUrl.includes('22412_boston') || currentUrl.includes('#ba_s=')) {
             console.log(`   🔄 Navigating back to listing page...`);
             await page.goto(listingPageUrl, { 
-                waitUntil: 'domcontentloaded',
+                waitUntil: 'networkidle2',
                 timeout: 15000 
             });
             
-            // Wait for business cards to load instead of arbitrary delay
+            // Wait for business cards to load and be fully interactive
             await page.waitForSelector('[data-testid="business-name"]', { 
                 visible: true, 
-                timeout: 10000 
+                timeout: 15000 
             });
+            
+            // Additional wait to ensure all business cards are rendered and clickable
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            // Verify we have the expected number of business cards and they're clickable
+            const pageInfo = await page.evaluate(() => {
+                const businessCards = document.querySelectorAll('[data-testid="business-name"]');
+                let clickableCount = 0;
+                
+                businessCards.forEach(card => {
+                    let currentElement = card;
+                    while (currentElement && currentElement !== document.body) {
+                        const computedStyle = getComputedStyle(currentElement);
+                        if (computedStyle.cursor === 'pointer' || 
+                            currentElement.tagName === 'A' ||
+                            currentElement.onclick) {
+                            clickableCount++;
+                            break;
+                        }
+                        currentElement = currentElement.parentElement;
+                    }
+                });
+                
+                return {
+                    totalCards: businessCards.length,
+                    clickableCards: clickableCount,
+                    pageUrl: window.location.href
+                };
+            });
+            
+            console.log(`   📋 Found ${pageInfo.totalCards} business cards (${pageInfo.clickableCards} clickable)`);
+            console.log(`   🌐 Current URL: ${pageInfo.pageUrl}`);
         }
         
         // Find and click on the specific business using its index
         console.log(`   🎯 Looking for business at index ${business.index}: ${business.name}`);
+        
+        // First, wait a moment to ensure page is stable
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const clickedSuccessfully = await page.evaluate((businessIndex, businessName) => {
-            // Get all business name elements
-            const businessNameElements = document.querySelectorAll('[data-testid="business-name"]');
-            
-            // Check if the index is valid
-            if (businessIndex >= 0 && businessIndex < businessNameElements.length) {
-                const targetElement = businessNameElements[businessIndex];
+            try {
+                // Get all business name elements
+                const businessNameElements = document.querySelectorAll('[data-testid="business-name"]');
                 
-                // Verify this is the business we expect (optional safety check)
-                const actualName = targetElement.textContent.trim();
-                console.log(`Found business at index ${businessIndex}: "${actualName}" (expected: "${businessName}")`);
-                
-                // Find the clickable parent
-                let clickableParent = targetElement;
-                let currentElement = targetElement;
-                
-                // Traverse up the DOM to find a clickable parent
-                while (currentElement && currentElement !== document.body) {
-                    if (currentElement.tagName === 'A' || 
-                        currentElement.onclick || 
-                        currentElement.getAttribute('role') === 'button' ||
-                        currentElement.style.cursor === 'pointer') {
-                        clickableParent = currentElement;
-                        break;
+                // Check if the index is valid
+                if (businessIndex >= 0 && businessIndex < businessNameElements.length) {
+                    const targetElement = businessNameElements[businessIndex];
+                    
+                    // Verify this is the business we expect (optional safety check)
+                    const actualName = targetElement.textContent.trim();
+                    console.log(`Found business at index ${businessIndex}: "${actualName}" (expected: "${businessName}")`);
+                    
+                    // Find the clickable parent - try multiple approaches
+                    let clickableParent = targetElement;
+                    let currentElement = targetElement;
+                    
+                    // Look for the specific clickable parent pattern we found in diagnosis
+                    while (currentElement && currentElement !== document.body) {
+                        const computedStyle = getComputedStyle(currentElement);
+                        if (computedStyle.cursor === 'pointer' || 
+                            currentElement.tagName === 'A' || 
+                            currentElement.onclick || 
+                            currentElement.getAttribute('role') === 'button' ||
+                            currentElement.getAttribute('href') ||
+                            currentElement.classList.contains('clickable')) {
+                            clickableParent = currentElement;
+                            break;
+                        }
+                        currentElement = currentElement.parentElement;
                     }
-                    currentElement = currentElement.parentElement;
+                    
+                    // Scroll element into view before clicking
+                    clickableParent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Click the element immediately (diagnosis showed this works reliably)
+                    clickableParent.click();
+                    
+                    return { success: true, actualName };
+                } else {
+                    console.log(`Invalid business index: ${businessIndex} (total elements: ${businessNameElements.length})`);
+                    return { success: false, error: `Invalid index ${businessIndex}/${businessNameElements.length}` };
                 }
-                
-                // Click the element
-                clickableParent.click();
-                return true;
-            } else {
-                console.log(`Invalid business index: ${businessIndex} (total elements: ${businessNameElements.length})`);
-                return false;
+            } catch (error) {
+                console.log(`Error clicking business: ${error.message}`);
+                return { success: false, error: error.message };
             }
         }, business.index, business.name);
         
-        if (!clickedSuccessfully) {
-            console.log(`   ⚠️  Could not click on business at index ${business.index}: ${business.name}`);
+        if (!clickedSuccessfully.success) {
+            console.log(`   ⚠️  Could not click on business at index ${business.index}: ${business.name} - ${clickedSuccessfully.error || 'Unknown error'}`);
             return {
                 name: business.name,
                 phone: '',
@@ -440,7 +488,7 @@ async function scrapeBooksy() {
         const totalPagesToScrape = 20;
         const allBarberData = [];
         
-        console.log(`Starting to scrape ${totalPagesToScrape} pages of Newark male haircut services...`);
+        console.log(`Starting to scrape ${totalPagesToScrape} pages of top-rated Boston barbershops...`);
         
         for (let currentPage = 1; currentPage <= totalPagesToScrape; currentPage++) {
             // Add error handling and retry logic for each page
@@ -452,8 +500,8 @@ async function scrapeBooksy() {
                 try {
                     console.log(`\n🔄 ===== SCRAPING PAGE ${currentPage}/${totalPagesToScrape} =====`);
                     
-                    // Navigate to specific page using the Newark URL
-                    const baseUrl = 'https://booksy.com/en-us/s/male-haircut/134623_newark?locationHash=here%253Acm%253Anamedplace%253A21017964';
+                    // Navigate to specific page using the Boston URL (top-rated)
+                    const baseUrl = 'https://booksy.com/en-us/s/22412_boston?locationHash=here%253Acm%253Anamedplace%253A21014642';
                     const pageUrl = currentPage === 1 
                         ? baseUrl
                         : `${baseUrl}&businessesPage=${currentPage}`;
@@ -541,14 +589,8 @@ async function scrapeBooksy() {
                     
                     // Add this page's data to the overall collection
                     allBarberData.push(...pageBarberData);
-                    globalScrapedData = allBarberData; // Update global data
+                    globalScrapedData = allBarberData; // Update global data for emergency saves
                     console.log(`✅ Page ${currentPage} complete! Extracted ${pageBarberData.length} businesses. Total so far: ${allBarberData.length}`);
-                    
-                    // Save progress after each page
-                    if (allBarberData.length > 0) {
-                        const progressFilename = `barbershop-data-progress-${currentPage}pages.csv`;
-                        saveToCSV(allBarberData, progressFilename);
-                    }
                     
                     pageSuccess = true;
                     
