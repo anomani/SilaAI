@@ -29,7 +29,7 @@ const CalendarScreen = ({ navigation }) => {
 
   // Add this constant at the top of the component
   const HOUR_HEIGHT = 100;
-  const TOTAL_HOURS = 12;
+  const TOTAL_HOURS = 14;
 
   const totalHeight = HOUR_HEIGHT * TOTAL_HOURS;
 
@@ -39,7 +39,7 @@ const CalendarScreen = ({ navigation }) => {
   const [dragPositions, setDragPositions] = useState({});
   const [dragTimes, setDragTimes] = useState({});
 
-  const visibleHeight = HOUR_HEIGHT * 12; // Assuming 12 hours are visible at once
+  const visibleHeight = HOUR_HEIGHT * 14; // 14 hours visible (8 AM to 9 PM)
 
   const onPanGestureEvent = Animated.event(
     [{ nativeEvent: { translationY: panY } }],
@@ -276,7 +276,7 @@ const CalendarScreen = ({ navigation }) => {
 
   const renderTimeSlots = () => {
     const slots = [];
-    for (let hour = 9; hour <= 21; hour++) {
+    for (let hour = 8; hour <= 21; hour++) {
       slots.push(
         <View key={hour} style={styles.timeSlot}>
           <Text style={styles.timeText}>
@@ -419,7 +419,7 @@ const CalendarScreen = ({ navigation }) => {
   const getColorForAppointmentType = (type) => {
     // Skip if it's a blocked time appointment
     if (type === 'BLOCKED_TIME') {
-      return 'rgba(255, 149, 0, 0.7)'; // Keep existing blocked time color
+      return 'rgba(128, 128, 128, 0.8)'; // Grey color for blocked time
     }
 
     // Generate a consistent color based on the appointment type string
@@ -450,6 +450,8 @@ const CalendarScreen = ({ navigation }) => {
       return new Date('1970/01/01 ' + a.startTime) - new Date('1970/01/01 ' + b.startTime);
     });
 
+    // First pass: Calculate columns for each appointment
+    const appointmentColumns = [];
     let maxColumn = 0;
 
     sortedAppointments.forEach((appointment, index) => {
@@ -459,9 +461,8 @@ const CalendarScreen = ({ navigation }) => {
       const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
       const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
       
-      const startPosition = (start - 9) * HOUR_HEIGHT;
-      const endPosition = (end - 9) * HOUR_HEIGHT;
-      const duration = endPosition - startPosition;
+      const startPosition = (start - 8) * HOUR_HEIGHT;
+      const endPosition = (end - 8) * HOUR_HEIGHT;
 
       let column = 0;
       while (timeSlots[`${startPosition}-${column}`]) {
@@ -473,9 +474,29 @@ const CalendarScreen = ({ navigation }) => {
         timeSlots[`${i}-${column}`] = appointment.id;
       }
 
+      appointmentColumns.push(column);
+    });
+
+    // Second pass: Render appointments with calculated widths
+    sortedAppointments.forEach((appointment, index) => {
+      const [startHour, startMinute] = appointment.startTime.split(':');
+      const [endHour, endMinute] = appointment.endTime.split(':');
+      
+      const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
+      const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
+      
+      const startPosition = (start - 8) * HOUR_HEIGHT;
+      const endPosition = (end - 8) * HOUR_HEIGHT;
+      const duration = endPosition - startPosition;
+
+      const column = appointmentColumns[index];
       const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
-      const width = 350; // Fixed width for all appointments
-      const left = column * 210; // 210 to add some space between appointments
+      
+      // Calculate dynamic width based on available space and columns
+      const availableWidth = 280; // Available width for appointments (screen width - timeline width - padding)
+      const columnWidth = availableWidth / (maxColumn + 1);
+      const width = Math.max(columnWidth - 5, 120); // Minimum width of 120, with 5px spacing
+      const left = column * columnWidth;
 
       // Create formatted service text that includes add-ons
       const getFormattedServiceText = (appointment) => {
@@ -524,6 +545,7 @@ const CalendarScreen = ({ navigation }) => {
               <Animated.View
                 style={[
                   styles.appointmentBlock,
+                  isBlockedTime && styles.blockedTimeBlock,
                   {
                     top: startPosition,
                     height: Math.max(duration, 50),
@@ -563,11 +585,8 @@ const CalendarScreen = ({ navigation }) => {
       );
     });
 
-    // Calculate the total width needed for all appointments
-    const totalWidth = (maxColumn + 1) * 210; // 210 is the width of each column
-
     return (
-      <View style={{ width: Math.max(totalWidth, 350) }}>
+      <View style={{ width: '100%' }}>
         {appointmentBlocks}
       </View>
     );
@@ -577,12 +596,12 @@ const CalendarScreen = ({ navigation }) => {
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
-    const timePosition = ((hours - 9) + minutes / 60) * 100;
+    const timePosition = ((hours - 8) + minutes / 60) * 100;
 
     // Check if the selected date is today
     const isToday = date.toDateString() === now.toDateString();
 
-    if (isToday && hours >= 9 && hours < 21) {
+    if (isToday && hours >= 8 && hours < 21) {
       return (
         <View
           style={[
@@ -712,15 +731,10 @@ const CalendarScreen = ({ navigation }) => {
               <View style={styles.timeline}>
                 {renderTimeSlots()}
               </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={true}
-                contentContainerStyle={{ flexGrow: 1 }}
-              >
-                <View style={styles.appointmentsContainer}>
-                  {renderAppointments()}
-                </View>
-              </ScrollView>
+              <View style={styles.appointmentsContainer}>
+                {renderAppointments()}
+                {renderCurrentTimeLine()}
+              </View>
             </View>
           </ScrollView>
         )
@@ -1054,7 +1068,8 @@ const styles = StyleSheet.create({
   },
   appointmentsContainer: {
     position: 'relative',
-    minWidth: '100%', // Ensure it's at least as wide as the screen
+    flex: 1,
+    minHeight: 1400, // 14 hours * 100px per hour
   },
   appointmentBlock: {
     position: 'absolute',
@@ -1071,6 +1086,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  blockedTimeBlock: {
+    borderWidth: 2,
+    borderColor: '#666',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(128, 128, 128, 0.6)',
+    opacity: 0.8,
   },
   appointmentHeader: {
     flexDirection: 'row',
@@ -1103,6 +1125,7 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: 'red',
     zIndex: 1000,
+    marginLeft: 0, // Ensure it starts from the left edge of the appointments container
   },
   datePickerButton: {
     flexDirection: 'row',

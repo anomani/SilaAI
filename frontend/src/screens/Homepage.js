@@ -70,6 +70,14 @@ const Homepage = ({ navigation }) => {
           </View>
           <Ionicons name="chevron-forward" size={24} color="#fff" />
         </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.logoutButton} 
+          onPress={handleLogout}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#ff4444" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
       <Footer navigation={navigation} />
     </View>
@@ -114,6 +122,21 @@ const styles = StyleSheet.create({
   menuSubtitle: {
     color: '#8e8e93',
     fontSize: 14,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    marginTop: 16,
+    backgroundColor: '#2c2c2e',
+    borderRadius: 12,
+  },
+  logoutText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#ff4444',
+    fontWeight: '600',
   },
 });
 

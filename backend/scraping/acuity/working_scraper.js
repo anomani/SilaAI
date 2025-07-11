@@ -2,8 +2,8 @@ const puppeteer = require('puppeteer');
 const dotenv = require('dotenv')
 dotenv.config({path : '../../.env'})
 const moment = require('moment');
-const {createAppointment} = require('../model/appointment')
-const {getClientByPhoneNumber, createClient} = require('../model/clients')
+const {createAppointment} = require('../../src/model/appointment')
+const {getClientByPhoneNumber, createClient} = require('../../src/model/clients')
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 

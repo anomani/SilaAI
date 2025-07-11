@@ -501,7 +501,7 @@ async function scrapeBooksy() {
                     console.log(`\n🔄 ===== SCRAPING PAGE ${currentPage}/${totalPagesToScrape} =====`);
                     
                     // Navigate to specific page using the Boston URL (top-rated)
-                    const baseUrl = 'https://booksy.com/en-us/s/22412_boston?locationHash=here%253Acm%253Anamedplace%253A21014642';
+                    const baseUrl = 'https://booksy.com/en-us/s/134762_bridgeport?locationHash=here%253Acm%253Anamedplace%253A21017570';
                     const pageUrl = currentPage === 1 
                         ? baseUrl
                         : `${baseUrl}&businessesPage=${currentPage}`;

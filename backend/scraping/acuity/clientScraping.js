@@ -5,8 +5,8 @@ const fs = require('fs');
 const os = require('os');   
 const path = require('path')
 const moment = require('moment'); // Add moment library
-const {createAppointment} = require('../model/appointment')
-const {getClientByPhoneNumber} = require('../model/clients')
+const {createAppointment} = require('../../src/model/appointment')
+const {getClientByPhoneNumber} = require('../../src/model/clients')
 const apiKey = process.env.BROWSERCLOUD_API_KEY;
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));

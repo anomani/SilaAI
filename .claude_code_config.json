@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "sequel_postgresql_klrO0C": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@sequelsh/mcp@latest",
+        "run",
+        "postgresql",
+        "--transport",
+        "io"
+      ],
+      "env": {
+        "DATABASE_URL": "postgres://ucssafk6fna0m1:pa3d881346248cf90530a78a1392873279efe0a3da40516d0d7d6a72ae770fd00@cd5gks8n4kb20g.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/d8tcqmqkfemv2t"
+      }
+    }
+  }
+}

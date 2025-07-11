@@ -5,10 +5,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path')
 const moment = require('moment'); // Add moment library
-const {createAppointment} = require('../model/appointment')
-const {getClientByPhoneNumber} = require('../model/clients')
+const {createAppointment} = require('../../src/model/appointment')
+const {getClientByPhoneNumber} = require('../../src/model/clients')
 // Import the launchAndLogin function
-const { launchAndLogin } = require('./squarespace'); // Added import
+const { launchAndLogin } = require('../../src/config/squarespace'); // Added import
 // Remove apiKey as it's handled within launchAndLogin now
 // const apiKey = process.env.BROWSERCLOUD_API_KEY;
 

@@ -24,6 +24,7 @@ import { connect } from "puppeteer-real-browser";
     //     password:'<proxy-password>'
     // }
   });
+
   await page.goto("https://booksy.com/pro/en-us/login");
   await page.type('[data-testid="email"],input[type="email"]', 'yeboi1234321234@gmail.com');
   await page.type('[data-testid="password"],input[type="password"]', 'Maks.9611');
