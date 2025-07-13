@@ -527,6 +527,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
           output = await createClient(args.firstName, args.lastName, phoneNumber, userId);
         }
         break;
+        
       case "findRecurringAvailability":
         output = await findRecurringAvailability(
           args.initialDate,
