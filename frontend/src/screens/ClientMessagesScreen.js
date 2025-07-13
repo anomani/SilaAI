@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, Image, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, Keyboard, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond, getSuggestedResponse, clearSuggestedResponse, getAIResponseStatus } from '../services/api';
+import { getMessagesByClientId, sendMessage, setMessagesRead, getClientById, getClientAutoRespond, updateClientAutoRespond, getSuggestedResponse, clearSuggestedResponse, getAIResponseStatus, getCurrentUser } from '../services/api';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import twilioAvatar from '../../assets/icon.png';
 import defaultAvatar from '../../assets/avatar.png';
@@ -68,10 +68,19 @@ const ClientMessagesScreen = ({ route }) => {
   const [isSuggestedResponseEdited, setIsSuggestedResponseEdited] = useState(false);
   const [aiStatus, setAiStatus] = useState(null);
   const aiStatusPolling = useRef(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     if (isFocused) {
       const initializeScreen = async () => {
+        // Fetch user data first
+        try {
+          const userData = await getCurrentUser();
+          setUser(userData);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+        
         const data = await getMessagesByClientId(clientid);
         const sortedMessages = data.sort((a, b) => new Date(a.date) - new Date(b.date));
         
@@ -152,7 +161,7 @@ const ClientMessagesScreen = ({ route }) => {
         const hasNewMessages = JSON.stringify(prevMessages) !== JSON.stringify(sortedMessages);
         if (hasNewMessages) {
           const newestMessage = sortedMessages[sortedMessages.length - 1];
-          if (newestMessage && newestMessage.fromtext !== '+18446480598') {
+          if (newestMessage && newestMessage.fromtext !== (user?.business_number || user?.phone_number)) {
             startPollingAIStatus();
           }
           setLocalMessages(prev => {
@@ -274,6 +283,11 @@ const ClientMessagesScreen = ({ route }) => {
       return;
     }
 
+    if (!user || (!user.business_number && !user.phone_number)) {
+      console.log('User data not available or missing phone number');
+      return;
+    }
+
     const tempId = `temp-${Date.now()}`;
     try {
       const recipient = clientDetails.phonenumber;
@@ -288,7 +302,7 @@ const ClientMessagesScreen = ({ route }) => {
       const tempMessage = {
         id: tempId,
         body: messageToSend,
-        fromtext: '+18446480598',
+        fromtext: user?.business_number || user?.phone_number,
         totext: recipient,
         date: adjustedDateString,
         is_ai: isAI,
@@ -457,7 +471,7 @@ const ClientMessagesScreen = ({ route }) => {
       return null;
     }
 
-    const isAssistant = messageGroup.sender === '+18446480598';
+    const isAssistant = messageGroup.sender === (user?.business_number || user?.phone_number);
     const avatar = isAssistant ? twilioAvatar : defaultAvatar;
     
     return (
@@ -539,7 +553,7 @@ const ClientMessagesScreen = ({ route }) => {
 
     const recentMessages = messages.slice(-5);
     const formattedMessages = recentMessages
-      .map(msg => `${msg.fromtext === '+18446480598' ? 'You' : clientName}: ${msg.body}`)
+      .map(msg => `${msg.fromtext === (user?.business_number || user?.phone_number) ? 'You' : clientName}: ${msg.body}`)
       .join('\n');
 
     await Notifications.scheduleNotificationAsync({
@@ -679,15 +693,15 @@ const ClientMessagesScreen = ({ route }) => {
               <TouchableOpacity 
                 style={[
                   styles.sendButton,
-                  (!clientDetails || (newMessage.trim() === '' && currentSuggestedResponse.trim() === '')) && styles.sendButtonDisabled
+                  (!clientDetails || !user || (!user.business_number && !user.phone_number) || (newMessage.trim() === '' && currentSuggestedResponse.trim() === '')) && styles.sendButtonDisabled
                 ]} 
                 onPress={() => handleSendMessage()}
-                disabled={!clientDetails || (newMessage.trim() === '' && currentSuggestedResponse.trim() === '')}
+                disabled={!clientDetails || !user || (!user.business_number && !user.phone_number) || (newMessage.trim() === '' && currentSuggestedResponse.trim() === '')}
               >
                 <Ionicons 
                   name="send" 
                   size={24} 
-                  color={(clientDetails && (newMessage.trim() !== '' || currentSuggestedResponse.trim() !== '')) ? '#fff' : '#666'} 
+                  color={(clientDetails && user && (user.business_number || user.phone_number) && (newMessage.trim() !== '' || currentSuggestedResponse.trim() !== '')) ? '#fff' : '#666'} 
                 />
               </TouchableOpacity>
             </View>
