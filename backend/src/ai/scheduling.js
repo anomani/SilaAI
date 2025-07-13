@@ -3,7 +3,9 @@ const dotenv = require('dotenv');
 dotenv.config({ path: '../env' });
 const { getAvailability, getCurrentDate, findNextAvailableSlots } = require('./tools/getAvailability');
 const { bookAppointment, bookAppointmentInternal } = require('./tools/bookAppointment');
-const {cancelAppointment, cancelAppointmentInternal} = require('./tools/cancelAppointment')
+const { routeBookAppointment } = require('./tools/bookAppointmentRouter');
+const {cancelAppointment, cancelAppointmentInternal} = require('./tools/cancelAppointment');
+const { routeCancelAppointment } = require('./tools/cancelAppointmentRouter');
 const { getClientByPhoneNumber, createClient, updateClientNames } = require('../model/clients');
 const {getMessagesByClientId} = require('../model/messages')
 const {getAllAppointmentsByClientId, getUpcomingAppointments, getAppointmentsByDay} = require('../model/appointment')
@@ -15,6 +17,7 @@ const { appointmentTypes, addOns } = require('../model/appointmentTypes');
 const { getAIPrompt , deleteAIPrompt} = require('../model/aiPrompt');
 const { Anthropic } = require('@anthropic-ai/sdk');
 const { rescheduleAppointmentByPhoneAndDate, rescheduleAppointmentByPhoneAndDateInternal } = require('./tools/rescheduleAppointment');
+const { routeRescheduleAppointment } = require('./tools/rescheduleAppointmentRouter');
 const { getThreadByPhoneNumber, saveThread } = require('../model/threads');
 const { createWaitlistRequest } = require('../model/waitlist');
 const { getAppointmentTypes, getAddOns } = require('../model/appTypes');
@@ -385,19 +388,16 @@ async function createAssistant(fname, lname, phone, messages, appointment, clien
     }
     appointmentTypesString += '\n';
   }
-  console.log(appointmentTypesString);
   // Create a string representation of add-ons
   const addOnsString = addOns.map(addon => {
     const price = typeof addon.price === 'number' ? `CA$${addon.price.toFixed(2)}` : addon.price;
     return `${addon.name}: ${addon.duration} minutes @ ${price}\n  Compatible with: ${addon.compatible_appointment_types.join(', ')}`;
   }).join('\n\n');
-  console.log(addOnsString);
   // Add the appointment types and add-ons information to the beginning of the instructions
   assistantInstructions = `Appointment Types:\n${appointmentTypesString}\nAdd-ons:\n${addOnsString}\n\n${assistantInstructions}`;
   
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
-  console.log("AI prompt", aiPrompt)
   // Place aiPrompt before assistantInstructions
   let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
   fullInstructions = fullInstructions
@@ -407,7 +407,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, clien
     .replace('${phone}', phone)
     .replace('${upcomingAppointment}', upcomingAppointment);
 
-
+  console.log("fullInstructions", fullInstructions)
   if (!assistants.has(phone)) {
     const newAssistant = await openai.beta.assistants.create({
       instructions: fullInstructions,
@@ -499,7 +499,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
         const appointmentInfo = appointmentTypes[args.appointmentType];
         const addOnInfo = args.addOns.map(addon => addOns[addon]);
         const totalPrice = appointmentInfo.price + addOnInfo.reduce((sum, addon) => sum + addon.price, 0);
-        output = await bookAppointment(
+        output = await routeBookAppointment(
           args.date,
           args.startTime,
           client.firstname,
@@ -513,7 +513,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
         );
         break;
       case "cancelAppointment":
-        output = await cancelAppointment(client.phonenumber, args.date, userId);
+        output = await routeCancelAppointment(client.phonenumber, args.date, userId);
         break;
       case "getAllAppointmentsByClientId":
         output = await getAllAppointmentsByClientId(client.id, userId);
@@ -527,7 +527,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
           output = await createClient(args.firstName, args.lastName, phoneNumber, userId);
         }
         break;
-        
+
       case "findRecurringAvailability":
         output = await findRecurringAvailability(
           args.initialDate,
@@ -566,7 +566,7 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
         await updateAssistantInstructions(client.phonenumber);
         break;
       case "rescheduleAppointmentByPhoneAndDate":
-        output = await rescheduleAppointmentByPhoneAndDate(client.phonenumber, args.currentDate, args.newDate, args.newStartTime, userId);
+        output = await routeRescheduleAppointment(client.phonenumber, args.currentDate, args.newDate, args.newStartTime, userId);
         break;
       case "createWaitlistRequest":
         console.log("Creating waitlist request with the following parameters:");
@@ -702,7 +702,7 @@ async function handleToolCallsInternal(requiredActions, client, phoneNumber, use
         await updateAssistantInstructions(client.phonenumber);
         break;
       case "rescheduleAppointmentByPhoneAndDate":
-        output = await rescheduleAppointmentByPhoneAndDateInternal(client.phonenumber, args.currentDate, args.newDate, args.newStartTime);
+        output = await rescheduleAppointmentByPhoneAndDateInternal(client.phonenumber, args.currentDate, args.newDate, args.newStartTime, userId);
         break;
       case "createWaitlistRequest":
         console.log("Creating waitlist request with the following parameters:");
@@ -756,9 +756,10 @@ async function updateAssistantInstructions(phoneNumber) {
 
 async function handleUserInput(userMessages, phoneNumber, userId) {
   try {
+    console.log("handleUserInput", userMessages)
     const client = await getClientByPhoneNumber(phoneNumber, userId);
     let thread = await createThread(phoneNumber, false, userId);
-
+    console.log("thread", thread)
     // Get current date/time
     const currentDate = new Date(getCurrentDate());
     const dayOfWeek = currentDate.toLocaleString('en-US', { weekday: 'long' });
@@ -1116,11 +1117,11 @@ async function shouldAIRespond(userMessages, thread) {
   }
 }
 
-// async function main() {
-//   const response = await handleUserInput(['What day is it today?'], '+12038324011', 1);
-//   console.log(response);
-// }
+async function main() {
+  const response = await handleUserInput(['When you free next week?'], '+12038324011', 35);
+  console.log(response);
+}
 
-// main();
+main();
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal, handleToolCalls, handleToolCallsInternal};

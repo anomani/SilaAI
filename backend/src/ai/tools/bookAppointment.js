@@ -188,7 +188,7 @@ async function bookAppointmentInternal(date, startTime, fname, lname, phone, ema
             const newClient = await getClientByPhoneNumber(phone, userId);
             clientId = newClient.id;
         }
-        await createAppointment(appointmentType, null, date, startTime, endTime, clientId, "", price, userId);
+        await createAppointment(appointmentType, null, date, startTime, endTime, clientId, "", price, null, null, null, addOnArray, userId);
         return "Appointment booked successfully";
     } catch (error) {
         console.error(error);
