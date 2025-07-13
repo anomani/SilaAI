@@ -520,7 +520,12 @@ async function handleToolCalls(requiredActions, client, phoneNumber, userId) {
         break;
       case "createClient":
         console.log("creating client")
-        output = await updateClientNames(client.id, args.firstName, args.lastName);
+        // Check if this is for the temporary assistant (client exists but no name)
+        if (!client.firstname && !client.lastname) {
+          output = await updateClientNames(client.id, args.firstName, args.lastName);
+        } else {
+          output = await createClient(args.firstName, args.lastName, phoneNumber, userId);
+        }
         break;
       case "findRecurringAvailability":
         output = await findRecurringAvailability(
