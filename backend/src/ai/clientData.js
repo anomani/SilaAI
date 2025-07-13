@@ -449,7 +449,7 @@ async function createAssistant(date, userId) {
     assistant = await openai.beta.assistants.create({
       instructions: assistantInstructions,
       name: "Client Data",
-      model: "o3-mini-2025-01-31",
+      model: "o4-mini-2025-04-16",
       tools: tools
     });
   } else {
