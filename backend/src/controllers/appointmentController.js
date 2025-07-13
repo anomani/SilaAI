@@ -13,7 +13,9 @@ const {
   getAppointmentTypes, 
   getAddOns, 
   getAppointmentTypeByIdFromDB,
-  updateAppointmentType
+  updateAppointmentType,
+  storeAppointmentType,
+  deleteAppointmentType
 } = require('../model/appTypes');
 const axios = require('axios');
 // Add this helper function at the top of the file or just before confirmAppointment
@@ -595,6 +597,64 @@ async function updateAppointmentTypeController(req, res) {
 
 
 
+async function createAppointmentTypeController(req, res) {
+  try {
+    const userId = req.user.id;
+    const { name, price, duration, availability } = req.body;
+
+    if (!name || !price || !duration) {
+      return res.status(400).send('Missing required fields: name, price, duration');
+    }
+
+    // Generate a new ID - get the highest existing ID and add 1
+    const existingTypes = await getAppointmentTypes(userId);
+    const maxId = existingTypes.length > 0 ? Math.max(...existingTypes.map(t => t.id)) : 0;
+    const newId = maxId + 1;
+
+    const appointmentType = {
+      id: newId,
+      name,
+      price: parseFloat(price),
+      duration: parseInt(duration),
+      group_number: 1, // Default group number
+      availability: availability || {}
+    };
+
+    await storeAppointmentType(userId, appointmentType);
+    
+    // Return the created appointment type
+    const createdType = await getAppointmentTypeByIdFromDB(userId, newId);
+    console.log('Appointment type created successfully:', createdType);
+    res.status(201).json(createdType);
+  } catch (error) {
+    console.error('Error creating appointment type:', error);
+    res.status(500).send(`Error creating appointment type: ${error.message}`);
+  }
+}
+
+async function deleteAppointmentTypeController(req, res) {
+  try {
+    const userId = req.user.id;
+    const { appointmentTypeId } = req.params;
+
+    if (!appointmentTypeId) {
+      return res.status(400).send('Missing required field: appointmentTypeId');
+    }
+
+    const deleted = await deleteAppointmentType(userId, parseInt(appointmentTypeId));
+    
+    if (!deleted) {
+      return res.status(404).send('Appointment type not found');
+    }
+
+    console.log('Appointment type deleted successfully');
+    res.status(200).json({ message: 'Appointment type deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting appointment type:', error);
+    res.status(500).send(`Error deleting appointment type: ${error.message}`);
+  }
+}
+
 module.exports = { 
   createNewAppointment, 
   getAppointmentsByDate, 
@@ -615,5 +675,7 @@ module.exports = {
   getAppointmentTypesForUser,
   convertTo24HourFormat,
   updateAppointmentTypeController,
-  getAppointmentTypesForUserNoAuth
+  getAppointmentTypesForUserNoAuth,
+  createAppointmentTypeController,
+  deleteAppointmentTypeController
 };

@@ -416,10 +416,10 @@ const styles = StyleSheet.create({
   },
   appointmentCard: {
     backgroundColor: '#2c2c2e',
-    marginHorizontal: 16,
+    marginHorizontal: 8,
     marginVertical: 6,
     borderRadius: 12,
-    padding: 16,
+    padding: 18,
   },
   appointmentHeader: {
     flexDirection: 'row',
@@ -440,11 +440,15 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     marginBottom: 4,
+    flexWrap: 'wrap',
+    flexShrink: 1,
   },
   serviceText: {
     color: '#8E8E93',
     fontSize: 15,
     marginBottom: 8,
+    flexWrap: 'wrap',
+    flexShrink: 1,
   },
   paymentInfo: {
     flexDirection: 'row',

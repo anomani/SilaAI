@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getToken } from '../utils/auth';
 
 // Replace with your backend API URL
-// const API_URL = 'https://cf50-24-47-16-140.ngrok-free.app/api';
+// const API_URL = 'https://2150af63e950.ngrok-free.app/api';
 const API_URL = 'https://uzi-53c819396cc7.herokuapp.com/api';
 const api = axios.create({
   baseURL: API_URL,

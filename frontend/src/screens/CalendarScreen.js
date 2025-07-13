@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration, TextInput, RefreshControl, Dimensions } from 'react-native';
 import { getAppointmentsByDay, getClientById, createBlockedTime, deleteAppointment, rescheduleAppointment, updateBlockedTime, deleteBlockedTime } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
@@ -415,11 +415,9 @@ const CalendarScreen = ({ navigation }) => {
     }
   };
 
-  // Add this function near the top of the component
   const getColorForAppointmentType = (type) => {
-    // Skip if it's a blocked time appointment
     if (type === 'BLOCKED_TIME') {
-      return 'rgba(128, 128, 128, 0.8)'; // Grey color for blocked time
+      return 'rgba(72, 72, 74, 0.7)';
     }
 
     // Generate a consistent color based on the appointment type string
@@ -428,9 +426,9 @@ const CalendarScreen = ({ navigation }) => {
       hash = type.charCodeAt(i) + ((hash << 5) - hash);
     }
 
-    // Generate HSL color with consistent saturation and lightness
+    // Generate HSL color with muted saturation and lightness for less brightness
     const hue = Math.abs(hash % 360);
-    return `hsla(${hue}, 70%, 45%, 0.9)`; // Adjusted saturation and lightness for better visibility
+    return `hsla(${hue}, 50%, 40%, 0.85)`; // Reduced saturation and lightness for softer colors
   };
 
   const renderAppointments = () => {
@@ -450,139 +448,168 @@ const CalendarScreen = ({ navigation }) => {
       return new Date('1970/01/01 ' + a.startTime) - new Date('1970/01/01 ' + b.startTime);
     });
 
-    // First pass: Calculate columns for each appointment
-    const appointmentColumns = [];
-    let maxColumn = 0;
-
-    sortedAppointments.forEach((appointment, index) => {
-      const [startHour, startMinute] = appointment.startTime.split(':');
-      const [endHour, endMinute] = appointment.endTime.split(':');
-      
-      const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
-      const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
-      
-      const startPosition = (start - 8) * HOUR_HEIGHT;
-      const endPosition = (end - 8) * HOUR_HEIGHT;
-
-      let column = 0;
-      while (timeSlots[`${startPosition}-${column}`]) {
-        column++;
-      }
-      maxColumn = Math.max(maxColumn, column);
-
-      for (let i = startPosition; i < endPosition; i += HOUR_HEIGHT / 4) {
-        timeSlots[`${i}-${column}`] = appointment.id;
-      }
-
-      appointmentColumns.push(column);
-    });
-
-    // Second pass: Render appointments with calculated widths
-    sortedAppointments.forEach((appointment, index) => {
-      const [startHour, startMinute] = appointment.startTime.split(':');
-      const [endHour, endMinute] = appointment.endTime.split(':');
-      
-      const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
-      const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
-      
-      const startPosition = (start - 8) * HOUR_HEIGHT;
-      const endPosition = (end - 8) * HOUR_HEIGHT;
-      const duration = endPosition - startPosition;
-
-      const column = appointmentColumns[index];
-      const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
-      
-      // Calculate dynamic width based on available space and columns
-      const availableWidth = 280; // Available width for appointments (screen width - timeline width - padding)
-      const columnWidth = availableWidth / (maxColumn + 1);
-      const width = Math.max(columnWidth - 5, 120); // Minimum width of 120, with 5px spacing
-      const left = column * columnWidth;
-
-      // Create formatted service text that includes add-ons
-      const getFormattedServiceText = (appointment) => {
-        if (appointment.appointmenttype === 'BLOCKED_TIME') {
-          return appointment.details || 'No Details';
-        }
-        
-        let serviceText = appointment.appointmenttype || 'No Type';
-        if (appointment.addons && appointment.addons.length > 0) {
-          // Split addons string if it's not already an array
-          const addonArray = Array.isArray(appointment.addons) 
-            ? appointment.addons 
-            : appointment.addons.split(',');
-          
-          // Add each addon to the service text
-          serviceText += addonArray.map(addon => ` + ${addon.trim()}`).join('');
-        }
-        return serviceText;
+    // Helper function to check if two appointments overlap
+    const appointmentsOverlap = (app1, app2) => {
+      const convertToMinutes = (timeStr) => {
+        const [time, period] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
       };
 
-      appointmentBlocks.push(
-        <TouchableOpacity
-          key={appointment.id}
-          onPress={() => handleAppointmentPress(appointment)}
-          onLongPress={() => {
-            Vibration.vibrate(50);
-            setIsDraggable(true);
-            setActiveDragId(appointment.id);
-          }}
-          delayLongPress={300}
-        >
-          <PanGestureHandler
-            enabled={isDraggable}
-            onGestureEvent={onPanGestureEvent}
-            onHandlerStateChange={(event) => onPanHandlerStateChange(event, appointment)}
-            minDist={10}
+      const app1Start = convertToMinutes(app1.startTime);
+      const app1End = convertToMinutes(app1.endTime);
+      const app2Start = convertToMinutes(app2.startTime);
+      const app2End = convertToMinutes(app2.endTime);
+
+      return app1Start < app2End && app2Start < app1End;
+    };
+
+    // Calculate overlapping groups
+    const overlappingGroups = [];
+    const processedAppointments = new Set();
+
+    sortedAppointments.forEach((appointment, index) => {
+      if (processedAppointments.has(appointment.id)) return;
+
+      const overlappingGroup = [appointment];
+      processedAppointments.add(appointment.id);
+
+      // Find all appointments that overlap with this one
+      for (let i = index + 1; i < sortedAppointments.length; i++) {
+        const otherAppointment = sortedAppointments[i];
+        if (processedAppointments.has(otherAppointment.id)) continue;
+
+        // Check if it overlaps with any appointment in the current group
+        const overlapsWithGroup = overlappingGroup.some(groupApp => 
+          appointmentsOverlap(groupApp, otherAppointment)
+        );
+
+        if (overlapsWithGroup) {
+          overlappingGroup.push(otherAppointment);
+          processedAppointments.add(otherAppointment.id);
+        }
+      }
+
+      overlappingGroups.push(overlappingGroup);
+    });
+
+    // Calculate screen dimensions
+    const screenWidth = Dimensions.get('window').width;
+    const timelineWidth = 50; // Reduced timeline width
+    const containerPadding = 0; // No container padding now
+    const availableWidth = screenWidth - timelineWidth - containerPadding;
+
+    // Render each group
+    overlappingGroups.forEach(group => {
+      const groupSize = group.length;
+      const columnWidth = availableWidth / groupSize;
+      const minWidth = Math.max(columnWidth - 4, 120); // Minimum width with minimal spacing
+
+      group.forEach((appointment, columnIndex) => {
+        const [startHour, startMinute] = appointment.startTime.split(':');
+        const [endHour, endMinute] = appointment.endTime.split(':');
+        
+        const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
+        const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
+        
+        const startPosition = (start - 8) * HOUR_HEIGHT;
+        const endPosition = (end - 8) * HOUR_HEIGHT;
+        const duration = endPosition - startPosition;
+
+        const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
+        
+        // Calculate width and position - start right at the edge of timeline
+        const width = groupSize === 1 ? availableWidth - 8 : minWidth; // Full width if no overlaps
+        const left = groupSize === 1 ? 4 : columnIndex * columnWidth + 2; // Start right next to timeline
+
+        // Create formatted service text that includes add-ons
+        const getFormattedServiceText = (appointment) => {
+          if (appointment.appointmenttype === 'BLOCKED_TIME') {
+            return appointment.details || 'No Details';
+          }
+          
+          let serviceText = appointment.appointmenttype || 'No Type';
+          if (appointment.addons && appointment.addons.length > 0) {
+            // Split addons string if it's not already an array
+            const addonArray = Array.isArray(appointment.addons) 
+              ? appointment.addons 
+              : appointment.addons.split(',');
+            
+            // Add each addon to the service text
+            serviceText += addonArray.map(addon => ` + ${addon.trim()}`).join('');
+          }
+          return serviceText;
+        };
+
+        appointmentBlocks.push(
+          <TouchableOpacity
+            key={appointment.id}
+            onPress={() => handleAppointmentPress(appointment)}
+            onLongPress={() => {
+              Vibration.vibrate(50);
+              setIsDraggable(true);
+              setActiveDragId(appointment.id);
+            }}
+            delayLongPress={300}
           >
-            <Animated.View
-              style={[
-                { zIndex: activeDragId === appointment.id ? 1000 : 1 },
-                activeDragId === appointment.id ? {
-                  transform: [{ translateY: dragPositions[appointment.id] || 0 }]
-                } : null
-              ]}
+            <PanGestureHandler
+              enabled={isDraggable}
+              onGestureEvent={onPanGestureEvent}
+              onHandlerStateChange={(event) => onPanHandlerStateChange(event, appointment)}
+              minDist={10}
             >
               <Animated.View
                 style={[
-                  styles.appointmentBlock,
-                  isBlockedTime && styles.blockedTimeBlock,
-                  {
-                    top: startPosition,
-                    height: Math.max(duration, 50),
-                    backgroundColor: getColorForAppointmentType(appointment.appointmenttype),
-                    width: width,
-                    left: left,
-                  },
-                  activeDragId === appointment.id && {
-                    shadowColor: "#000",
-                    shadowOffset: {
-                      width: 0,
-                      height: 4,
-                    },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 4.65,
-                    elevation: 8,
-                  }
+                  { zIndex: activeDragId === appointment.id ? 1000 : 1 },
+                  activeDragId === appointment.id ? {
+                    transform: [{ translateY: dragPositions[appointment.id] || 0 }]
+                  } : null
                 ]}
               >
-                <View style={styles.appointmentHeader}>
-                  <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
-                    {isBlockedTime ? 'Blocked Time' : (appointment.clientName || 'No Name')}
+                <Animated.View
+                  style={[
+                    styles.appointmentBlock,
+                    isBlockedTime && styles.blockedTimeBlock,
+                    {
+                      top: startPosition,
+                      height: Math.max(duration, 60), // Minimum height increased
+                      backgroundColor: getColorForAppointmentType(appointment.appointmenttype),
+                      width: width,
+                      left: left,
+                    },
+                    activeDragId === appointment.id && {
+                      shadowColor: "#000",
+                      shadowOffset: {
+                        width: 0,
+                        height: 4,
+                      },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4.65,
+                      elevation: 8,
+                    }
+                  ]}
+                >
+                  <View style={styles.appointmentHeader}>
+                    <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
+                      {isBlockedTime ? 'Blocked Time' : (appointment.clientName || 'No Name')}
+                    </Text>
+                    <Text style={styles.appointmentType} numberOfLines={2} ellipsizeMode="tail">
+                      {getFormattedServiceText(appointment)}
+                    </Text>
+                  </View>
+                  <Text style={styles.appointmentTime} numberOfLines={1}>
+                    {activeDragId === appointment.id && dragTimes[appointment.id]
+                      ? `${dragTimes[appointment.id].startTime} - ${dragTimes[appointment.id].endTime}`
+                      : `${appointment.startTime || 'No Start'} - ${appointment.endTime || 'No End'}`}
                   </Text>
-                  <Text style={styles.appointmentType} numberOfLines={2} ellipsizeMode="tail">
-                    {getFormattedServiceText(appointment)}
-                  </Text>
-                </View>
-                <Text style={styles.appointmentTime}>
-                  {activeDragId === appointment.id && dragTimes[appointment.id]
-                    ? `${dragTimes[appointment.id].startTime} - ${dragTimes[appointment.id].endTime}`
-                    : `${appointment.startTime || 'No Start'} - ${appointment.endTime || 'No End'}`}
-                </Text>
+                </Animated.View>
               </Animated.View>
-            </Animated.View>
-          </PanGestureHandler>
-        </TouchableOpacity>
-      );
+            </PanGestureHandler>
+          </TouchableOpacity>
+        );
+      });
     });
 
     return (
@@ -656,15 +683,23 @@ const CalendarScreen = ({ navigation }) => {
                 [date.toISOString().split('T')[0]]: { selected: true }
               }}
               theme={{
-                backgroundColor: '#2c2c2e',
-                calendarBackground: '#2c2c2e',
-                textSectionTitleColor: '#fff',
+                backgroundColor: 'transparent',
+                calendarBackground: 'transparent',
+                textSectionTitleColor: '#ffffff',
                 selectedDayBackgroundColor: '#007AFF',
-                selectedDayTextColor: '#fff',
+                selectedDayTextColor: '#ffffff',
                 todayTextColor: '#007AFF',
-                dayTextColor: '#fff',
-                textDisabledColor: '#444',
-                monthTextColor: '#fff',
+                dayTextColor: '#ffffff',
+                textDisabledColor: '#48484a',
+                monthTextColor: '#ffffff',
+                arrowColor: '#007AFF',
+                indicatorColor: '#007AFF',
+                textDayFontWeight: '600',
+                textMonthFontWeight: '700',
+                textDayHeaderFontWeight: '600',
+                textDayFontSize: 16,
+                textMonthFontSize: 18,
+                textDayHeaderFontSize: 13,
               }}
             />
           </View>
@@ -686,106 +721,129 @@ const CalendarScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerDay}>{formatDay(date)}</Text>
-        <View style={styles.headerDateContainer}>
-          <TouchableOpacity onPress={() => setShowCustomDatePicker(true)}>
-            <View style={styles.datePickerButton}>
-              <Text style={styles.headerDate}>{formatDate(date)}</Text>
-              <Ionicons name="calendar" size={24} color="white" style={styles.calendarIcon} />
-            </View>
+      {/* Top Navigation Bar */}
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.actionButton} onPress={toggleViewMode}>
+          <Ionicons 
+            name={viewMode === 'list' ? 'apps' : 'calendar'} 
+            size={20} 
+            color="#ffffff" 
+          />
+        </TouchableOpacity>
+        
+        <View style={styles.dateSection}>
+          <TouchableOpacity onPress={() => setShowCustomDatePicker(true)} style={styles.dateButton}>
+            <Text style={styles.dayLabel}>{formatDay(date)}</Text>
+            <Text style={styles.dateLabel}>{formatDate(date)}</Text>
+            <Ionicons name="chevron-down" size={16} color="#8e8e93" />
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddButtonPress}>
-          <Ionicons name="add-circle" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.viewToggleButton} onPress={toggleViewMode}>
-          <Ionicons name={viewMode === 'list' ? 'card' : 'list'} size={24} color="#007AFF" />
+
+        <TouchableOpacity style={styles.actionButton} onPress={handleAddButtonPress}>
+          <Ionicons name="add" size={20} color="#ffffff" />
         </TouchableOpacity>
       </View>
-      
-      {renderCustomDatePicker()}
 
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-        </View>
-      ) : viewMode === 'list' ? (
-        appointments.length === 0 ? (
-          <View style={styles.noAppointmentsContainer}>
-            <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
-          </View>
-        ) : (
-          <ScrollView 
-            style={styles.calendarContainer}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                tintColor="#007AFF"
-                colors={["#007AFF"]}
-              />
-            }
-          >
-            <View style={styles.timelineContainer}>
-              <View style={styles.timeline}>
-                {renderTimeSlots()}
-              </View>
-              <View style={styles.appointmentsContainer}>
-                {renderAppointments()}
-                {renderCurrentTimeLine()}
-              </View>
-            </View>
-          </ScrollView>
-        )
-      ) : (
-        <View style={styles.cardView}>
-          {appointments.length > 0 ? (
-            <>
-              <ClientCardView
-                appointment={appointments[currentAppointmentIndex]}
-                onDelete={fetchAppointments}
-                allAppointments={appointments}
-                currentIndex={currentAppointmentIndex}
-                setCurrentIndex={setCurrentAppointmentIndex}
-              />
-              <View style={styles.cardNavigation}>
-                <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.max(0, currentAppointmentIndex - 1))} style={styles.navButton}>
-                  <Text style={styles.navButtonText}>‹</Text>
-                </TouchableOpacity>
-                <View style={styles.appointmentCounterContainer}>
-                  <Text style={styles.appointmentCounter}>
-                    {currentAppointmentIndex + 1} / {appointments.length}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => setCurrentAppointmentIndex(Math.min(appointments.length - 1, currentAppointmentIndex + 1))} style={styles.navButton}>
-                  <Text style={styles.navButtonText}>›</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <View style={styles.noAppointmentsContainer}>
-              <Text style={styles.noAppointmentsText}>No appointments scheduled today</Text>
-            </View>
-          )}
+
+      {/* Day Navigation - Only show in list view */}
+      {viewMode === 'list' && (
+        <View style={styles.dayNavigation}>
+          <TouchableOpacity style={styles.navArrow} onPress={() => changeDate(-1)}>
+            <Ionicons name="chevron-back" size={20} color="#8e8e93" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.todayButton} onPress={goToToday}>
+            <Text style={styles.todayButtonText}>Today</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.navArrow} onPress={() => changeDate(1)}>
+            <Ionicons name="chevron-forward" size={20} color="#8e8e93" />
+          </TouchableOpacity>
         </View>
       )}
-      
-      <View style={styles.totalContainer}>
-        <Text style={styles.totalText}>Daily Total: ${calculateDailyTotal()}</Text>
+
+      {/* Main Content */}
+      <View style={styles.mainContent}>
+        {renderCustomDatePicker()}
+
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Loading appointments...</Text>
+          </View>
+        ) : viewMode === 'list' ? (
+          appointments.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={64} color="#48484a" />
+              <Text style={styles.emptyStateTitle}>No appointments today</Text>
+              <Text style={styles.emptyStateSubtitle}>Tap the + button to create your first appointment</Text>
+            </View>
+          ) : (
+            <>
+              <ScrollView 
+                style={styles.timelineScrollView}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#007AFF"
+                    colors={["#007AFF"]}
+                  />
+                }
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.timelineWrapper}>
+                  <View style={styles.timelineContainer}>
+                    <View style={styles.timeline}>
+                      {renderTimeSlots()}
+                    </View>
+                    <View style={styles.appointmentsContainer}>
+                      {renderAppointments()}
+                      {renderCurrentTimeLine()}
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+              
+              {/* Quick Stats - Show below appointments in list view */}
+              <View style={styles.statsContainer}>
+                <View style={styles.statCard}>
+                  <Text style={styles.statNumber}>{appointments.length}</Text>
+                  <Text style={styles.statLabel}>Appts</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statNumber}>${calculateDailyTotal()}</Text>
+                  <Text style={styles.statLabel}>Total</Text>
+                </View>
+              </View>
+            </>
+          )
+        ) : (
+          <View style={styles.cardView}>
+            {appointments.length > 0 ? (
+              <>
+                <ClientCardView
+                  appointment={appointments[currentAppointmentIndex]}
+                  onDelete={fetchAppointments}
+                  allAppointments={appointments}
+                  currentIndex={currentAppointmentIndex}
+                  setCurrentIndex={setCurrentAppointmentIndex}
+                />
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="calendar-outline" size={64} color="#48484a" />
+                <Text style={styles.emptyStateTitle}>No appointments today</Text>
+                <Text style={styles.emptyStateSubtitle}>Tap the + button to create your first appointment</Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
-      <View style={styles.navigation}>
-        <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(-1)}>
-          <Text style={styles.dayNavButtonText}>Previous Day</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.dayNavButton} onPress={goToToday}>
-          <Text style={styles.dayNavButtonText}>Today</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.dayNavButton} onPress={() => changeDate(1)}>
-          <Text style={styles.dayNavButtonText}>Next Day</Text>
-        </TouchableOpacity>
-      </View>
+
       <Footer navigation={navigation} />
+      
+      {/* Modals */}
       <RescheduleConfirmModal
         isVisible={isRescheduleModalVisible}
         appointment={draggedAppointment}
@@ -794,7 +852,6 @@ const CalendarScreen = ({ navigation }) => {
         onCancel={() => setIsRescheduleModalVisible(false)}
       />
 
-      {/* Dropdown Modal */}
       <Modal
         transparent={true}
         visible={isDropdownVisible}
@@ -806,23 +863,23 @@ const CalendarScreen = ({ navigation }) => {
         >
           <View style={styles.dropdown}>
             <TouchableOpacity style={styles.dropdownItem} onPress={handleBlockTime}>
+              <Ionicons name="time-outline" size={20} color="#ffffff" style={styles.dropdownIcon} />
               <Text style={styles.dropdownItemText}>Block Time</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.dropdownItem} onPress={handleCreateAppointment}>
-              <Text style={styles.dropdownItemText}>Create Appointment</Text>
+              <Ionicons name="person-add-outline" size={20} color="#ffffff" style={styles.dropdownIcon} />
+              <Text style={styles.dropdownItemText}>New Appointment</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
 
-      {/* Modal for creating new blocked times */}
       <BlockTimeModal
         isVisible={isBlockTimeModalVisible}
         onClose={() => setIsBlockTimeModalVisible(false)}
         onSubmit={handleBlockTimeSubmit}
       />
 
-      {/* Modal for editing existing blocked times */}
       <EditBlockedTimeModal
         isVisible={isEditBlockTimeModalVisible}
         onClose={() => setIsEditBlockTimeModalVisible(false)}
@@ -837,312 +894,414 @@ const CalendarScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    padding: 16, 
-    paddingTop: 40, // Reduced from 0 to add some padding at the top
-    backgroundColor: '#1c1c1e' 
+    backgroundColor: '#000000',
   },
-  header: { 
-    alignItems: 'center', 
-    marginBottom: 20,
-    marginTop: 20, // Reduced from 80 to remove extra space
-  },
-  headerDay: { 
-    color: '#007AFF', 
-    fontSize: 16, 
-    fontWeight: 'bold' 
-  },
-  headerDateContainer: { 
-    backgroundColor: '#007AFF', 
-    borderRadius: 50, 
-    padding: 8,  // Reduced from 10
-    marginTop: 5,
+  
+  // New Top Bar Design
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: '80%',  // Limit the width to prevent overlapping
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 16,
+    backgroundColor: 'rgba(18, 18, 18, 0.95)',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(84, 84, 88, 0.2)',
   },
-  headerDate: { 
-    color: 'white', 
-    fontSize: 20,  // Reduced from 24
-    fontWeight: 'bold' 
-  },
-  addButton: { 
-    position: 'absolute', 
-    top: 10, 
-    right: 10 
-  },
-  refreshButton: { 
-    position: 'absolute', 
-    top: 10, 
-    right: 60 
-  },
-  viewToggleButton: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-  },
-  item: { flexDirection: 'row', alignItems: 'center', padding: 10, borderBottomWidth: 1, borderBottomColor: '#333' },
-  icon: { marginRight: 10 },
-  itemText: { flex: 1 },
-  name: { fontSize: 18, color: 'white' },
-  time: { fontSize: 14, color: '#aaa' },
-  type: { fontSize: 14, color: '#aaa' },
-  clientName: { fontSize: 16, color: '#aaa' }, // Added this line
-  navigation: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 10 },
-  navButton: { padding: 10, backgroundColor: '#333', borderRadius: 5 },
-  navButtonText: { color: 'white', fontSize: 16 },
-  footer: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#333' },
-  footerItem: { alignItems: 'center' },
-  footerText: { color: '#fff', fontSize: 12, marginTop: 4 },
-  addButton: { position: 'absolute', top: 10, right: 10 },
-  refreshButton: { position: 'absolute', top: 10, right: 60 },
-  noAppointmentsContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(44, 44, 46, 0.8)',
     alignItems: 'center',
-    marginTop: -50, // Move the container up
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.3)',
   },
-  noAppointmentsText: {
-    fontSize: 18,
-    color: '#aaa',
+  
+  dateSection: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  
+  dateButton: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: 'rgba(28, 28, 30, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.2)',
+  },
+  
+  dayLabel: {
+    color: '#8e8e93',
+    fontSize: 12,
+    fontWeight: '500',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  
+  dateLabel: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  
+  // Stats Container
+  statsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16, // Add padding back here since we removed it from mainContent
+    paddingVertical: 8,
+    gap: 8,
+  },
+  
+  statCard: {
+    flex: 1,
+    backgroundColor: 'rgba(28, 28, 30, 0.6)',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.15)',
+  },
+  
+  statNumber: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    marginBottom: 2,
+  },
+  
+  statLabel: {
+    color: '#8e8e93',
+    fontSize: 9,
+    fontWeight: '500',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
     textAlign: 'center',
   },
-  totalContainer: {
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  totalText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#007AFF',
-  },
-  cardView: {
-    flex: 1,
-    width: '100%',
-  },
-  cardNavigation: {
+  
+  // Day Navigation
+  dayNavigation: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 16, // Add padding back here since we removed it from mainContent
+    paddingVertical: 6,
+    gap: 16,
+  },
+  
+  navArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(44, 44, 46, 0.6)',
     alignItems: 'center',
-    marginTop: 20,
-    paddingHorizontal: 20,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.2)',
   },
-  navButton: {
-    padding: 10,
-    backgroundColor: '#007AFF',
-    borderRadius: 5,
-    minWidth: 40,
-    alignItems: 'center',
+  
+  todayButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
   },
-  navButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  appointmentCounterContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  appointmentCounter: {
+  
+  todayButtonText: {
     color: '#007AFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
+  
+  // Main Content Area
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 0, // Remove horizontal padding
+  },
+  // Loading States
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 16,
   },
-  dayNavButton: {
-    padding: 10,
-    backgroundColor: '#4a4a4a', // Gray color
-    borderRadius: 5,
-    minWidth: 40,
-    alignItems: 'center',
-  },
-  dayNavButtonText: {
-    color: 'white',
+  
+  loadingText: {
+    color: '#8e8e93',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
-  modalOverlay: {
+  
+  // Empty State
+  emptyState: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
+    gap: 16,
   },
-  dropdown: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 10,
-    padding: 10,
-    width: '80%',
-  },
-  dropdownItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#444',
-  },
-  dropdownItemText: {
-    color: '#fff',
-    fontSize: 16,
-  },
-  blockTimeModal: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 10,
-    padding: 20,
-    width: '80%',
-  },
-  modalTitle: {
-    color: '#fff',
+  
+  emptyStateTitle: {
+    color: '#ffffff',
     fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 15,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    textAlign: 'center',
   },
-  submitButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
+  
+  emptyStateSubtitle: {
+    color: '#8e8e93',
+    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: 0.2,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // Card View Styles
+  cardView: {
+    flex: 1,
+    paddingTop: 8,
+    paddingHorizontal: 16, // Add padding for card view
+  },
+  
+  cardNavigation: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 15,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    gap: 20,
   },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cancelButton: {
-    backgroundColor: '#FF3B30',
-    padding: 10,
-    borderRadius: 5,
+  
+  cardNavButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(28, 28, 30, 0.8)',
     alignItems: 'center',
-    marginTop: 10,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.3)',
   },
-  cancelButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  
+  disabledButton: {
+    opacity: 0.5,
   },
-  inputContainer: {
-    marginBottom: 15,
+  
+  cardCounter: {
+    flex: 1,
+    alignItems: 'center',
   },
-  inputLabel: {
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 5,
+  
+  cardCounterText: {
+    color: '#8e8e93',
+    fontSize: 14,
+    fontWeight: '500',
+    letterSpacing: 0.3,
   },
-  input: {
-    backgroundColor: '#333',
-    borderRadius: 5,
-    padding: 10,
-    color: '#fff',
-  },
-  swiper: {
+  // Timeline Styles
+  timelineScrollView: {
     flex: 1,
   },
-  buttonText: {
-    fontSize: 24,
-    color: '#007AFF',
+  
+  timelineWrapper: {
+    paddingBottom: 40,
   },
-  calendarContainer: {
-    flex: 1,
-  },
+  
   timelineContainer: {
     flexDirection: 'row',
-    height: '100%', // Make sure it takes full height
+    backgroundColor: 'rgba(18, 18, 18, 0.8)',
+    borderRadius: 20,
+    marginHorizontal: 0, // Remove horizontal margins
+    marginVertical: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.1)',
   },
+  
   timeline: {
-    width: 50,
+    width: 50, // Reduced from 60
+    backgroundColor: 'rgba(28, 28, 30, 0.9)',
     borderRightWidth: 1,
-    borderRightColor: '#333',
+    borderRightColor: 'rgba(84, 84, 88, 0.15)',
   },
+  
   timeSlot: {
     height: 100,
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    paddingTop: 2, // Add a small top padding
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(84, 84, 88, 0.1)',
+    paddingHorizontal: 4, // Reduced padding
   },
+  
   timeText: {
-    color: '#aaa',
-    fontSize: 12,
+    color: '#8e8e93',
+    fontSize: 10, // Slightly smaller to fit better
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
+  
   appointmentsContainer: {
     position: 'relative',
     flex: 1,
-    minHeight: 1400, // 14 hours * 100px per hour
+    minHeight: 1400,
+    paddingLeft: 0, // Remove left padding
+    paddingRight: 4, // Minimal right padding
   },
+  
   appointmentBlock: {
     position: 'absolute',
-    padding: 6,
-    borderRadius: 6,
+    padding: 12, // Reduced padding for better text fit
+    borderRadius: 14,
     backgroundColor: '#007AFF',
-    borderWidth: 1,
-    borderColor: '#0056b3',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 6,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden', // Prevent text overflow
   },
+  
   blockedTimeBlock: {
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: 'rgba(142, 142, 147, 0.5)',
     borderStyle: 'dashed',
-    backgroundColor: 'rgba(128, 128, 128, 0.6)',
-    opacity: 0.8,
+    backgroundColor: 'rgba(72, 72, 74, 0.7)',
+    shadowOpacity: 0.1,
   },
+  
   appointmentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    marginBottom: 4, // Reduced margin
+    flex: 1,
   },
+  
   appointmentName: {
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 14,
-    flex: 1,
-    marginRight: 4,
+    marginBottom: 3, // Reduced margin
+    letterSpacing: 0.2,
+    flexShrink: 1, // Allow text to shrink
   },
+  
   appointmentType: {
-    color: 'white',
-    fontSize: 12,
-    textAlign: 'right',
-    flex: 1,  // Allow text to take up available space
-    marginLeft: 4,  // Add some spacing from the name
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 11, // Slightly smaller font
+    fontWeight: '500',
+    letterSpacing: 0.1,
+    lineHeight: 14, // Tighter line height
+    flexShrink: 1, // Allow text to shrink
+    flex: 1,
   },
+  
   appointmentTime: {
-    color: 'white',
+    color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2, // Reduced margin
+    letterSpacing: 0.2,
+    flexShrink: 0, // Don't shrink time text
   },
+  
   currentTimeLine: {
     position: 'absolute',
     left: 0,
     right: 0,
-    height: 2,
-    backgroundColor: 'red',
+    height: 3,
+    backgroundColor: '#ff453a',
     zIndex: 1000,
-    marginLeft: 0, // Ensure it starts from the left edge of the appointments container
+    shadowColor: '#ff453a',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.6,
+    shadowRadius: 6,
+    elevation: 12,
   },
-  datePickerButton: {
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  dropdown: {
+    backgroundColor: 'rgba(28, 28, 30, 0.95)',
+    borderRadius: 20,
+    padding: 12,
+    width: '80%',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.2)',
+  },
+  
+  dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,  // Reduced from 15
-  },
-  calendarIcon: {
-    marginLeft: 6,  // Reduced from 8
-    size: 20,  // Reduced from 24
-  },
-  calendarModal: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 10,
     padding: 20,
+    borderRadius: 14,
+    marginVertical: 4,
+    backgroundColor: 'rgba(44, 44, 46, 0.3)',
+  },
+  
+  dropdownIcon: {
+    marginRight: 12,
+  },
+  
+  dropdownItemText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  // Calendar Modal
+  calendarModal: {
+    backgroundColor: 'rgba(18, 18, 18, 0.98)',
+    borderRadius: 24,
+    padding: 24,
     width: '90%',
-    maxHeight: '80%',
+    maxHeight: '85%',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.2)',
   },
 });
 

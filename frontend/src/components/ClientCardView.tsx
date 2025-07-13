@@ -249,31 +249,52 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
       transparent={true}
       visible={isAddNoteModalVisible}
       onRequestClose={() => setIsAddNoteModalVisible(false)}
+      animationType="fade"
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.addNoteModalContent}>
-          <Text style={styles.addNoteModalTitle}>Add New Note</Text>
-          <TextInput
-            style={styles.addNoteModalInput}
-            value={newNote}
-            onChangeText={setNewNote}
-            placeholder="Enter your note here..."
-            placeholderTextColor="#999"
-            multiline
-            numberOfLines={4}
-          />
-          <View style={styles.addNoteModalButtons}>
+        <View style={styles.noteModalContainer}>
+          {/* Header */}
+          <View style={styles.noteModalHeader}>
+            <View style={styles.noteHeaderIcon}>
+              <Ionicons name="create" size={20} color="#007AFF" />
+            </View>
+            <Text style={styles.noteModalTitle}>Add New Note</Text>
             <TouchableOpacity 
-              style={[styles.addNoteModalButton, styles.cancelButton]} 
+              style={styles.noteCloseButton} 
               onPress={() => setIsAddNoteModalVisible(false)}
             >
-              <Text style={styles.addNoteModalButtonText}>Cancel</Text>
+              <Ionicons name="close" size={18} color="#8e8e93" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Content */}
+          <View style={styles.noteModalContent}>
+            <TextInput
+              style={styles.noteInput}
+              value={newNote}
+              onChangeText={setNewNote}
+              placeholder="Enter your note here..."
+              placeholderTextColor="#48484a"
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+            />
+          </View>
+
+          {/* Actions */}
+          <View style={styles.noteModalActions}>
+            <TouchableOpacity 
+              style={styles.noteCancelBtn} 
+              onPress={() => setIsAddNoteModalVisible(false)}
+            >
+              <Text style={styles.noteCancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.addNoteModalButton, styles.submitButton]} 
+              style={styles.noteSubmitBtn} 
               onPress={addNote}
             >
-              <Text style={styles.addNoteModalButtonText}>Add Note</Text>
+              <Ionicons name="checkmark" size={16} color="#ffffff" />
+              <Text style={styles.noteSubmitText}>Add Note</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -695,35 +716,60 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
       transparent={true}
       visible={isEditNoteModalVisible}
       onRequestClose={() => setIsEditNoteModalVisible(false)}
+      animationType="fade"
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.addNoteModalContent}>
-          <Text style={styles.addNoteModalTitle}>Edit Note</Text>
-          <TextInput
-            style={styles.addNoteModalInput}
-            value={editedNoteContent}
-            onChangeText={setEditedNoteContent}
-            placeholder="Edit your note..."
-            placeholderTextColor="#999"
-            multiline
-            numberOfLines={4}
-          />
-          <View style={styles.addNoteModalButtons}>
+        <View style={styles.noteModalContainer}>
+          {/* Header */}
+          <View style={styles.noteModalHeader}>
+            <View style={styles.noteHeaderIcon}>
+              <Ionicons name="create-outline" size={20} color="#007AFF" />
+            </View>
+            <Text style={styles.noteModalTitle}>Edit Note</Text>
             <TouchableOpacity 
-              style={[styles.addNoteModalButton, styles.cancelButton]} 
+              style={styles.noteCloseButton} 
               onPress={() => {
                 setIsEditNoteModalVisible(false);
                 setSelectedNote(null);
                 setEditedNoteContent('');
               }}
             >
-              <Text style={styles.addNoteModalButtonText}>Cancel</Text>
+              <Ionicons name="close" size={18} color="#8e8e93" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Content */}
+          <View style={styles.noteModalContent}>
+            <TextInput
+              style={styles.noteInput}
+              value={editedNoteContent}
+              onChangeText={setEditedNoteContent}
+              placeholder="Edit your note..."
+              placeholderTextColor="#48484a"
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+            />
+          </View>
+
+          {/* Actions */}
+          <View style={styles.noteModalActions}>
+            <TouchableOpacity 
+              style={styles.noteCancelBtn} 
+              onPress={() => {
+                setIsEditNoteModalVisible(false);
+                setSelectedNote(null);
+                setEditedNoteContent('');
+              }}
+            >
+              <Text style={styles.noteCancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.addNoteModalButton, styles.submitButton]} 
+              style={styles.noteSubmitBtn} 
               onPress={handleEditNote}
             >
-              <Text style={styles.addNoteModalButtonText}>Save</Text>
+              <Ionicons name="save" size={16} color="#ffffff" />
+              <Text style={styles.noteSubmitText}>Save Changes</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -751,153 +797,147 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
   }
 
   return (
-    <ScrollView style={styles.cardView}>
+    <ScrollView style={styles.cardView} showsVerticalScrollIndicator={false}>
       {console.log('Rendering ClientCardView content')}
+      
+      {/* Main Card Container */}
       <View style={styles.cardContainer}>
-        {/* Payment Status and Tip Amount */}
-        {appointment.paid && (
-          <View style={styles.paymentInfoContainer}>
-            <View style={styles.paymentMethodContainer}>
-              <Text style={styles.paymentMethodText}>
-                {appointment.paymentmethod === 'cash' ? 'Cash' : 'E-Transfer'}
-              </Text>
-            </View>
-            <View style={styles.paidStatusContainer}>
-              <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-              <Text style={styles.paidStatusText}>Paid</Text>
-            </View>
-            {appointment.tipamount != null && (
-              <View style={styles.tipContainer}>
-                <Text style={styles.tipLabel}>Tip:</Text>
-                <Text style={styles.tipAmount}>${Number(appointment.tipamount).toFixed(2)}</Text>
-              </View>
-            )}
-          </View>
-        )}
-        {!appointment.paid && appointment.paymentmethod === 'e-transfer' && (
-          <View style={styles.paymentInfoContainer}>
-            <View style={styles.pendingPaymentContainer}>
-              <Ionicons name="time-outline" size={24} color="#FFA500" />
-              <Text style={styles.pendingPaymentText}>Pending Payment</Text>
-            </View>
-          </View>
-        )}
-
-        <View style={styles.topSection}>
-          <View style={styles.actionButtonsContainer}>
-            <TouchableOpacity style={styles.iconButton} onPress={handleCallPress}>
-              <Ionicons name="call" size={24} color="#fff" />
+        
+        {/* Header with Action Buttons */}
+        <View style={styles.headerSection}>
+          <View style={styles.actionButtonsRow}>
+            <TouchableOpacity style={styles.actionBtn} onPress={handleCallPress}>
+              <Ionicons name="call" size={18} color="#ffffff" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={handleMessagePress}>
-              <Ionicons name="chatbubble" size={24} color="#fff" />
+            <TouchableOpacity style={styles.actionBtn} onPress={handleMessagePress}>
+              <Ionicons name="chatbubble" size={18} color="#ffffff" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={handleEditPress}>
-              <Ionicons name="create" size={24} color="#fff" />
+            <TouchableOpacity style={styles.actionBtn} onPress={handleEditPress}>
+              <Ionicons name="create" size={18} color="#ffffff" />
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.iconButton, styles.deleteButton]} 
+              style={[styles.actionBtn, styles.deleteBtn]} 
               onPress={handleDeletePress}
             >
-              <Ionicons name="trash" size={24} color="#fff" />
+              <Ionicons name="trash" size={18} color="#ffffff" />
             </TouchableOpacity>
           </View>
-
-          <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              {clientMedia.length > 0 ? (
-                <TouchableOpacity onPress={() => handleMediaPress(0)}>
-                  {clientMedia[0].media_type === 'image' ? (
-                    <Image source={{ uri: clientMedia[0].media_url }} style={styles.clientMedia} />
-                  ) : (
-                    <View style={styles.clientMedia}>
-                      <Ionicons name="videocam" size={50} color="#007AFF" />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ) : (
-                <Image source={avatarImage} style={styles.clientMedia} />
+          
+          {/* Payment Status Badges */}
+          {appointment.paid ? (
+            <View style={styles.statusBadges}>
+              <View style={styles.paidBadge}>
+                <Ionicons name="checkmark-circle" size={16} color="#30d158" />
+                <Text style={styles.paidText}>Paid</Text>
+              </View>
+              <View style={styles.methodBadge}>
+                <Text style={styles.methodText}>
+                  {appointment.paymentmethod === 'cash' ? 'Cash' : 'E-Transfer'}
+                </Text>
+              </View>
+              {appointment.tipamount != null && (
+                <View style={styles.tipBadge}>
+                  <Text style={styles.tipText}>Tip: ${Number(appointment.tipamount).toFixed(2)}</Text>
+                </View>
               )}
-              <TouchableOpacity style={styles.addMediaButton} onPress={handleAddMediaPress}>
-                <Text style={styles.addMediaButtonText}>Add Media</Text>
-              </TouchableOpacity>
             </View>
-            <TouchableOpacity 
-              style={styles.clientNameContainer}
-              onPress={handleClientNamePress}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.cardClientName}>{appointment.clientName || 'No Name'}</Text>
-              <Ionicons name="information-circle-outline" size={16} color="#9da6b8" style={styles.infoIcon} />
-            </TouchableOpacity>
-          </View>
+          ) : appointment.paymentmethod === 'e-transfer' && (
+            <View style={styles.statusBadges}>
+              <View style={styles.pendingBadge}>
+                <Ionicons name="time-outline" size={16} color="#ff9f0a" />
+                <Text style={styles.pendingText}>Pending</Text>
+              </View>
+            </View>
+          )}
         </View>
 
-        {isEditMode ? (
-          <>
-            <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-              <Text style={styles.editableText}>{editedAppointment.date}</Text>
+        {/* Profile Section */}
+        <View style={styles.profileContainer}>
+          <View style={styles.avatarSection}>
+            {clientMedia.length > 0 ? (
+              <TouchableOpacity onPress={() => handleMediaPress(0)} style={styles.avatarWrapper}>
+                {clientMedia[0].media_type === 'image' ? (
+                  <Image source={{ uri: clientMedia[0].media_url }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.videoPlaceholder]}>
+                    <Ionicons name="videocam" size={32} color="#007AFF" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.avatarWrapper}>
+                <Image source={avatarImage} style={styles.avatar} />
+              </View>
+            )}
+            
+            <TouchableOpacity style={styles.mediaButton} onPress={handleAddMediaPress}>
+              <Ionicons name="camera" size={14} color="#007AFF" />
+              <Text style={styles.mediaButtonText}>Add Media</Text>
             </TouchableOpacity>
-            <View style={styles.timeContainer}>
-              <TouchableOpacity onPress={() => setShowStartTimePicker(true)}>
-                <Text style={styles.editableText}>{editedAppointment.startTime}</Text>
-              </TouchableOpacity>
-              <Text style={styles.timeSeparator}>-</Text>
-              <TouchableOpacity onPress={() => setShowEndTimePicker(true)}>
-                <Text style={styles.editableText}>{editedAppointment.endTime}</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.editableText}
-              value={editedAppointment.appointmenttype}
-              onChangeText={(value) => handleInputChange('appointmenttype', value)}
-              placeholder="Service Type"
-              placeholderTextColor="#666"
-            />
-            <TextInput
-              style={styles.editableText}
-              value={editedAppointment.addons?.join(', ') || ''}
-              onChangeText={(value) => handleInputChange('addons', value.split(',').map(addon => addon.trim()))}
-              placeholder="Add-ons (comma separated)"
-              placeholderTextColor="#666"
-            />
-            <TextInput
-              style={styles.editableText}
-              value={editedAppointment.price.toString()}
-              onChangeText={(value) => handleInputChange('price', value)}
-              keyboardType="numeric"
-              placeholder="Price"
-              placeholderTextColor="#666"
-            />
-          </>
-        ) : (
-          <>
-            <Text style={styles.cardTime}>{appointment.startTime} - {appointment.endTime}</Text>
-            <Text style={styles.cardType}>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.nameSection}
+            onPress={handleClientNamePress}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.clientName}>{appointment.clientName || 'No Name'}</Text>
+            <Ionicons name="chevron-forward" size={16} color="#8e8e93" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Appointment Details */}
+        <View style={styles.appointmentDetails}>
+          <View style={styles.timeSection}>
+            <Ionicons name="time-outline" size={20} color="#8e8e93" />
+            <Text style={styles.timeText}>{appointment.startTime} - {appointment.endTime}</Text>
+          </View>
+          
+          <View style={styles.serviceSection}>
+            <Ionicons name="scissors-outline" size={20} color="#8e8e93" />
+            <Text style={styles.serviceText}>
               {appointment.appointmenttype}
               {appointment.addons && appointment.addons.length > 0 && (
                 appointment.addons.map(addon => ` + ${addon.trim()}`).join('')
               )}
             </Text>
-            <Text style={styles.cardPrice}>${appointment.price}</Text>
-          </>
-        )}
+          </View>
+          
+          <View style={styles.priceSection}>
+            <Ionicons name="card-outline" size={20} color="#8e8e93" />
+            <Text style={styles.priceText}>${appointment.price}</Text>
+          </View>
+        </View>
         
         {/* Payment Button */}
-        <TouchableOpacity 
-          style={styles.paymentButton} 
-          onPress={handlePaymentPress}
-        >
+        <TouchableOpacity style={styles.paymentButton} onPress={handlePaymentPress}>
+          <Ionicons 
+            name={appointment.paid ? "card" : "wallet-outline"} 
+            size={18} 
+            color="#ffffff" 
+          />
           <Text style={styles.paymentButtonText}>
             {appointment.paid ? 'Update Payment' : 'Log Payment'}
           </Text>
         </TouchableOpacity>
         
-        <View style={styles.notesContainer}>
-          <Text style={styles.notesTitle}>Notes</Text>
+        {/* Notes Section */}
+        <View style={styles.notesSection}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="document-text-outline" size={20} color="#ffffff" />
+            <Text style={styles.sectionTitle}>Notes</Text>
+            <TouchableOpacity 
+              style={styles.addButton} 
+              onPress={() => setIsAddNoteModalVisible(true)}
+            >
+              <Ionicons name="add" size={16} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
+          
           {notes.length > 0 ? (
-            <>
+            <View style={styles.notesContent}>
               {/* Always show the first note */}
-              <View style={styles.noteItem}>
+              <View style={styles.noteCard}>
                 <View style={styles.noteHeader}>
                   <Text style={styles.noteDate}>{formatNoteDate(notes[0].createdat)}</Text>
                   <View style={styles.noteActions}>
@@ -907,24 +947,24 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
                         setEditedNoteContent(notes[0].content);
                         setIsEditNoteModalVisible(true);
                       }}
-                      style={styles.noteActionButton}
+                      style={styles.noteActionBtn}
                     >
-                      <Ionicons name="create-outline" size={20} color="#007AFF" />
+                      <Ionicons name="create-outline" size={16} color="#007AFF" />
                     </TouchableOpacity>
                     <TouchableOpacity 
                       onPress={() => handleDeleteNote(notes[0].id)}
-                      style={styles.noteActionButton}
+                      style={styles.noteActionBtn}
                     >
-                      <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                      <Ionicons name="trash-outline" size={16} color="#ff453a" />
                     </TouchableOpacity>
                   </View>
                 </View>
-                <Text style={styles.noteContent}>{notes[0].content}</Text>
+                <Text style={styles.noteText}>{notes[0].content}</Text>
               </View>
 
               {/* Show remaining notes when showAllNotes is true */}
               {showAllNotes && notes.slice(1).map((note, index) => (
-                <View key={index} style={styles.noteItem}>
+                <View key={index} style={styles.noteCard}>
                   <View style={styles.noteHeader}>
                     <Text style={styles.noteDate}>{formatNoteDate(note.createdat)}</Text>
                     <View style={styles.noteActions}>
@@ -934,106 +974,114 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
                           setEditedNoteContent(note.content);
                           setIsEditNoteModalVisible(true);
                         }}
-                        style={styles.noteActionButton}
+                        style={styles.noteActionBtn}
                       >
-                        <Ionicons name="create-outline" size={20} color="#007AFF" />
+                        <Ionicons name="create-outline" size={16} color="#007AFF" />
                       </TouchableOpacity>
                       <TouchableOpacity 
                         onPress={() => handleDeleteNote(note.id)}
-                        style={styles.noteActionButton}
+                        style={styles.noteActionBtn}
                       >
-                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                        <Ionicons name="trash-outline" size={16} color="#ff453a" />
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <Text style={styles.noteContent}>{note.content}</Text>
+                  <Text style={styles.noteText}>{note.content}</Text>
                 </View>
               ))}
-            </>
+              
+              {notes.length > 1 && (
+                <TouchableOpacity 
+                  onPress={() => setShowAllNotes(!showAllNotes)}
+                  style={styles.expandButton}
+                >
+                  <Text style={styles.expandText}>
+                    {showAllNotes ? 'Show Less' : `Show ${notes.length - 1} More`}
+                  </Text>
+                  <Ionicons 
+                    name={showAllNotes ? "chevron-up" : "chevron-down"} 
+                    size={16} 
+                    color="#007AFF" 
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
           ) : (
-            <Text style={styles.noNotesText}>No notes available</Text>
-          )}
-
-          <TouchableOpacity 
-            style={styles.addNoteButton} 
-            onPress={() => setIsAddNoteModalVisible(true)}
-          >
-            <Text style={styles.addNoteButtonText}>Add Note</Text>
-          </TouchableOpacity>
-
-          {notes.length > 1 && (
-            <TouchableOpacity 
-              onPress={() => setShowAllNotes(!showAllNotes)}
-              style={styles.seeMoreButton}
-            >
-              <Text style={styles.seeMoreText}>
-                {showAllNotes ? 'See Less' : `See ${notes.length - 1} More Notes`}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No notes yet</Text>
+            </View>
           )}
         </View>
         
-        <View style={styles.clientAppointmentsContainer}>
-          <Text style={styles.clientAppointmentsTitle}>Appointments</Text>
+        {/* Appointments History */}
+        <View style={styles.appointmentsSection}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="calendar-outline" size={20} color="#ffffff" />
+            <Text style={styles.sectionTitle}>Appointments</Text>
+          </View>
+          
           {clientAppointments.length > 0 ? (
-            clientAppointments.map((app, index) => (
-              <View key={index} style={[
-                styles.clientAppointmentItem,
-                app.id === appointment.id ? styles.currentAppointment : null
-              ]}>
-                <Text style={styles.appDate}>{formatAppointmentDate(app.date)}</Text>
-                <Text style={styles.appType}>
-                  {app.appointmenttype}
-                  {app.addons && app.addons.length > 0 && (
-                    app.addons.map(addon => ` + ${addon.trim()}`).join('')
-                  )}
-                </Text>
-                <Text style={styles.appPrice}>${app.price}</Text>
-              </View>
-            ))
+            <View style={styles.appointmentsContent}>
+              {clientAppointments.map((app, index) => (
+                <View key={index} style={[
+                  styles.appointmentCard,
+                  app.id === appointment.id ? styles.currentAppointmentCard : null
+                ]}>
+                  <Text style={styles.appointmentDate}>{formatAppointmentDate(app.date)}</Text>
+                  <Text style={styles.appointmentService}>
+                    {app.appointmenttype}
+                    {app.addons && app.addons.length > 0 && (
+                      app.addons.map(addon => ` + ${addon.trim()}`).join('')
+                    )}
+                  </Text>
+                  <Text style={styles.appointmentPrice}>${app.price}</Text>
+                </View>
+              ))}
+            </View>
           ) : (
-            <Text style={styles.noAppointmentsText}>No appointments available</Text>
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No appointments found</Text>
+            </View>
           )}
         </View>
         
-        <View style={styles.messageHistoryContainer}>
-          <Text style={styles.messageHistoryTitle}>Message History</Text>
+        {/* Messages Section */}
+        <View style={styles.messagesSection}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="chatbubbles-outline" size={20} color="#ffffff" />
+            <Text style={styles.sectionTitle}>Recent Messages</Text>
+            <TouchableOpacity 
+              style={styles.viewAllButton}
+              onPress={() => navigateToFullMessageHistory(currentClientId, appointment.clientName)}
+            >
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          
           {messages.length > 0 ? (
-            <View style={styles.messagesContainer}>
-              {messages.slice(-5).map((message, index) => {
+            <View style={styles.messagesContent}>
+              {messages.slice(-3).map((message, index) => {
                 const isAssistant = message.fromtext === '+18446480598';
-                const avatar = isAssistant ? twilioAvatar : defaultAvatar;
                 const senderName = isAssistant ? 'Assistant' : appointment.clientName;
 
                 return (
-                  <View 
-                    key={index}
-                    style={[styles.messageContainer, isAssistant ? styles.assistantMessage : styles.clientMessage]}
-                  >
-                    {!isAssistant && <Image source={avatar} style={styles.avatar} />}
-                    <View style={styles.messageContent}>
+                  <View key={index} style={styles.messageCard}>
+                    <View style={styles.messageHeader}>
                       <Text style={styles.messageSender}>{senderName}</Text>
-                      <View style={[styles.messageBubble, isAssistant ? styles.assistantBubble : styles.clientBubble]}>
-                        <Text style={[styles.messageText, isAssistant ? styles.assistantText : styles.clientText]}>
-                          {message.body}
-                        </Text>
-                        <Text style={styles.timestamp}>{formatTimestamp(message.date)}</Text>
-                      </View>
+                      <Text style={styles.messageTime}>{formatTimestamp(message.date)}</Text>
                     </View>
-                    {isAssistant && <Image source={avatar} style={styles.avatar} />}
+                    <Text style={styles.messagePreview} numberOfLines={2}>
+                      {message.body}
+                    </Text>
                   </View>
                 );
               })}
             </View>
           ) : (
-            <Text style={styles.noMessagesText}>No messaging history</Text>
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No messages yet</Text>
+            </View>
           )}
-          <TouchableOpacity 
-            style={styles.fullHistoryButton}
-            onPress={() => navigateToFullMessageHistory(currentClientId, appointment.clientName)}
-          >
-            <Text style={styles.fullHistoryButtonText}>See Full Message History</Text>
-          </TouchableOpacity>
         </View>
       </View>
       <ImageGallery 
@@ -1091,762 +1139,674 @@ const ClientCardView: React.FC<ClientCardViewProps> = ({
 const styles = StyleSheet.create({
   cardView: {
     flex: 1,
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#000000',
   },
   cardContainer: {
-    backgroundColor: '#2c2c2e',
-    borderRadius: 15,
-    padding: 20,
+    backgroundColor: 'rgba(18, 18, 18, 0.95)',
+    borderRadius: 24,
+    margin: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.1)',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  
+  // Header Section
+  headerSection: {
+    marginBottom: 24,
+  },
+  
+  actionButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 16,
+  },
+  
+  actionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(44, 44, 46, 0.8)',
     alignItems: 'center',
-    width: '100%',
-    maxWidth: 400,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.3)',
   },
-  clientImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    alignSelf: 'center',
-    marginBottom: 10,
+  
+  deleteBtn: {
+    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+    borderColor: 'rgba(255, 69, 58, 0.3)',
   },
-  cardClientName: {
+  
+  statusBadges: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  
+  paidBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(48, 209, 88, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  
+  paidText: {
+    color: '#30d158',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  methodBadge: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  
+  methodText: {
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  tipBadge: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  
+  tipText: {
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 159, 10, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  
+  pendingText: {
+    color: '#ff9f0a',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  // Profile Section
+  profileContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  
+  avatarWrapper: {
+    marginBottom: 12,
+  },
+  
+  avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: 'rgba(84, 84, 88, 0.2)',
+  },
+  
+  videoPlaceholder: {
+    backgroundColor: 'rgba(44, 44, 46, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  mediaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  
+  mediaButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
+  nameSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  
+  clientName: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 10,
+    fontWeight: '700',
+    color: '#ffffff',
+    textAlign: 'center',
   },
-  cardDate: {
-    fontSize: 18,
-    color: '#007AFF',
-    marginBottom: 5,
+  
+  // Appointment Details
+  appointmentDetails: {
+    width: '100%',
+    backgroundColor: 'rgba(28, 28, 30, 0.6)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    gap: 16,
   },
-  cardTime: {
-    fontSize: 16,
-    color: '#aaa',
-    marginBottom: 5,
-  },
-  cardType: {
-    fontSize: 18,
-    color: '#fff',
-    fontWeight: '500',
-  },
-  cardPrice: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 10,
-  },
-  paymentButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
+  
+  timeSection: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    width: '100%',
+    gap: 12,
   },
-  paymentButtonText: {
-    color: 'white',
+  
+  timeText: {
+    color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  notesContainer: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: '#2c2c2e',
-    borderRadius: 10,
-    width: '100%',
+  
+  serviceSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
   },
-  notesTitle: {
+  
+  serviceText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+  },
+  
+  priceSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  
+  priceText: {
+    color: '#007AFF',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  
+  // Payment Button
+  paymentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginBottom: 32,
+    gap: 8,
+    shadowColor: "#007AFF",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  
+  paymentButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  
+  // Section Styles
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  
+  sectionTitle: {
+    color: '#ffffff',
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 10,
+    fontWeight: '600',
+    flex: 1,
   },
-  noteItem: {
-    marginBottom: 10,
-    padding: 12,
-    backgroundColor: '#3a3a3c',
-    borderRadius: 8,
+  
+  addButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  
+  viewAllButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+  },
+  
+  viewAllText: {
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  // Notes Section
+  notesSection: {
+    marginBottom: 32,
+  },
+  
+  notesContent: {
+    gap: 12,
+  },
+  
+  noteCard: {
+    backgroundColor: 'rgba(28, 28, 30, 0.6)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  
   noteHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
   },
-  noteActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  noteActionButton: {
-    padding: 5,
-  },
-  noteContent: {
-    color: '#fff',
-    fontSize: 14,
-    lineHeight: 20,
-  },
+  
   noteDate: {
     color: '#8e8e93',
     fontSize: 12,
+    fontWeight: '500',
   },
-  addNoteButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
-  addNoteButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  seeMoreButton: {
-    marginTop: 10,
-    padding: 8,
-    alignItems: 'center',
-  },
-  clientAppointmentsContainer: {
-    width: '100%',
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#444',
-    paddingTop: 10,
-  },
-  clientAppointmentsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 10,
-  },
-  clientAppointmentItem: {
+  
+  noteActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    width: '100%',
+    gap: 8,
   },
-  currentAppointment: {
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    borderRadius: 5,
-  },
-  appDate: {
-    color: '#aaa',
-    fontSize: 14,
-    width: '30%',
-  },
-  appType: {
-    fontSize: 16,
-    color: '#fff',
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  appPrice: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-    width: '20%',
-    textAlign: 'right',
-  },
-  messageHistoryContainer: {
-    width: '100%',
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#444',
-    paddingTop: 10,
-  },
-  messageHistoryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 10,
-  },
-  messagesContainer: {
-    width: '100%',
-  },
-  messageContainer: {
-    flexDirection: 'row',
-    padding: 8,
-    alignItems: 'flex-end',
-    marginBottom: 8,
-  },
-  assistantMessage: {
-    justifyContent: 'flex-end',
-  },
-  clientMessage: {
-    justifyContent: 'flex-start',
-  },
-  avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-  },
-  messageContent: {
-    maxWidth: '70%',
-  },
-  messageSender: {
-    color: '#9da6b8',
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  messageBubble: {
-    borderRadius: 12,
-    padding: 8,
-  },
-  assistantBubble: {
-    backgroundColor: '#195de6',
-  },
-  clientBubble: {
-    backgroundColor: '#292e38',
-  },
-  messageText: {
-    color: 'white',
-    fontSize: 14,
-  },
-  assistantText: {
-    color: 'white',
-  },
-  clientText: {
-    color: 'white',
-  },
-  timestamp: {
-    fontSize: 10,
-    color: '#9da6b8',
-    alignSelf: 'flex-end',
-    marginTop: 2,
-  },
-  noMessagesText: {
-    color: '#aaa',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  fullHistoryButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  fullHistoryButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  paymentInfoContainer: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    alignItems: 'flex-end',
-    zIndex: 1,
-  },
-  paymentMethodContainer: {
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    padding: 5,
-    borderRadius: 15,
-    marginBottom: 5,
-  },
-  paymentMethodText: {
-    color: '#007AFF',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  paidStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-    padding: 5,
-    borderRadius: 15,
-    marginBottom: 5,
-  },
-  paidStatusText: {
-    color: '#4CAF50',
-    fontWeight: 'bold',
-    marginLeft: 5,
-    fontSize: 14,
-  },
-  tipContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    padding: 5,
-    borderRadius: 15,
-  },
-  tipLabel: {
-    color: '#007AFF',
-    fontSize: 14,
-    marginRight: 5,
-  },
-  tipAmount: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  pendingPaymentContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 165, 0, 0.1)',
-    padding: 5,
-    borderRadius: 15,
-    marginBottom: 5,
-  },
-  pendingPaymentText: {
-    color: '#FFA500',
-    fontWeight: 'bold',
-    marginLeft: 5,
-    fontSize: 14,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  paymentModalContent: {
-    backgroundColor: '#2c2c2e',
-    padding: 24,
-    borderRadius: 16,
-    width: '90%',
-    maxWidth: 400,
-  },
-  paymentModalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  paymentOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  paymentOptionLabel: {
-    fontSize: 18,
-    color: '#fff',
-    marginBottom: 12,
-  },
-  paymentMethodOptions: {
-    marginBottom: 24,
-  },
-  paymentMethodOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  radioButtonTouchable: {
-    padding: 8,
-  },
-  radioButton: {
-    height: 24,
-    width: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#007AFF',
+  
+  noteActionBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(44, 44, 46, 0.6)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioButtonInner: {
-    height: 12,
-    width: 12,
-    borderRadius: 6,
-    backgroundColor: '#007AFF',
+  
+  noteText: {
+    color: '#ffffff',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '500',
   },
-  tipInputContainer: {
+  
+  expandButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
   },
-  dollarSign: {
-    color: '#fff',
-    fontSize: 18,
-    marginRight: 4,
+  
+  expandText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
-  tipInput: {
-    borderWidth: 1,
-    borderColor: '#444',
-    padding: 8,
-    borderRadius: 8,
-    color: '#fff',
-    backgroundColor: '#3a3a3c',
-    fontSize: 18,
-    width: '70%',
-    textAlign: 'right',
+  
+  // Appointments Section
+  appointmentsSection: {
+    marginBottom: 32,
   },
-  paymentModalButtons: {
+  
+  appointmentsContent: {
+    gap: 8,
+  },
+  
+  appointmentCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 24,
-  },
-  paymentModalButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(28, 28, 30, 0.6)',
+    borderRadius: 12,
     padding: 16,
-    borderRadius: 8,
-    width: '48%',
-  },
-  cancelButton: {
-    backgroundColor: '#444',
-  },
-  submitButton: {
-    backgroundColor: '#007AFF',
-  },
-  paymentModalButtonText: {
-    fontSize: 18,
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  addNoteModalContent: {
-    backgroundColor: '#2c2c2e',
-    padding: 20,
-    borderRadius: 12,
-    width: '90%',
-    maxWidth: 400,
-  },
-  addNoteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  addNoteModalInput: {
-    borderWidth: 1,
-    borderColor: '#444',
-    borderRadius: 8,
-    padding: 12,
-    color: '#fff',
-    backgroundColor: '#3a3a3c',
-    fontSize: 16,
-    minHeight: 100,
-    textAlignVertical: 'top',
-    marginBottom: 16,
-  },
-  addNoteModalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: 12,
   },
-  addNoteModalButton: {
+  
+  currentAppointmentCard: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+  
+  appointmentDate: {
+    color: '#8e8e93',
+    fontSize: 12,
+    fontWeight: '600',
+    width: 60,
+  },
+  
+  appointmentService: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '500',
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+  },
+  
+  appointmentPrice: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  
+  // Messages Section
+  messagesSection: {
+    marginBottom: 32,
+  },
+  
+  messagesContent: {
+    gap: 8,
+  },
+  
+  messageCard: {
+    backgroundColor: 'rgba(28, 28, 30, 0.6)',
+    borderRadius: 12,
+    padding: 16,
+  },
+  
+  messageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  
+  messageSender: {
+    color: '#007AFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  
+  messageTime: {
+    color: '#8e8e93',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  
+  messagePreview: {
+    color: '#ffffff',
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  
+  // Empty States
+  emptyState: {
+    paddingVertical: 24,
     alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#3a3a3c',
+  
+  emptyText: {
+    color: '#8e8e93',
+    fontSize: 14,
+    fontWeight: '500',
+    fontStyle: 'italic',
   },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  addNoteModalContent: {
+    backgroundColor: 'rgba(28, 28, 30, 0.95)',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.2)',
+  },
+  
+  addNoteModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  
+  addNoteModalInput: {
+    backgroundColor: 'rgba(44, 44, 46, 0.8)',
+    borderRadius: 12,
+    padding: 16,
+    color: '#ffffff',
+    fontSize: 16,
+    minHeight: 120,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.3)',
+  },
+  
+  addNoteModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  
+  addNoteModalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  
+  cancelButton: {
+    backgroundColor: 'rgba(84, 84, 88, 0.6)',
+  },
+  
   submitButton: {
     backgroundColor: '#007AFF',
   },
+  
   addNoteModalButtonText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },
-  noNotesText: {
-    color: '#aaa',
-    fontSize: 14,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    paddingVertical: 20,
-    width: '100%',
-  },
-  noAppointmentsText: {
-    color: '#aaa',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  uploadImagesText: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    width: '100%',
-    marginBottom: 10,
-    paddingLeft: 10,
-  },
-  addPhotoButton: {
-    backgroundColor: '#007AFF',
-    padding: 8,
-    borderRadius: 5,
-  },
-  addPhotoButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  clientMedia: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  captureButton: {
-    position: 'absolute',
-    bottom: 20,
-    alignSelf: 'center',
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 30,
-  },
-  captureButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cameraContainer: {
-    flex: 1,
-    backgroundColor: 'black',
-  },
-  camera: {
-    flex: 1,
-  },
-  cameraButtonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-  },
-  cameraButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  captureButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captureButtonInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'white',
-  },
-  mediaContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  clientMedia: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  galleryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    padding: 8,
-    borderRadius: 20,
-  },
-  galleryButtonText: {
-    color: '#007AFF',
-    marginLeft: 5,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  iconButton: {
-    backgroundColor: '#007AFF',
-    padding: 8,
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cardNavigation: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    paddingHorizontal: 10,
-  },
-  navButton: {
-    padding: 10,
-  },
-  navButtonText: {
-    fontSize: 24,
-    color: '#007AFF',
-  },
-  appointmentCounterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  appointmentCounter: {
-    fontSize: 16,
-    color: '#fff',
-  },
-  clientInfoContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 20,
-    width: '100%',
-    marginTop: 40,
-  },
-  avatarAndMediaContainer: {
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  avatarContainer: {
-    alignItems: 'center',
-    gap: 10,
-  },
-  clientDetailsContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  actionButtonsContainer: {
-    position: 'absolute',
-    left: 0,
-    top: -45,
-    flexDirection: 'row',
-    gap: 15,
-    zIndex: 1,
-  },
-  editableText: {
-    backgroundColor: '#3a3a3c',
-    color: '#fff',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-    fontSize: 16,
-  },
-  timeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  timeSeparator: {
-    color: '#fff',
-    fontSize: 16,
-    marginHorizontal: 5,
-  },
+  
+  // Loading and Error States
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#000000',
+    gap: 16,
   },
+  
   loadingText: {
-    color: '#fff',
-    marginTop: 10,
+    color: '#8e8e93',
     fontSize: 16,
+    fontWeight: '500',
   },
+  
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#000000',
+    paddingHorizontal: 40,
   },
+  
   errorText: {
-    color: '#fff',
+    color: '#ffffff',
     fontSize: 16,
-  },
-  editContainer: {
-    width: '100%',
-    marginBottom: 20,
-  },
-  editInput: {
-    backgroundColor: '#3a3a3c',
-    color: '#fff',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  editButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  editButton: {
-    backgroundColor: '#007AFF',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 10,
-    width: '48%',
-  },
-  editButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  addMediaButton: {
-    backgroundColor: '#007AFF',
-    padding: 8,
-    borderRadius: 5,
-    alignSelf: 'center',
-  },
-  addMediaButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  topSection: {
-    width: '100%',
-    alignItems: 'center',
-    marginTop: 40,
-    position: 'relative',
-  },
-  profileSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    marginTop: 60,
-  },
-  serviceContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    marginVertical: 5,
-  },
-  cardAddons: {
-    fontSize: 18,
-    color: '#fff',
-    fontWeight: '300',
-  },
-  appServiceContainer: {
-    flex: 1,
-    marginHorizontal: 10,
-  },
-  deleteButton: {
-    backgroundColor: '#FF3B30',
-  },
-  clientNameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    justifyContent: 'center',
-  },
-  infoIcon: {
-    opacity: 0.8,
-  },
-  cardClientName: {
-    fontSize: 24,
-    color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '500',
     textAlign: 'center',
   },
-  seeMoreText: {
-    color: '#007AFF',
+
+  // Note Modal Styles (Modern Design)
+  noteModalContainer: {
+    backgroundColor: 'rgba(18, 18, 18, 0.98)',
+    borderRadius: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.2)',
+  },
+  
+  // Note Modal Header
+  noteModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(84, 84, 88, 0.2)',
+  },
+  
+  noteHeaderIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  noteModalTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#ffffff',
+    textAlign: 'center',
+    marginHorizontal: 16,
+  },
+  
+  noteCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(142, 142, 147, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  // Note Modal Content
+  noteModalContent: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  
+  noteInput: {
+    backgroundColor: 'rgba(44, 44, 46, 0.8)',
+    borderRadius: 12,
+    padding: 16,
+    color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
+    lineHeight: 22,
+    minHeight: 120,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: 'rgba(84, 84, 88, 0.3)',
+    fontWeight: '500',
+  },
+  
+  // Note Modal Actions
+  noteModalActions: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+    gap: 12,
+  },
+  
+  noteCancelBtn: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(84, 84, 88, 0.6)',
+    alignItems: 'center',
+  },
+  
+  noteCancelText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  noteSubmitBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    shadowColor: "#007AFF",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  
+  noteSubmitText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
