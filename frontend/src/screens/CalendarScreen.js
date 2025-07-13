@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration, TextInput, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Alert, Animated, Vibration, TextInput, RefreshControl, Dimensions } from 'react-native';
 import { getAppointmentsByDay, getClientById, createBlockedTime, deleteAppointment, rescheduleAppointment, updateBlockedTime, deleteBlockedTime } from '../services/api';
 import { Ionicons } from '@expo/vector-icons';
 import Footer from '../components/Footer';
@@ -448,139 +448,168 @@ const CalendarScreen = ({ navigation }) => {
       return new Date('1970/01/01 ' + a.startTime) - new Date('1970/01/01 ' + b.startTime);
     });
 
-    // First pass: Calculate columns for each appointment
-    const appointmentColumns = [];
-    let maxColumn = 0;
-
-    sortedAppointments.forEach((appointment, index) => {
-      const [startHour, startMinute] = appointment.startTime.split(':');
-      const [endHour, endMinute] = appointment.endTime.split(':');
-      
-      const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
-      const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
-      
-      const startPosition = (start - 8) * HOUR_HEIGHT;
-      const endPosition = (end - 8) * HOUR_HEIGHT;
-
-      let column = 0;
-      while (timeSlots[`${startPosition}-${column}`]) {
-        column++;
-      }
-      maxColumn = Math.max(maxColumn, column);
-
-      for (let i = startPosition; i < endPosition; i += HOUR_HEIGHT / 4) {
-        timeSlots[`${i}-${column}`] = appointment.id;
-      }
-
-      appointmentColumns.push(column);
-    });
-
-    // Second pass: Render appointments with calculated widths
-    sortedAppointments.forEach((appointment, index) => {
-      const [startHour, startMinute] = appointment.startTime.split(':');
-      const [endHour, endMinute] = appointment.endTime.split(':');
-      
-      const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
-      const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
-      
-      const startPosition = (start - 8) * HOUR_HEIGHT;
-      const endPosition = (end - 8) * HOUR_HEIGHT;
-      const duration = endPosition - startPosition;
-
-      const column = appointmentColumns[index];
-      const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
-      
-      // Calculate dynamic width based on available space and columns
-      const availableWidth = 280; // Available width for appointments (screen width - timeline width - padding)
-      const columnWidth = availableWidth / (maxColumn + 1);
-      const width = Math.max(columnWidth - 5, 120); // Minimum width of 120, with 5px spacing
-      const left = column * columnWidth;
-
-      // Create formatted service text that includes add-ons
-      const getFormattedServiceText = (appointment) => {
-        if (appointment.appointmenttype === 'BLOCKED_TIME') {
-          return appointment.details || 'No Details';
-        }
-        
-        let serviceText = appointment.appointmenttype || 'No Type';
-        if (appointment.addons && appointment.addons.length > 0) {
-          // Split addons string if it's not already an array
-          const addonArray = Array.isArray(appointment.addons) 
-            ? appointment.addons 
-            : appointment.addons.split(',');
-          
-          // Add each addon to the service text
-          serviceText += addonArray.map(addon => ` + ${addon.trim()}`).join('');
-        }
-        return serviceText;
+    // Helper function to check if two appointments overlap
+    const appointmentsOverlap = (app1, app2) => {
+      const convertToMinutes = (timeStr) => {
+        const [time, period] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
       };
 
-      appointmentBlocks.push(
-        <TouchableOpacity
-          key={appointment.id}
-          onPress={() => handleAppointmentPress(appointment)}
-          onLongPress={() => {
-            Vibration.vibrate(50);
-            setIsDraggable(true);
-            setActiveDragId(appointment.id);
-          }}
-          delayLongPress={300}
-        >
-          <PanGestureHandler
-            enabled={isDraggable}
-            onGestureEvent={onPanGestureEvent}
-            onHandlerStateChange={(event) => onPanHandlerStateChange(event, appointment)}
-            minDist={10}
+      const app1Start = convertToMinutes(app1.startTime);
+      const app1End = convertToMinutes(app1.endTime);
+      const app2Start = convertToMinutes(app2.startTime);
+      const app2End = convertToMinutes(app2.endTime);
+
+      return app1Start < app2End && app2Start < app1End;
+    };
+
+    // Calculate overlapping groups
+    const overlappingGroups = [];
+    const processedAppointments = new Set();
+
+    sortedAppointments.forEach((appointment, index) => {
+      if (processedAppointments.has(appointment.id)) return;
+
+      const overlappingGroup = [appointment];
+      processedAppointments.add(appointment.id);
+
+      // Find all appointments that overlap with this one
+      for (let i = index + 1; i < sortedAppointments.length; i++) {
+        const otherAppointment = sortedAppointments[i];
+        if (processedAppointments.has(otherAppointment.id)) continue;
+
+        // Check if it overlaps with any appointment in the current group
+        const overlapsWithGroup = overlappingGroup.some(groupApp => 
+          appointmentsOverlap(groupApp, otherAppointment)
+        );
+
+        if (overlapsWithGroup) {
+          overlappingGroup.push(otherAppointment);
+          processedAppointments.add(otherAppointment.id);
+        }
+      }
+
+      overlappingGroups.push(overlappingGroup);
+    });
+
+    // Calculate screen dimensions
+    const screenWidth = Dimensions.get('window').width;
+    const timelineWidth = 50; // Reduced timeline width
+    const containerPadding = 0; // No container padding now
+    const availableWidth = screenWidth - timelineWidth - containerPadding;
+
+    // Render each group
+    overlappingGroups.forEach(group => {
+      const groupSize = group.length;
+      const columnWidth = availableWidth / groupSize;
+      const minWidth = Math.max(columnWidth - 4, 120); // Minimum width with minimal spacing
+
+      group.forEach((appointment, columnIndex) => {
+        const [startHour, startMinute] = appointment.startTime.split(':');
+        const [endHour, endMinute] = appointment.endTime.split(':');
+        
+        const start = parseInt(startHour) % 12 + (appointment.startTime.includes('PM') ? 12 : 0) + parseInt(startMinute) / 60;
+        const end = parseInt(endHour) % 12 + (appointment.endTime.includes('PM') ? 12 : 0) + parseInt(endMinute) / 60;
+        
+        const startPosition = (start - 8) * HOUR_HEIGHT;
+        const endPosition = (end - 8) * HOUR_HEIGHT;
+        const duration = endPosition - startPosition;
+
+        const isBlockedTime = appointment.appointmenttype === 'BLOCKED_TIME';
+        
+        // Calculate width and position - start right at the edge of timeline
+        const width = groupSize === 1 ? availableWidth - 8 : minWidth; // Full width if no overlaps
+        const left = groupSize === 1 ? 4 : columnIndex * columnWidth + 2; // Start right next to timeline
+
+        // Create formatted service text that includes add-ons
+        const getFormattedServiceText = (appointment) => {
+          if (appointment.appointmenttype === 'BLOCKED_TIME') {
+            return appointment.details || 'No Details';
+          }
+          
+          let serviceText = appointment.appointmenttype || 'No Type';
+          if (appointment.addons && appointment.addons.length > 0) {
+            // Split addons string if it's not already an array
+            const addonArray = Array.isArray(appointment.addons) 
+              ? appointment.addons 
+              : appointment.addons.split(',');
+            
+            // Add each addon to the service text
+            serviceText += addonArray.map(addon => ` + ${addon.trim()}`).join('');
+          }
+          return serviceText;
+        };
+
+        appointmentBlocks.push(
+          <TouchableOpacity
+            key={appointment.id}
+            onPress={() => handleAppointmentPress(appointment)}
+            onLongPress={() => {
+              Vibration.vibrate(50);
+              setIsDraggable(true);
+              setActiveDragId(appointment.id);
+            }}
+            delayLongPress={300}
           >
-            <Animated.View
-              style={[
-                { zIndex: activeDragId === appointment.id ? 1000 : 1 },
-                activeDragId === appointment.id ? {
-                  transform: [{ translateY: dragPositions[appointment.id] || 0 }]
-                } : null
-              ]}
+            <PanGestureHandler
+              enabled={isDraggable}
+              onGestureEvent={onPanGestureEvent}
+              onHandlerStateChange={(event) => onPanHandlerStateChange(event, appointment)}
+              minDist={10}
             >
               <Animated.View
                 style={[
-                  styles.appointmentBlock,
-                  isBlockedTime && styles.blockedTimeBlock,
-                  {
-                    top: startPosition,
-                    height: Math.max(duration, 50),
-                    backgroundColor: getColorForAppointmentType(appointment.appointmenttype),
-                    width: width,
-                    left: left,
-                  },
-                  activeDragId === appointment.id && {
-                    shadowColor: "#000",
-                    shadowOffset: {
-                      width: 0,
-                      height: 4,
-                    },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 4.65,
-                    elevation: 8,
-                  }
+                  { zIndex: activeDragId === appointment.id ? 1000 : 1 },
+                  activeDragId === appointment.id ? {
+                    transform: [{ translateY: dragPositions[appointment.id] || 0 }]
+                  } : null
                 ]}
               >
-                <View style={styles.appointmentHeader}>
-                  <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
-                    {isBlockedTime ? 'Blocked Time' : (appointment.clientName || 'No Name')}
+                <Animated.View
+                  style={[
+                    styles.appointmentBlock,
+                    isBlockedTime && styles.blockedTimeBlock,
+                    {
+                      top: startPosition,
+                      height: Math.max(duration, 60), // Minimum height increased
+                      backgroundColor: getColorForAppointmentType(appointment.appointmenttype),
+                      width: width,
+                      left: left,
+                    },
+                    activeDragId === appointment.id && {
+                      shadowColor: "#000",
+                      shadowOffset: {
+                        width: 0,
+                        height: 4,
+                      },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4.65,
+                      elevation: 8,
+                    }
+                  ]}
+                >
+                  <View style={styles.appointmentHeader}>
+                    <Text style={styles.appointmentName} numberOfLines={1} ellipsizeMode="tail">
+                      {isBlockedTime ? 'Blocked Time' : (appointment.clientName || 'No Name')}
+                    </Text>
+                    <Text style={styles.appointmentType} numberOfLines={2} ellipsizeMode="tail">
+                      {getFormattedServiceText(appointment)}
+                    </Text>
+                  </View>
+                  <Text style={styles.appointmentTime} numberOfLines={1}>
+                    {activeDragId === appointment.id && dragTimes[appointment.id]
+                      ? `${dragTimes[appointment.id].startTime} - ${dragTimes[appointment.id].endTime}`
+                      : `${appointment.startTime || 'No Start'} - ${appointment.endTime || 'No End'}`}
                   </Text>
-                  <Text style={styles.appointmentType} numberOfLines={2} ellipsizeMode="tail">
-                    {getFormattedServiceText(appointment)}
-                  </Text>
-                </View>
-                <Text style={styles.appointmentTime}>
-                  {activeDragId === appointment.id && dragTimes[appointment.id]
-                    ? `${dragTimes[appointment.id].startTime} - ${dragTimes[appointment.id].endTime}`
-                    : `${appointment.startTime || 'No Start'} - ${appointment.endTime || 'No End'}`}
-                </Text>
+                </Animated.View>
               </Animated.View>
-            </Animated.View>
-          </PanGestureHandler>
-        </TouchableOpacity>
-      );
+            </PanGestureHandler>
+          </TouchableOpacity>
+        );
+      });
     });
 
     return (
@@ -927,7 +956,7 @@ const styles = StyleSheet.create({
   // Stats Container
   statsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16, // Add padding back here since we removed it from mainContent
     paddingVertical: 8,
     gap: 8,
   },
@@ -964,7 +993,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16, // Add padding back here since we removed it from mainContent
     paddingVertical: 6,
     gap: 16,
   },
@@ -999,7 +1028,7 @@ const styles = StyleSheet.create({
   // Main Content Area
   mainContent: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0, // Remove horizontal padding
   },
   // Loading States
   loadingContainer: {
@@ -1045,6 +1074,7 @@ const styles = StyleSheet.create({
   cardView: {
     flex: 1,
     paddingTop: 8,
+    paddingHorizontal: 16, // Add padding for card view
   },
   
   cardNavigation: {
@@ -1095,7 +1125,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'rgba(18, 18, 18, 0.8)',
     borderRadius: 20,
-    marginHorizontal: 8,
+    marginHorizontal: 0, // Remove horizontal margins
     marginVertical: 8,
     overflow: 'hidden',
     borderWidth: 1,
@@ -1103,7 +1133,7 @@ const styles = StyleSheet.create({
   },
   
   timeline: {
-    width: 60,
+    width: 50, // Reduced from 60
     backgroundColor: 'rgba(28, 28, 30, 0.9)',
     borderRightWidth: 1,
     borderRightColor: 'rgba(84, 84, 88, 0.15)',
@@ -1115,26 +1145,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(84, 84, 88, 0.1)',
+    paddingHorizontal: 4, // Reduced padding
   },
   
   timeText: {
     color: '#8e8e93',
-    fontSize: 11,
+    fontSize: 10, // Slightly smaller to fit better
     fontWeight: '600',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   
   appointmentsContainer: {
     position: 'relative',
     flex: 1,
     minHeight: 1400,
-    paddingLeft: 12,
-    paddingRight: 8,
+    paddingLeft: 0, // Remove left padding
+    paddingRight: 4, // Minimal right padding
   },
   
   appointmentBlock: {
     position: 'absolute',
-    padding: 12,
+    padding: 12, // Reduced padding for better text fit
     borderRadius: 14,
     backgroundColor: '#007AFF',
     shadowColor: "#000",
@@ -1147,6 +1178,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden', // Prevent text overflow
   },
   
   blockedTimeBlock: {
@@ -1160,31 +1192,36 @@ const styles = StyleSheet.create({
   appointmentHeader: {
     flexDirection: 'column',
     alignItems: 'flex-start',
-    marginBottom: 6,
+    marginBottom: 4, // Reduced margin
+    flex: 1,
   },
   
   appointmentName: {
     color: 'white',
     fontWeight: '700',
-    fontSize: 13,
-    marginBottom: 3,
+    fontSize: 14,
+    marginBottom: 3, // Reduced margin
     letterSpacing: 0.2,
+    flexShrink: 1, // Allow text to shrink
   },
   
   appointmentType: {
     color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 11,
+    fontSize: 11, // Slightly smaller font
     fontWeight: '500',
     letterSpacing: 0.1,
-    lineHeight: 15,
+    lineHeight: 14, // Tighter line height
+    flexShrink: 1, // Allow text to shrink
+    flex: 1,
   },
   
   appointmentTime: {
     color: 'rgba(255, 255, 255, 0.9)',
     fontSize: 10,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 2, // Reduced margin
     letterSpacing: 0.2,
+    flexShrink: 0, // Don't shrink time text
   },
   
   currentTimeLine: {
