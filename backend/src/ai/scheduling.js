@@ -436,16 +436,13 @@ CRITICAL: The above custom prompt controls this conversation. Only use the sched
     .replace('${upcomingAppointment}', upcomingAppointment);
 
   console.log("fullInstructions", fullInstructions)
-  if (!assistants.has(phone)) {
-    const newAssistant = await openai.beta.assistants.create({
-      instructions: fullInstructions,
-      name: `Scheduling Assistant for ${fname} ${lname}`,
-      model: "gpt-4.1-2025-04-14",
-      tools: tools
-    });
-    assistants.set(phone, newAssistant);
-  }
-  return assistants.get(phone);
+  const newAssistant = await openai.beta.assistants.create({
+    instructions: fullInstructions,
+    name: `Scheduling Assistant for ${fname} ${lname}`,
+    model: "gpt-4.1-2025-04-14",
+    tools: tools
+  });
+  return newAssistant;
 }
 
 tempTools = [{
@@ -1145,11 +1142,11 @@ async function shouldAIRespond(userMessages, thread) {
   }
 }
 
-async function main() {
-  const response = await handleUserInput(['When you free next week?'], '+12038324011', 1);
-  console.log(response);
-}
+// async function main() {
+//   const response = await handleUserInput(['When you free next week?'], '+12038324011', 1);
+//   console.log(response);
+// }
 
-main();
+// main();
 
 module.exports = { getAvailability, bookAppointment, handleUserInput, createAssistant, createThread, shouldAIRespond, handleUserInputInternal, handleToolCalls, handleToolCallsInternal};
