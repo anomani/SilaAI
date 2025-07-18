@@ -406,9 +406,28 @@ async function createAssistant(fname, lname, phone, messages, appointment, clien
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
   console.log("aiPrompt", aiPrompt)
-  // Place aiPrompt before assistantInstructions
+  
+  // Restructure instructions: Custom prompt as PRIMARY, scheduling as SECONDARY
+  let fullInstructions;
+  
+  if (aiPrompt) {
+    // Custom prompt controls the conversation, scheduling instructions are conditional
+    fullInstructions = `${aiPrompt}
 
-  let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
+---
+
+SCHEDULING TOOLS AVAILABLE (ONLY use when client brings up booking/appointments):
+
+${assistantInstructions}
+
+---
+
+CRITICAL: The above custom prompt controls this conversation. Only use the scheduling instructions below if the client specifically asks about booking, appointments, availability, or scheduling. Otherwise, follow the custom conversation guidelines above.`;
+  } else {
+    // No custom prompt, use default scheduling instructions
+    fullInstructions = assistantInstructions;
+  }
+
   fullInstructions = fullInstructions
     .replace('${appointment}', appointment)
     .replace('${fname}', fname)
