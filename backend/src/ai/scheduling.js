@@ -356,8 +356,15 @@ async function createThread(phoneNumber, initialMessage = false, userId) {
 }
 
 async function createAssistant(fname, lname, phone, messages, appointment, client, upcomingAppointment, userId) {
-  const instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
+  console.log("creating assistant for client", client)
+  let instructionsPath;
+  if (userId === 1) {
+    instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
+  } else {
+    instructionsPath = path.join(__dirname, 'Prompts', 'assitantBrett.txt');
+  }
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
+
     // Fetch appointment types and add-ons for the user
   const appointmentTypes = await getAppointmentTypes(userId);
   const addOns = await getAddOns(userId);
@@ -398,7 +405,9 @@ async function createAssistant(fname, lname, phone, messages, appointment, clien
   
   // Get the AI prompt for this client
   const aiPrompt = await getAIPrompt(client.id);
+  console.log("aiPrompt", aiPrompt)
   // Place aiPrompt before assistantInstructions
+
   let fullInstructions = `${aiPrompt}\n\n${assistantInstructions}`;
   fullInstructions = fullInstructions
     .replace('${appointment}', appointment)
@@ -412,7 +421,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, clien
     const newAssistant = await openai.beta.assistants.create({
       instructions: fullInstructions,
       name: `Scheduling Assistant for ${fname} ${lname}`,
-      model: "gpt-4o",
+      model: "gpt-4.1-2025-04-14",
       tools: tools
     });
     assistants.set(phone, newAssistant);

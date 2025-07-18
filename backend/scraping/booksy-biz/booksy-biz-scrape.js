@@ -4,7 +4,7 @@ const puppeteer       = require('puppeteer-extra');
 const StealthPlugin   = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
 
-require('dotenv').config({ path: __dirname + '/../.env' });
+require('dotenv').config({ path: __dirname + '../../.env' });
 
 /*──── helper: interact ───────────────────────────────────────*/
 async function interact(page, sels, act, val = null, timeout = 8000) {

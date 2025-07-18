@@ -9,6 +9,120 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const { createClient } = require('../../src/model/clients');
 const dbUtils = require('../../src/model/dbUtils');
 
+// Simple function to extract appointments from client page
+async function extractAppointments(page, clientName) {
+    console.log(`\n=== EXTRACTING APPOINTMENTS FOR: ${clientName} ===`);
+    
+    // Wait for page to load
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Try to click appointments tab first
+    const appointmentTabSelectors = [
+        '[data-testid="appointments-tab"]',
+        'button:contains("APPOINTMENTS")',
+        '[role="tab"]:contains("APPOINTMENTS")'
+    ];
+    
+    for (const selector of appointmentTabSelectors) {
+        try {
+            await page.waitForSelector(selector, { visible: true, timeout: 3000 });
+            await page.click(selector);
+            console.log(`✅ Clicked appointments tab with selector: ${selector}`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            break;
+        } catch (e) {
+            console.log(`❌ Appointments tab selector failed: ${selector}`);
+        }
+    }
+    
+    // Check for and click "More appointments" button to load all appointments
+    let moreButtonClicked = true;
+    let clickCount = 0;
+    const maxClicks = 10; // Prevent infinite loop
+    
+    while (moreButtonClicked && clickCount < maxClicks) {
+        moreButtonClicked = false;
+        try {
+            // Look for "More appointments" button
+            const moreButton = await page.$('.list_more_J3y6g');
+            if (moreButton) {
+                const buttonText = await page.evaluate(el => el.textContent, moreButton);
+                console.log(`🔄 Found "More appointments" button: ${buttonText}`);
+                
+                await moreButton.click();
+                console.log(`✅ Clicked "More appointments" button (click ${clickCount + 1})`);
+                
+                // Wait for more appointments to load
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                moreButtonClicked = true;
+                clickCount++;
+            } else {
+                console.log(`✅ No more "More appointments" button found. All appointments should be loaded.`);
+            }
+        } catch (e) {
+            console.log(`❌ Error clicking "More appointments" button:`, e.message);
+            break;
+        }
+    }
+    
+    if (clickCount > 0) {
+        console.log(`📈 Clicked "More appointments" button ${clickCount} times to load all appointments`);
+    }
+    
+    // Extract appointments using the specific selectors
+    const appointments = await page.evaluate(() => {
+        const appointments = [];
+        
+        // Look for appointment elements using the provided selectors
+        const monthElements = document.querySelectorAll('.appointment-date_month_nFAjw');
+        const dayElements = document.querySelectorAll('.appointment-date_day_zpfF4');
+        const timeElements = document.querySelectorAll('.appointment-date_hour_isz2C');
+        const serviceElements = document.querySelectorAll('.appointment-service_serviceHeader_qO6qz');
+        const priceElements = document.querySelectorAll('.appointment_total_tXjTE');
+        
+        console.log(`Found ${monthElements.length} month elements`);
+        console.log(`Found ${dayElements.length} day elements`);
+        console.log(`Found ${timeElements.length} time elements`);
+        console.log(`Found ${serviceElements.length} service elements`);
+        console.log(`Found ${priceElements.length} price elements`);
+        
+        // Extract appointment data
+        const maxElements = Math.max(monthElements.length, dayElements.length, timeElements.length, serviceElements.length, priceElements.length);
+        
+        for (let i = 0; i < maxElements; i++) {
+            const month = monthElements[i]?.textContent?.trim();
+            const day = dayElements[i]?.textContent?.trim();
+            const time = timeElements[i]?.textContent?.trim();
+            const service = serviceElements[i]?.textContent?.trim();
+            const price = priceElements[i]?.textContent?.trim();
+            
+            // Only include appointments that have at least date and time
+            if (month && day && time) {
+                appointments.push({
+                    month: month,
+                    day: day,
+                    time: time,
+                    service: service || 'Unknown Service',
+                    price: price || '$0.00',
+                    date: `${month} ${day}`,
+                    fullDateTime: `${month} ${day} at ${time}`,
+                    fullDetails: `${month} ${day} at ${time} - ${service || 'Unknown Service'} - ${price || '$0.00'}`
+                });
+            }
+        }
+        
+        return appointments;
+    });
+    
+    console.log(`\n📅 FOUND ${appointments.length} APPOINTMENTS:`);
+    appointments.forEach((appt, index) => {
+        console.log(`${index + 1}. ${appt.fullDetails}`);
+    });
+    
+    return appointments;
+}
+
 async function scrapeClients() {
     let browser;
     
@@ -140,7 +254,11 @@ async function scrapeClients() {
         // Extract client data from each element
         const clients = [];
         
-        for (let i = 0; i < clientElements.length; i++) {
+        // TESTING: Only process the first client for now
+        const elementsToProcess = Math.min(clientElements.length, 1);
+        console.log(`\n=== TESTING MODE: Processing only the first client ===`);
+        
+        for (let i = 0; i < elementsToProcess; i++) {
             const element = clientElements[i];
             
             try {
@@ -212,8 +330,12 @@ async function scrapeClients() {
         const detailedClients = [];
         
         // Get all client elements fresh each time (to avoid stale references)
-        for (let i = 0; i < clientElements.length; i++) {
-            console.log(`\nProcessing client element ${i + 1} of ${clientElements.length}...`);
+        // TESTING: Only process the first client for detailed extraction
+        const clientsToProcess = Math.min(clientElements.length, 1);
+        console.log(`\n=== TESTING MODE: Processing only the first ${clientsToProcess} client(s) for detailed extraction ===`);
+        
+        for (let i = 0; i < clientsToProcess; i++) {
+            console.log(`\nProcessing client element ${i + 1} of ${clientsToProcess}...`);
             
             try {
                 // Get fresh elements each time to avoid stale references
@@ -289,6 +411,9 @@ async function scrapeClients() {
                 console.log(`Extracted details for ${basicClientInfo.fullName}:`);
                 console.log(`- Phone: ${detailedInfo.phoneNumber || 'Not found'}`);
                 console.log(`- Email: ${detailedInfo.email || 'Not found'}`);
+                
+                // Extract appointments for this client
+                await extractAppointments(page, basicClientInfo.fullName);
                 
                 detailedClients.push({
                     firstName: basicClientInfo.firstName,

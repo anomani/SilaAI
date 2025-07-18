@@ -18,6 +18,7 @@ async function storeAIPrompt(clientid, aiPrompt) {
 }
 
 async function getAIPrompt(clientid) {
+  console.log("getting ai prompt for clientid", clientid)
   const db = dbUtils.getDB();
   const sql = 'SELECT prompt FROM ai_prompts WHERE clientid = $1';
   const values = [clientid];
