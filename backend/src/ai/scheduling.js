@@ -361,7 +361,7 @@ async function createAssistant(fname, lname, phone, messages, appointment, clien
   if (userId === 1) {
     instructionsPath = path.join(__dirname, 'Prompts', 'assistantInstructions.txt');
   } else {
-    instructionsPath = path.join(__dirname, 'Prompts', 'assitantBrett.txt');
+    instructionsPath = path.join(__dirname, 'Prompts', 'assistantBrett.txt');
   }
   let assistantInstructions = fs.readFileSync(instructionsPath, 'utf-8');
 
@@ -1127,7 +1127,7 @@ async function shouldAIRespond(userMessages, thread) {
 }
 
 async function main() {
-  const response = await handleUserInput(['When you free next week?'], '+12038324011', 35);
+  const response = await handleUserInput(['When you free next week?'], '+12038324011', 1);
   console.log(response);
 }
 
