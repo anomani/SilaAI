@@ -144,6 +144,41 @@ async function getClientByPhoneNumber(phoneNumber, user_id) {
     }
 }
 
+async function checkClientExistsByPhone(phoneNumber, user_id) {
+    console.log('[checkClientExistsByPhone] START');
+    console.log('Input phoneNumber:', phoneNumber);
+    console.log('Input user_id:', user_id);
+    
+    const db = dbUtils.getDB();
+    const sql = `
+        SELECT * FROM Client 
+        WHERE (REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phoneNumber, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '') = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE($1, '+1', ''), '(', ''), ')', ''), '-', ''), ' ', ''), '.', '')
+        OR phoneNumber = $1)
+        AND user_id = $2
+    `;
+    const values = [phoneNumber, user_id];
+    
+    console.log('SQL query:', sql);
+    console.log('SQL values:', values);
+    
+    try {
+        const res = await db.query(sql, values);
+        console.log('Query result rows:', res.rows.length);
+        
+        if (res.rows.length > 0 && res.rows[0]) {
+            console.log('Found existing client:', res.rows[0]);
+            return res.rows[0];
+        } else {
+            console.log('No existing client found for phone:', phoneNumber, 'and user_id:', user_id);
+            return null;
+        }
+    } catch (err) {
+        console.error('Error checking client by phone number:', err.message);
+        console.error('Full error:', err);
+        throw err;
+    }
+}
+
 async function followUp(days, user_id) {
     const db = dbUtils.getDB();
 
@@ -801,6 +836,7 @@ function calculateClientValueScore(client) {
     return Math.round(score);
 }
 
+
 module.exports = {
     createClient,
     getClientById,
@@ -809,6 +845,7 @@ module.exports = {
     getAllClients,
     checkClientExists,
     getClientByPhoneNumber,
+    checkClientExistsByPhone,
     followUp,
     searchForClients,
     getDaysSinceLastAppointment,

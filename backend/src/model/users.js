@@ -225,6 +225,35 @@ async function setFirstMessageTemplate(userId, template) {
   }
 }
 
+/**
+ * Fetches user's outreach message templates
+ * @param {number} userId - The user ID
+ * @returns {Promise<Object>} Object containing firstOutreachMessage and outreachMessage
+ */
+async function getUserMessageTemplates(userId) {
+  const db = dbUtils.getDB();
+  const sql = `
+    SELECT first_outreach_message, outreach_message 
+    FROM users 
+    WHERE id = $1
+  `;
+  
+  try {
+    const res = await db.query(sql, [userId]);
+    if (res.rows.length === 0) {
+      throw new Error(`User with ID ${userId} not found`);
+    }
+    
+    return {
+      firstOutreachMessage: res.rows[0].first_outreach_message,
+      outreachMessage: res.rows[0].outreach_message
+    };
+  } catch (err) {
+    console.error('Error fetching user message templates:', err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   createUser,
   createUserManual,
@@ -239,5 +268,6 @@ module.exports = {
   getReminderMessageTemplate,
   setReminderMessageTemplate,
   getFirstMessageTemplate,
-  setFirstMessageTemplate
+  setFirstMessageTemplate,
+  getUserMessageTemplates
 };

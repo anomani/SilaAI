@@ -1,4 +1,5 @@
 const { getClientById, getOldClients, updateClientOutreachInfo, getNumberOfCustomersContacted, getDynamicLapsedClients } = require('../model/clients');
+const { getUserMessageTemplates } = require('../model/users');
 const { getAvailableSlots } = require('./tools/getAvailableSlots');
 const { OpenAI } = require('openai');
 const { zodResponseFormat } = require("openai/helpers/zod");
@@ -249,6 +250,15 @@ async function selectClientsBasedOnStrategy(strategy, clients) {
 
 async function saveSuggestedResponses(clients) {
   try {
+    // Get user message templates from database (assuming all clients belong to same user)
+    const userId = clients[0]?.user_id;
+    if (!userId) {
+      throw new Error('No user ID found for clients');
+    }
+    
+    const messageTemplates = await getUserMessageTemplates(userId);
+    console.log('Fetched message templates:', messageTemplates);
+    
     const savedResponses = await Promise.all(clients.map(async (client) => {
       // Update outreach info before saving suggested response
       await updateClientOutreachInfo(client.id);
@@ -290,14 +300,17 @@ Adjust your approach based on their response history - if they're a good respond
       
       let personalizedMessage;
       if (!messageHistory || messageHistory.length === 0) {
-        // First time message - introduce yourself and the new business number
-        personalizedMessage = "Hey {name}, this is Uzi from Uzi Cuts reaching out from my new business number. How's everything going bro?"
+        // First time message - use template from database
+        personalizedMessage = messageTemplates.firstOutreachMessage
           .replace("{name}", clientData.firstname);
       } else {
-        // Regular outreach message - more casual since they know you
-        personalizedMessage = "Hey {name}, how's everything going bro?"
+        // Regular outreach message - use template from database
+        personalizedMessage = messageTemplates.outreachMessage
           .replace("{name}", clientData.firstname);
       }
+      
+      console.log(`Using template for ${clientData.firstname}: ${personalizedMessage}`);
+      
       // Save the suggested response with OUTREACH type
       return saveSuggestedResponse(client.id, personalizedMessage, clientData.user_id, 'OUTREACH');
     }));
@@ -318,11 +331,7 @@ function calculateWeeksSinceLastVisit(lastVisitDate) {
 }
 
 function getCatchUpMessage(weeksSinceLastVisit) {
-  if (weeksSinceLastVisit <= 54) {
     return "Would love to catch up. When can I see you next?";
-  } else {
-    return "I just wanted to say thank you for once being a part of my barber journey and trusting me with your image. It really means a lot. Would love to catch up on all the big moments since we last met. When can I see you and bless you next? 🙌";
-  }
 }
 
 // Add this new function at the end of the file

@@ -501,7 +501,7 @@ async function scrapeBooksy() {
                     console.log(`\n🔄 ===== SCRAPING PAGE ${currentPage}/${totalPagesToScrape} (Page ${currentPage - startPage + 1} of ${totalPagesToScrape - startPage + 1}) =====`);
                     
                     // Navigate to specific page using the Boston URL (top-rated)
-                    const baseUrl = 'https://booksy.com/en-us/s/28561_jersey-city?locationHash=here%253Acm%253Anamedplace%253A21017995';
+                    const baseUrl = 'https://booksy.com/en-us/s/134656_san-diego?locationHash=here%253Acm%253Anamedplace%253A21010222';
                     const pageUrl = currentPage === 1 
                         ? baseUrl
                         : `${baseUrl}&businessesPage=${currentPage}`;

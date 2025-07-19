@@ -308,6 +308,16 @@ reminder_template: text
 
 first_message_template: text
 
+first_outreach_message: text
+
+outreach_message: text
+
+emailVerified: boolean
+
+verificationToken: text
+
+verificationTokenExpiry: timestamp without time zone
+
 Table: waitlistrequest
 
 id: integer

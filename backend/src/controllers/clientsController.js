@@ -1,6 +1,6 @@
 const { getAllClients, createClient, searchForClients, 
     deleteClient, followUp, getClientById, updateClient, getDaysSinceLastAppointment, 
-    updateClientOutreachDate, getClientAutoRespond, updateClientAutoRespond, getClientByPhoneNumber } = require('../model/clients');
+    updateClientOutreachDate, getClientAutoRespond, updateClientAutoRespond, getClientByPhoneNumber, checkClientExistsByPhone } = require('../model/clients');
 const dbUtils = require('../model/dbUtils');
 const { authenticateToken } = require('../middleware/authMiddleware');
 
@@ -127,4 +127,114 @@ async function getClientNameByPhone(req, res) {
     }
 }
 
-module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment, updateClientOutreachDateController, getClientAutoRespondController, updateClientAutoRespondController, getClientNameByPhone };
+async function importContacts(req, res) {
+    const userId = req.user.id;
+    const { contacts } = req.body;
+    
+    console.log('=== IMPORT CONTACTS START ===');
+    console.log('User ID:', userId);
+    console.log('Contacts received:', JSON.stringify(contacts, null, 2));
+    
+    if (!contacts || !Array.isArray(contacts)) {
+        console.log('ERROR: Invalid contacts array');
+        return res.status(400).json({ error: 'Contacts array is required' });
+    }
+
+    try {
+        const results = {
+            imported: 0,
+            skipped: 0,
+            errors: [],
+            duplicates: []
+        };
+
+        console.log(`Processing ${contacts.length} contacts for user ${userId}`);
+
+        for (let i = 0; i < contacts.length; i++) {
+            const contact = contacts[i];
+            console.log(`\n--- Processing contact ${i + 1}/${contacts.length} ---`);
+            console.log('Contact data:', JSON.stringify(contact, null, 2));
+            
+            try {
+                const { firstName, lastName, phoneNumber, email } = contact;
+                
+                if (!phoneNumber) {
+                    console.log('ERROR: Missing phone number for contact:', contact);
+                    results.errors.push({ contact, error: 'Missing phone number' });
+                    continue;
+                }
+
+                const normalizedPhone = phoneNumber.replace(/\D/g, '');
+                console.log('Original phone:', phoneNumber);
+                console.log('Normalized phone:', normalizedPhone);
+                
+                console.log('Checking for existing client with phone:', normalizedPhone, 'and userId:', userId);
+                const existingClient = await checkClientExistsByPhone(normalizedPhone, userId);
+                
+                if (existingClient) {
+                    console.log('DUPLICATE FOUND:', existingClient);
+                    results.duplicates.push({ contact, existing: existingClient });
+                    results.skipped++;
+                    continue;
+                } else {
+                    console.log('No existing client found, proceeding with creation');
+                }
+
+                console.log('Creating new client with data:', {
+                    firstName: firstName || '',
+                    lastName: lastName || '',
+                    phoneNumber: normalizedPhone,
+                    email: email || '',
+                    userId: userId
+                });
+
+                const newClient = await createClient(
+                    firstName || '',
+                    lastName || '',
+                    normalizedPhone,
+                    email || '',
+                    '',
+                    userId
+                );
+                
+                console.log('CLIENT CREATED SUCCESSFULLY:', newClient);
+                results.imported++;
+            } catch (contactError) {
+                console.log('Contact processing error:', contactError.message);
+                console.log('Full error:', contactError);
+                
+                if (contactError.message.includes('not found')) {
+                    console.log('Error was "not found", attempting to create client anyway');
+                    try {
+                        const newClient = await createClient(
+                            contact.firstName || '',
+                            contact.lastName || '',
+                            contact.phoneNumber.replace(/\D/g, ''),
+                            contact.email || '',
+                            '',
+                            userId
+                        );
+                        console.log('CLIENT CREATED ON RETRY:', newClient);
+                        results.imported++;
+                    } catch (retryError) {
+                        console.log('RETRY FAILED:', retryError);
+                        results.errors.push({ contact, error: retryError.message });
+                    }
+                } else {
+                    results.errors.push({ contact, error: contactError.message });
+                }
+            }
+        }
+
+        console.log('\n=== FINAL RESULTS ===');
+        console.log('Results:', JSON.stringify(results, null, 2));
+        console.log('=== IMPORT CONTACTS END ===\n');
+
+        res.status(200).json(results);
+    } catch (error) {
+        console.log('IMPORT CONTACTS FATAL ERROR:', error);
+        res.status(500).json({ error: `Error importing contacts: ${error.message}` });
+    }
+}
+
+module.exports = { getClients, addClient, searchClients, delClient, getSuggestedFollowUps, clientIDGet, updateTheClient, daysSinceLastAppointment, updateClientOutreachDateController, getClientAutoRespondController, updateClientAutoRespondController, getClientNameByPhone, importContacts };
