@@ -1,13 +1,1 @@
-{
-  "type": "service_account",
-  "project_id": "uzi-imaging-project",
-  "private_key_id": "33fdba88c16b165c223be4a0c6b535212dc49291",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDAybCygEHZSivE\n2yd4nN7HOCfasU2m1p2eg9ZQTLKAOjJBadzzTo91YbFDSrM9/TxLrbr+Hf6fw/Bd\npoJzbzPfq4Bq0tOQ26TBy0ZjikL7983G5OXX2RnrTW7/uCfphs3PNfVHdjnoLgTZ\nS2NhlaC+s0f6VGpygg9OCvON/pCFsjtkueQqYO4riiCqUDJIk8C/vp4tWv1mcL+m\nMYQqRW4WlMajoGQZ5IaO+Oum61HklTFNMnoxgTEtoLBHWEphS838+smtitH82IZU\neEZuXsM0RLkHot5+qu8zdbayvKmC6I3CgZ8ArXKhlQ4GRVtNfhnfu+NuETytfe2K\nCe72/8C3AgMBAAECggEAQ8vp1qwh/A8IW18Sf2jzMy39XfvyKdTZczA7wttl/o/4\nsmZPLEUZUBc95kMzy33toVOEKe9UZszaD6UJxRx7KpI+Q9LGUe/b/cbFhyXNLpzT\ngblnVsPjSItfmJAjgQ1F/TOlgS8DaDIexGetmFitQcL8cf0Tvhcc2L4jLnEyU8Ff\n/WSQBwKOsngHNAj1w929bDLXZG+yU4YvEC3PI39oE6AAb1icz5+dWtLEuaf1Xm5D\npZqN0iJVCD0ApNjq/oEUbG2gbHyz7bL4bwA2j/NysRDBj6jCF747aYsBNbTbFj67\nAXQTtVVRgT3R0vjPDL8m6x6BJt2IYhxq2EvuVDdUuQKBgQD1Igltsz4CgG/mjaED\nhmSd5a1xk0jhSSDHvV+Z5C87csquKVxy+rKMPXsDEdeCJZ7SM6weqVBp8TBIRJ5Y\ny0X6b7n0v+tOM81XRnJ0xWPAKmu3rhzQjUAFUCCykc6abQUJWoahXZCp0dwrMiFx\nexHl12VPew+e0NRb1uz5hCTQ2wKBgQDJVZmCbuNSKL6/ULjkncdJZXdb3LdXDLkN\nWr4KNIIaZCnX+JqxCeh3kHXQ5VtEbas/vnj093R9OuI00+8vUXFZndNPpS1SmIa2\nIuMRVsLMsZd8IUgZKAIwK047Z2hkBnZNnBMl9vyVu1jWM5UAQOAxpwp0HxivRZDp\nE4ff+cu4VQKBgQCGooIhMVA+mYJcU696uyaqHorLlYRyz/JkIhvO7ygN87dkPq1b\nLVxBcEcO4Y7HGZiIhP7k/EOBXIoTNzTtOgAeU50D0yEPG56Nb9DPV9a4pdPx13xW\nAy6FfIPo7/JUmMoqYAEPwc8BppTRWMBLjre+0DYBmGp05Oet5XbUeIKr/wKBgQC3\nvyvO4q0Muqr7qAxWebj7v2Ljr9iT1cS972cpoSpsM6YMuZNUqBpFpM4hzHEzTnPQ\nRWHXEFB8SlVQqWvN36J3i5bjRXjLvPCVIdniZTB76Ei8vRM0AlOc6qkHhiS7xToL\nMro3F+cGMGmvdHw0MwFpz2229PpuXCsYzP5g53WJ0QKBgG+djI8EbflBPnAgZLve\nK+7OHVpZeTuHEwc2cuSZVT/YCLTsbatRHg3KeiPP5CdcS1IKx2TWFHM4mP6nlZ8l\nu/zAPCkrWO90yb+kkB5jdqRZQlpv1aaOeD23qVgSRqErdrZqv8T0+rpf4dJBASWG\nyk/wfG2j9B+CtAaHbeGsCmXG\n-----END PRIVATE KEY-----\n",
-  "client_email": "temp-407@uzi-imaging-project.iam.gserviceaccount.com",
-  "client_id": "113788144267043801620",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/temp-407%40uzi-imaging-project.iam.gserviceaccount.com",
-  "universe_domain": "googleapis.com"
-}
+
